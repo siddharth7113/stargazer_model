@@ -653,3 +653,11 @@ sigma; the density of the Sun-like test host comes back near 1.5 g/cc. The promp
 puts fit_transit between the folds and odd_even and requires flat_bottom with a
 plausible density. The viewer summarises the result. Tool and prompt change, so the
 next full runs after the `full_v4search` series are `full_v5fit`.
+
+**Three-episode check of fit_transit**
+(`results/smoke/agent_inkling_small_s98_v2_fit3.json`, Inkling-Small, `tml_v0`,
+$0.14, no errors). ep_0000 true null: the one signal at sde 11 fitted v_shaped with a
+density of 0.013 g/cc, verdict too_low_for_a_dwarf, and the model declined it for
+that reason. ep_0001 hit: flat_bottom, density plausible, 33 sigma, odd_even
+consistent, submitted at 0.7764 days. ep_0002 true null: no signal. The model called
+fit_transit between the fold and odd_even on each candidate, as the procedure says.
