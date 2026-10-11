@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from stargazer import tools
+from stargazer.inject import inject, make_truth
 from stargazer.tools import TOOLS, TOOLS_BY_NAME, ToolSpec, call_tool, tool_definitions
 
 
@@ -180,6 +181,7 @@ def test_registry_periods_durations_and_depth_are_positive():
         ("fold", "detrend_window_days"),
         ("odd_even", "period"),
         ("odd_even", "duration"),
+        ("single_events", "detrend_window_days"),
         ("submit_prediction", "period"),
         ("submit_prediction", "duration"),
         ("submit_prediction", "depth"),
@@ -224,3 +226,48 @@ def test_bls_peaks_derived_fields(injected):
     assert top["half_period"] == pytest.approx(top["period"] / 2, rel=1e-4)
     assert top["double_period"] == pytest.approx(top["period"] * 2, rel=1e-4)
     assert top["n_events_in_data"] == 9  # 27 days at 3 days from t0 = 1: events at 1, 4, ..., 25
+
+
+def test_bls_peaks_mask_reveals_weaker_signal(lc, star):
+    """With a 1 percent, 3-day signal masked, a 0.2 percent, 7-day signal becomes the top peak."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    strong = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star)
+    weak = make_truth(period=7.0, t0=2.0, depth=0.002, b=0.0, star=star)
+    both = inject(relative, inject(relative, flux, strong), weak)
+    top_before = tools.bls_peaks(relative, both)["peaks"][0]["period"]
+    masked = tools.bls_peaks(relative, both, masks=[{"period": 3.0, "t0": 1.0, "duration": strong.duration}])
+    assert abs(top_before / 3.0 - 1) < 0.01
+    assert abs(masked["peaks"][0]["period"] / 7.0 - 1) < 0.01 and masked["n_points_masked"] > 0
+
+
+def test_bls_peaks_masks_argument_is_validated():
+    """A mask item missing a key is rejected by the schema, not by a crash inside the tool."""
+    spec = TOOLS_BY_NAME["bls_peaks"]
+    assert spec.validate({"masks": [{"period": 3.0, "t0": 1.0, "duration": 0.1}]}) == []
+    assert any("must be array" in problem for problem in spec.validate({"masks": "3.0"}))
+
+
+def test_single_events_finds_a_lone_transit(lc, star):
+    """One 1 percent event at day 20 with no repeat is found at the right time with a high SNR."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=40.0, t0=20.0, depth=0.01, b=0.0, star=star)
+    events = tools.single_events(relative, inject(relative, flux, truth))["events"]
+    assert abs(events[0]["time"] - 20.0) < 0.05 and events[0]["snr"] > 20
+    assert all(abs(event["time"] - 20.0) > 0.2 for event in events[1:])  # no duplicate of the same dip
+
+
+def test_single_events_on_noise_are_weak(lc):
+    """Pure noise gives only low-SNR events, well below the level a real dip reaches."""
+    time, flux, _ = lc
+    events = tools.single_events(time - time.min(), flux)["events"]
+    assert events and events[0]["snr"] < 8
+
+
+def test_single_events_skips_boxes_across_the_gap(lc, star):
+    """A box spanning the 1-day gap would mix two separated segments; no event is reported there."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    events = tools.single_events(relative, flux)["events"]
+    assert all(not (12.9 < event["time"] < 14.1) for event in events)

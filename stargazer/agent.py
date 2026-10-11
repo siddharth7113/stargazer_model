@@ -37,7 +37,12 @@ You cannot see the data. You see tool results. Follow this procedure:
 3. For the strongest one or two peaks: fold at phase_half_width 0.5, then 0.05, then odd_even.
 4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
    fold shows no clear dip, test half_period or the next peak.
-5. submit_prediction, once.
+5. If the strongest peak fails the checks, call bls_peaks again with that peak in masks: a
+   strong feature hides weaker periodic signals until it is removed.
+6. If no periodic signal convinces you, call single_events. A single deep event can be a
+   long-period planet with one transit in the data; look for a second event of the same
+   depth and fold at the implied period before you decide.
+7. submit_prediction, once.
 
 Decision rules: a planet is one clean dip at phase 0 in the zoomed fold, a flat curve away
 from it, and odd_even verdict consistent. A high sde alone is not evidence; on real stars

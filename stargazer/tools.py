@@ -55,6 +55,7 @@ def bls_peaks(
     detrend_window_days: float = 0.75,
     bin_minutes: float = 10.0,
     n_peaks: int = 5,
+    masks: list[dict] | None = None,
 ) -> dict:
     """Detrend, bin and run a Box Least Squares (BLS) search. Return the top peaks.
 
@@ -68,14 +69,18 @@ def bls_peaks(
     bin_minutes : float
     n_peaks : int
         Number of distinct peaks to return.
+    masks : list of dict, optional
+        Signals to remove before the search, each ``{"period", "t0", "duration"}`` in
+        days. Points within one full duration of each event centre are dropped.
 
     Returns
     -------
     dict
         ``peaks``: a list of ``period, t0, duration, depth_ppm, sde, n_events_in_data,
         half_period, double_period`` for the strongest peaks, each at least 2 percent
-        apart in period. ``n_periods_searched``. The alias periods and the event count
-        are derived here so the model does not do arithmetic on them.
+        apart in period. ``n_periods_searched`` and ``n_points_masked``. The alias
+        periods and the event count are derived here so the model does not do
+        arithmetic on them.
 
     Notes
     -----
@@ -83,10 +88,21 @@ def bls_peaks(
     :meth:`stargazer.baseline.BLSDetector.detect`. Peaks are found by sorting the
     power spectrum and skipping any period within 2 percent of a stronger one, so
     the list is not five samples of one wide peak.
+
+    Masking is how pipelines find more than one signal per star: a deep eclipse or
+    a single strong dip dominates the power at every window, and a second, shallower
+    periodic signal only appears once the first is removed. The mask half-width is
+    one full duration, twice the transit, so ingress and egress are removed too.
     """
     from astropy.timeseries import BoxLeastSquares
 
     work_time, work_flux = detrend(time, flux, detrend_window_days)
+    n_masked = 0
+    for mask in masks or []:
+        phase = ((work_time - mask["t0"] + 0.5 * mask["period"]) % mask["period"]) - 0.5 * mask["period"]
+        keep = np.abs(phase) > mask["duration"]
+        n_masked += int((~keep).sum())
+        work_time, work_flux = work_time[keep], work_flux[keep]
     work_time, work_flux, work_err = bin_lc(work_time, work_flux, bin_minutes)
     span = work_time.max() - work_time.min()
     max_period = max_period or span * 0.5
@@ -119,7 +135,7 @@ def bls_peaks(
         )
         if len(peaks) >= n_peaks:
             break
-    return {"peaks": peaks, "n_periods_searched": len(periods)}
+    return {"peaks": peaks, "n_periods_searched": len(periods), "n_points_masked": n_masked}
 
 
 def fold(
@@ -177,6 +193,97 @@ def fold(
         "n_empty_bins": int((counts == 0).sum()),
         "depth_ppm": None if np.all(np.isnan(flux_ppm)) else round(float(-np.nanmin(flux_ppm)), 1),
     }
+
+
+def single_events(
+    time: np.ndarray,
+    flux: np.ndarray,
+    detrend_window_days: float = 0.75,
+    durations_days: tuple[float, ...] = (0.04, 0.08, 0.125, 0.25, 0.5),
+    n_events: int = 5,
+    min_points: int = 3,
+) -> dict:
+    """Find the strongest individual dips, without assuming they repeat.
+
+    Parameters
+    ----------
+    time, flux : ndarray
+    detrend_window_days : float
+    durations_days : tuple of float
+        Box widths to try. The longest must stay below three times the detrend window
+        or the detrend step erases the dip.
+    n_events : int
+        Number of distinct events to return.
+    min_points : int
+        A box with fewer points, for example at a gap edge, is skipped.
+
+    Returns
+    -------
+    dict
+        ``events``: a list of ``time`` (centre, days), ``duration`` (days),
+        ``depth_ppm``, ``snr`` and ``n_points`` for the strongest non-overlapping dips;
+        ``point_scatter_ppm``.
+
+    Notes
+    -----
+    A periodic search needs at least two events. A planet with a period longer than
+    half the data has at most one, and the mission pipelines report those only as
+    single-transit candidates. This tool scores each box of width ``d`` centred at
+    each time by
+
+    ``snr = (1 - mean_flux_in_box) / (sigma / sqrt(n))``
+
+    with ``sigma`` the point-to-point scatter and ``n`` the points in the box. That
+    is the single-event statistic of the Kepler pipeline [1]_. Boxes that straddle a
+    gap, where the points span more than 1.5 times the box width, are skipped. The
+    strongest boxes are kept greedily with a separation of at least two widths, so
+    one dip is not reported five times. An event is then a hypothesis: fold at a few
+    trial periods, or check whether a second event of the same depth exists.
+
+    References
+    ----------
+    .. [1] Jenkins, J. M. (2002). The impact of solar-like variability on the
+       detectability of transiting terrestrial planets. The Astrophysical Journal,
+       575, 493. https://doi.org/10.1086/341136
+    """
+    from stargazer.inject import point_scatter
+
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    sigma = point_scatter(work_flux)
+    cadence = float(np.median(np.diff(work_time)))
+    cumulative = np.concatenate([[0.0], np.cumsum(work_flux)])
+    candidates = []
+    for duration in durations_days:
+        n_box = max(min_points, round(duration / cadence))
+        if n_box >= len(work_flux):
+            continue
+        starts = np.arange(len(work_flux) - n_box + 1)
+        spans = work_time[starts + n_box - 1] - work_time[starts]
+        means = (cumulative[starts + n_box] - cumulative[starts]) / n_box
+        snr = (1.0 - means) / (sigma / np.sqrt(n_box))
+        snr[spans > 1.5 * duration] = -np.inf
+        for index in np.argsort(-snr)[: 4 * n_events]:
+            if not np.isfinite(snr[index]) or snr[index] <= 0:
+                break
+            centre = 0.5 * (work_time[index] + work_time[index + n_box - 1])
+            candidates.append((float(snr[index]), float(centre), duration, float(1.0 - means[index]), n_box))
+    candidates.sort(reverse=True)
+    events = []
+    for snr_value, centre, duration, depth, n_box in candidates:
+        if any(abs(centre - kept["time"]) < 2 * max(duration, kept["duration"]) for kept in events):
+            continue
+        events.append(
+            {
+                "time": round(centre, 4),
+                "duration": duration,
+                "depth_ppm": round(depth * 1e6, 1),
+                "snr": round(snr_value, 2),
+                "n_points": n_box,
+            }
+        )
+        if len(events) >= n_events:
+            break
+    return {"events": events, "point_scatter_ppm": round(sigma * 1e6, 1)}
 
 
 def odd_even(
@@ -330,6 +437,10 @@ def _json_type_ok(value: object, json_type: str) -> bool:
         return isinstance(value, int) and not isinstance(value, bool)
     if json_type == "string":
         return isinstance(value, str)
+    if json_type == "array":
+        return isinstance(value, list)
+    if json_type == "object":
+        return isinstance(value, dict)
     return False
 
 
@@ -386,15 +497,58 @@ TOOLS: tuple[ToolSpec, ...] = (
                     0.75,
                     positive=True,
                 ),
+                "masks": {
+                    "type": "array",
+                    "description": (
+                        "Signals to remove before searching, so a strong feature cannot hide a weaker "
+                        "periodic one. Each item is {period, t0, duration} in days, usually a rejected "
+                        "peak. Use after a peak fails fold or odd_even."
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "period": {"type": "number"},
+                            "t0": {"type": "number"},
+                            "duration": {"type": "number"},
+                        },
+                        "required": ["period", "t0", "duration"],
+                    },
+                },
             },
             "required": [],
         },
-        function=lambda time, flux, min_period=0.5, max_period=None, detrend_window_days=0.75: bls_peaks(
-            time,
-            flux,
-            min_period=min_period,
-            max_period=max_period,
-            detrend_window_days=detrend_window_days,
+        function=lambda time, flux, min_period=0.5, max_period=None, detrend_window_days=0.75, masks=None: (
+            bls_peaks(
+                time,
+                flux,
+                min_period=min_period,
+                max_period=max_period,
+                detrend_window_days=detrend_window_days,
+                masks=masks,
+            )
+        ),
+    ),
+    ToolSpec(
+        name="single_events",
+        description=(
+            "Find the strongest individual dips without assuming they repeat. Use when bls_peaks finds "
+            "nothing convincing, or when a planet could have only one or two transits in the data "
+            "(long period). Returns up to five events with time (days from start), duration, "
+            "depth_ppm, snr and n_points. An event with snr above about 8 is a hypothesis, not a "
+            "detection: look for a second event of the same depth and fold at the period between "
+            "them. A submission needs a period, so a lone event with no partner stays detected=false."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "detrend_window_days": _number(
+                    "Detrending window, days. Use the same value as in bls_peaks.", 0.75, positive=True
+                ),
+            },
+            "required": [],
+        },
+        function=lambda time, flux, detrend_window_days=0.75: single_events(
+            time, flux, detrend_window_days=detrend_window_days
         ),
     ),
     ToolSpec(
