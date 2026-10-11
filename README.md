@@ -166,9 +166,25 @@ detection was reported.
 
 With this set of tools the two agents are about level with the thresholded baseline.
 Most of their wrong periods are noise peaks on faint injections, which the Box Least
-Squares tool returned as the top result and the model had no tool to reject. Two tools
-were added in response, a masked re-search and a single-event search, and the runs
-with them are described in LOGBOOK.md.
+Squares tool returned as the top result and the model had no tool to reject.
+
+Episode set `s98_v2` is built on the same stars with periods from 0.5 to 60 days, so
+single and double transits are common: 18 of its 127 injections with a transit in
+the data have one. The table follows Inkling-Small through the toolbox on this set.
+Each row adds the tools and prompt rules named; LOGBOOK.md has the command, the
+cost and the reading of each run.
+
+| toolbox | false alarm | completeness | with aliases and events | mean score | one-transit hits |
+|---|---|---|---|---|---|
+| Box Least Squares at 5 percent false alarm | 5% | 25% | - | - | 0 of 18 |
+| masked re-search, single events | 11% | 32% | 34% | 0.533 | 0 of 18 |
+| single-event submission form, edge guard | 12% | 28% | 34% | 0.515 | 2 of 18 |
+| search_signals, single-event rules | 11% | 32% | 35% | 0.538 | 2 of 18 |
+| fit_transit, secondary_eclipse | 3% | 35% | 37% | 0.583 | 1 of 18 |
+
+The two vetting tools cut the false-alarm rate to 3 percent and the wrong periods
+from 10 to 4. The one-transit hits moved with the event count of the search, which
+now counts only epochs with data; the run with that change is in LOGBOOK.md.
 
 ## Toolbox
 
