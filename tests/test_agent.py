@@ -71,8 +71,19 @@ def test_tool_results_are_appended_in_openai_format(lc, fake_tools):
     assert second_request[3] == {
         "role": "tool",
         "tool_call_id": "abc",
-        "content": json.dumps({"ok": "summarize"}),
+        "content": json.dumps({"ok": "summarize", "calls_remaining": 39}),
     }
+
+
+def test_tool_results_carry_calls_remaining(lc, fake_tools):
+    """Each tool result tells the model how many calls are left, counting down from the cap."""
+    time, flux, flux_err = lc
+    turns = [AssistantTurn(tool_calls=[ToolCall("1", "summarize", {}), ToolCall("2", "summarize", {})])]
+    backend = FixedBackend(turns)
+    pred = ToolAgentDetector(backend, max_tool_calls=5).detect(time, flux, flux_err)
+    remaining = [call["result"]["calls_remaining"] for call in pred.extra["transcript"]]
+    assert remaining == [4, 3]
+    assert json.loads(backend.seen[1][-1]["content"])["calls_remaining"] == 3
 
 
 def test_tools_are_called_with_the_episode_arrays(lc, fake_tools):
@@ -124,7 +135,9 @@ def test_invalid_submission_does_not_end_episode(lc, fake_tools):
     turns = [AssistantTurn(tool_calls=[ToolCall("1", "fail", {})]), AssistantTurn(content="stop")]
     pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
     assert pred.extra["stop"] == "model_stopped"
-    assert pred.extra["transcript"] == [{"tool": "fail", "arguments": {}, "result": {"error": "bad"}}]
+    assert pred.extra["transcript"] == [
+        {"tool": "fail", "arguments": {}, "result": {"error": "bad", "calls_remaining": 39}}
+    ]
 
 
 def test_usage_is_summed_across_turns(lc, fake_tools):
@@ -145,3 +158,17 @@ def test_config_records_backend_caps_and_prompt_hash():
     assert config["max_tool_calls"] == 5
     assert config["system_prompt_sha256"] == hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()
     assert "submit_prediction" in config["tools"]
+
+
+def test_trajectory_keeps_conversation_and_thinking(lc, fake_tools):
+    """The prediction stores the message list the backend saw and the thinking of each turn."""
+    time, flux, flux_err = lc
+    turns = [
+        AssistantTurn(content="I will search.", tool_calls=[ToolCall("1", "summarize", {})], thinking="hmm"),
+        _submit(detected=False),
+    ]
+    pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
+    roles = [message["role"] for message in pred.extra["conversation"]]
+    assert roles == ["user", "assistant", "tool", "assistant", "tool"]
+    assert pred.extra["conversation"][1]["content"] == "I will search."
+    assert pred.extra["thinking"] == ["hmm", ""]

@@ -1,6 +1,7 @@
 """Unit tests for stargazer.tools: each analysis tool, the schema validator and the dispatcher."""
 
 import numpy as np
+import pytest
 
 from stargazer import tools
 from stargazer.tools import TOOLS, TOOLS_BY_NAME, ToolSpec, call_tool, tool_definitions
@@ -59,18 +60,19 @@ def test_fold_empty_bins_are_null(lc):
     """With 2 days of data folded at 10 days, most phase bins have no points and must be null, not NaN."""
     time = np.arange(0, 2, 2 / 1440)
     curve = tools.fold(time, np.ones_like(time), period=10.0, t0=0.0, phase_half_width=0.5)
-    assert None in curve["flux_ppm"] and curve["n"][0] == 0
+    assert None in curve["flux_ppm"] and curve["n_empty_bins"] > 0 and curve["n_points"] == time.size
 
 
 def test_odd_even_equal_for_planet(injected):
-    """Odd and even transits of one planet have the same depth, so the difference is below 3 sigma."""
+    """Odd and even transits of one planet have the same depth: below 3 sigma and verdict consistent."""
     time, flux, _, truth = injected
     result = tools.odd_even(time, flux, period=truth.period, t0=truth.t0, duration=truth.duration)
-    assert result["odd_n"] > 0 and result["even_n"] > 0 and result["difference_sigma"] < 3
+    assert result["odd_events"] >= 2 and result["even_events"] >= 2
+    assert result["difference_sigma"] < 3 and result["verdict"] == "consistent"
 
 
 def test_odd_even_flags_binary(injected):
-    """Making the odd events 0.3 percent shallower, like a secondary eclipse, must exceed 3 sigma."""
+    """Making the odd events 0.3 percent shallower, like a secondary eclipse, gives verdict inconsistent."""
     time, flux, _, truth = injected
     epoch = np.round((time - truth.t0) / truth.period).astype(int)
     phase = ((time - truth.t0 + 1.5) % 3.0) - 1.5
@@ -78,14 +80,31 @@ def test_odd_even_flags_binary(injected):
     binary = flux.copy()
     binary[shallow] = 1.0 - 0.003
     result = tools.odd_even(time, binary, period=truth.period, t0=truth.t0, duration=truth.duration)
-    assert result["difference_sigma"] > 3
+    assert result["difference_sigma"] > 3 and result["verdict"] == "inconsistent"
+
+
+def test_odd_even_tolerates_slow_variability(injected):
+    """A 5 percent, 7-day sinusoid left after injection must not turn a planet into a binary verdict."""
+    time, flux, _, truth = injected
+    active = flux * (1.0 + 0.05 * np.sin(2 * np.pi * time / 7.0))
+    result = tools.odd_even(time, active, period=truth.period, t0=truth.t0, duration=truth.duration)
+    assert result["verdict"] == "consistent", result
+
+
+def test_odd_even_with_one_event_per_parity_is_insufficient():
+    """Two events in total give one per parity; no standard error exists, so the verdict says so."""
+    time = np.arange(0, 4, 2 / 1440)  # events at day 1 (even) and day 3 (odd) only
+    flux = np.ones_like(time)
+    result = tools.odd_even(time, flux, period=2.0, t0=1.0, duration=0.1)
+    assert result["odd_events"] == 1 and result["even_events"] == 1
+    assert result["difference_sigma"] is None and result["verdict"] == "insufficient_data"
 
 
 def test_odd_even_without_points_has_null_depth():
     """One day of data folded at 10 days with the epoch at day 5 has no in-transit points of either parity."""
     time = np.arange(0, 1, 2 / 1440)
     result = tools.odd_even(time, np.ones_like(time), period=10.0, t0=5.0, duration=0.1)
-    assert result["odd_depth_ppm"] is None and result["difference_sigma"] is None
+    assert result["odd_depth_ppm"] is None and result["verdict"] == "insufficient_data"
 
 
 def test_every_tool_definition_is_well_formed():
@@ -155,8 +174,10 @@ def test_registry_periods_durations_and_depth_are_positive():
     assert constrained == {
         ("bls_peaks", "min_period"),
         ("bls_peaks", "max_period"),
+        ("bls_peaks", "detrend_window_days"),
         ("fold", "period"),
         ("fold", "phase_half_width"),
+        ("fold", "detrend_window_days"),
         ("odd_even", "period"),
         ("odd_even", "duration"),
         ("submit_prediction", "period"),
@@ -166,16 +187,18 @@ def test_registry_periods_durations_and_depth_are_positive():
 
 
 def test_call_tool_unknown_name(lc):
-    """An unknown tool name returns an error naming the available tools, so the model can recover."""
+    """An unknown tool name returns an error plus the list of available tools, so the model can recover."""
     time, flux, _ = lc
-    error = call_tool("nope", {}, time, flux)["error"]
-    assert error.startswith("unknown tool: nope") and "bls_peaks" in error
+    result = call_tool("nope", {}, time, flux)
+    assert result["error"] == "unknown tool: nope" and "bls_peaks" in result["available_tools"]
 
 
 def test_call_tool_invalid_arguments_return_error(lc):
-    """Validation problems come back as the tool result, joined by semicolons."""
+    """Validation problems come back with the expected arguments, so the model can fix the call."""
     time, flux, _ = lc
-    assert call_tool("fold", {"period": 3.0}, time, flux) == {"error": "missing required argument: t0"}
+    result = call_tool("fold", {"period": 3.0}, time, flux)
+    assert result["error"] == "missing required argument: t0"
+    assert result["required"] == ["period", "t0"] and "t0" in result["expected_arguments"]
 
 
 def test_call_tool_exception_becomes_error(lc, monkeypatch):
@@ -184,3 +207,20 @@ def test_call_tool_exception_becomes_error(lc, monkeypatch):
     schema = {"type": "object", "properties": {}, "required": []}
     monkeypatch.setitem(TOOLS_BY_NAME, "boom", ToolSpec("boom", "x", schema, lambda *args, **kwargs: 1 / 0))
     assert call_tool("boom", {}, time, flux)["error"].startswith("ZeroDivisionError")
+
+
+def test_bls_peaks_detrend_window_is_applied(injected):
+    """The window argument reaches the detrend step: a different window changes the peak statistics."""
+    time, flux, _, _ = injected
+    wide = tools.bls_peaks(time, flux, detrend_window_days=0.75)["peaks"][0]
+    narrow = tools.bls_peaks(time, flux, detrend_window_days=0.2)["peaks"][0]
+    assert wide["sde"] != narrow["sde"]
+
+
+def test_bls_peaks_derived_fields(injected):
+    """Each peak carries the alias periods and the event count, so the model does no arithmetic."""
+    time, flux, _, _ = injected
+    top = tools.bls_peaks(time, flux)["peaks"][0]
+    assert top["half_period"] == pytest.approx(top["period"] / 2, rel=1e-4)
+    assert top["double_period"] == pytest.approx(top["period"] * 2, rel=1e-4)
+    assert top["n_events_in_data"] == 9  # 27 days at 3 days from t0 = 1: events at 1, 4, ..., 25

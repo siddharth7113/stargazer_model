@@ -154,6 +154,44 @@ def cmd_agent(args: argparse.Namespace) -> None:
     print(f"total reported cost usd={total_usd:.4f}\nresults -> {out}")
 
 
+def cmd_show(args: argparse.Namespace) -> None:
+    """Print the trajectory of one episode from a results file: truth, thinking, tool calls, answer."""
+    from stargazer.episodes import EpisodeSet
+    from stargazer.evaluate import Results
+
+    results = Results.load(args.results)
+    truth = EpisodeSet(results.episode_set).truth[args.episode]
+    prediction = results.preds[args.episode]
+    row = results.rows[args.episode]
+    model = results.config.get("backend_model") or results.config.get("backend_base_model")
+    print(f"== {args.episode}  system={results.system}  model={model}")
+    transit = truth.get("transit", {})
+    print(
+        f"truth: kind={truth['kind']} snr={truth.get('snr', 0):.1f} n_transits={truth.get('n_transits')} "
+        f"period={transit.get('period', float('nan')):.4f} t0={transit.get('t0', float('nan')):.3f}"
+    )
+    print(
+        f"score: outcome={row['outcome']} score={row['score']}  stop={prediction.get('stop')} "
+        f"calls={prediction.get('n_tool_calls')} tokens={prediction.get('usage')}"
+    )
+    turn = 0
+    for message in prediction.get("conversation", []):
+        if message["role"] == "assistant":
+            turn += 1
+            thought = (prediction.get("thinking") or [""] * turn)[turn - 1]
+            if thought:
+                print(f"\n[turn {turn} thinking]\n{thought if args.full else thought[: args.width]}")
+            if message.get("content"):
+                said = message["content"] if args.full else message["content"][: args.width]
+                print(f"\n[turn {turn} says] {said}")
+            for call in message.get("tool_calls", []):
+                print(f"[turn {turn} calls] {call['function']['name']}({call['function']['arguments']})")
+        elif message["role"] == "tool":
+            content = message["content"]
+            print(f"[result] {content if args.full else content[: args.width]}")
+    print(f"\nreasoning: {prediction.get('reasoning', '')}")
+
+
 def cmd_calibrate(args: argparse.Namespace) -> None:
     """Sweep the detection threshold on a results file and print the table."""
     from stargazer.calibrate import choose_threshold, threshold_sweep
@@ -257,12 +295,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-url", default="https://openrouter.ai/api/v1")
     parser.add_argument("--api-key-env", default="OPENROUTER_API_KEY")
     parser.add_argument("--model-path", default=None, help="tinker:// checkpoint path")
+    parser.add_argument(
+        "--renderer",
+        default="qwen3_disable_thinking",
+        help="tinker_cookbook renderer name, for example qwen3_8_disable_thinking for Qwen3.8",
+    )
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--max-tool-calls", type=int, default=12)
+    parser.add_argument(
+        "--max-tool-calls", type=int, default=None, help="safety stop; default is the detector's (40)"
+    )
     parser.add_argument("--limit", type=int, default=3, help="episodes to run; 0 means all")
     parser.add_argument("--period-rtol", type=float, default=0.01)
     parser.add_argument("--out", default=None)
     parser.set_defaults(func=cmd_agent)
+
+    parser = sub.add_parser("show", help="print one episode's trajectory from a results file")
+    parser.add_argument("--results", required=True)
+    parser.add_argument("--episode", required=True)
+    parser.add_argument("--width", type=int, default=400, help="characters shown per message")
+    parser.add_argument("--full", action="store_true", help="print every message in full")
+    parser.set_defaults(func=cmd_show)
 
     parser = sub.add_parser("calibrate", help="sweep the detection threshold on a results file")
     parser.add_argument("--results", required=True)

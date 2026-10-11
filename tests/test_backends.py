@@ -76,3 +76,20 @@ def test_tinker_config_records_checkpoint_and_renderer():
     """A trained checkpoint path and the chat template must be in ``config`` to reproduce a run."""
     config = TinkerBackend(model_path="tinker://run/weights").config
     assert config["model_path"] == "tinker://run/weights" and config["renderer"] == "qwen3_disable_thinking"
+
+
+def test_tinker_split_thinking_with_tags():
+    """A ``<think>`` block is returned separately and removed from the answer text."""
+    thinking, rest = TinkerBackend.split_thinking("<think>\nreason\n</think>\nanswer")
+    assert thinking == "reason" and rest == "answer"
+
+
+def test_tinker_split_thinking_with_implicit_open_tag():
+    """Some reasoning templates emit only the closing tag; everything before it is the trace."""
+    thinking, rest = TinkerBackend.split_thinking("reason\n</think>\nanswer")
+    assert thinking == "reason" and rest == "answer"
+
+
+def test_tinker_split_thinking_without_tags():
+    """Plain text has no trace."""
+    assert TinkerBackend.split_thinking("answer") == ("", "answer")

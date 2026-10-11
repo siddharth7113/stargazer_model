@@ -23,17 +23,30 @@ import numpy as np
 from stargazer.tools import call_tool, tool_definitions
 from stargazer.types import Prediction
 
-SYSTEM_PROMPT = """You are an astronomer searching one TESS light curve for a transiting planet.
+SYSTEM_PROMPT = """You are an exoplanet astronomer. You have one TESS light curve of one star. Decide
+whether it contains a transiting planet and, if so, report its period and epoch.
 
-You cannot see the data directly. Use the tools. Start with summarize, then bls_peaks.
-Check the strongest peaks with fold at the full orbit and zoomed on the transit, and with
-odd_even. A real transit is a single dip at phase zero that is present in both odd and even
-events. Consider the aliases at half and twice the best period. A long-period planet may
-show only one or two transits, which BLS underweights.
+How you are scored: full marks for the right period (within 1 percent) and an epoch within
+half a transit duration of a real transit; half marks for the half or double period; full
+marks for detected=false on a star with no planet; zero for a false alarm, a wrong period,
+a missed planet, or no submission.
 
-When you are done, call submit_prediction exactly once. If no convincing signal exists,
-submit detected=false. Do not guess a detection on noise: a false alarm scores zero.
-Time is in days from the start of the light curve. Depth is fractional, not ppm."""
+You cannot see the data. You see tool results. Follow this procedure:
+1. summarize, once. Note point_scatter_ppm and whether the star is active.
+2. bls_peaks, once. Treat every peak as a hypothesis, not a result.
+3. For the strongest one or two peaks: fold at phase_half_width 0.5, then 0.05, then odd_even.
+4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
+   fold shows no clear dip, test half_period or the next peak.
+5. submit_prediction, once.
+
+Decision rules: a planet is one clean dip at phase 0 in the zoomed fold, a flat curve away
+from it, and odd_even verdict consistent. A high sde alone is not evidence; on real stars
+noise reaches sde 10 to 14. If nothing meets the rules, submit detected=false.
+
+Every tool result has calls_remaining, a safety limit. Take the calls you need; a careful
+analysis uses about 6 to 12. Submit before it reaches 0; when it is 1, submit what you have.
+Units: days from the start of the light curve for time; fractional depth for depth
+(0.0005 means 500 ppm)."""
 
 
 @dataclass
@@ -65,11 +78,15 @@ class AssistantTurn:
     tool_calls : list of ToolCall
     usage : dict
         ``input_tokens`` and ``output_tokens``; ``usd`` when the provider reports cost.
+    thinking : str
+        The model's reasoning trace when the backend exposes one, else empty. It is
+        stored in the trajectory and never sent back to the model.
     """
 
     content: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
     usage: dict[str, float] = field(default_factory=dict)
+    thinking: str = ""
 
 
 class ChatBackend(Protocol):
@@ -98,18 +115,25 @@ class ToolAgentDetector:
     It implements the :class:`~stargazer.types.Detector` protocol. The loop is:
     ask the backend for a turn, run each tool call, append the results, repeat. It
     ends when the model calls ``submit_prediction``, stops calling tools, or hits a
-    cap. The full transcript of tool calls is kept in ``Prediction.extra`` so a reader
-    can audit the path to the answer.
+    cap. ``Prediction.extra`` keeps the whole trajectory: ``conversation`` is the
+    message list as the backend saw it, with the model's text and tool calls;
+    ``transcript`` is the list of tool calls with their results; ``thinking`` is the
+    per-turn reasoning trace when the backend exposes one. A reader can replay the
+    path to the answer from the results file alone.
 
     Parameters
     ----------
     backend : ChatBackend
     max_tool_calls : int
-        Hard cap on tool calls per episode. Reaching it ends the episode as "none".
+        Safety stop, not a budget: it exists so a model that loops cannot run forever.
+        Reaching it ends the episode as "none". Each tool result carries
+        ``calls_remaining`` so the model can pace itself; a careful run uses 6 to 12.
     max_turns : int
         Hard cap on model calls per episode.
     max_tokens_per_episode : int
-        Hard cap on input plus output tokens per episode, from the backend's usage.
+        Hard cap on input plus output tokens per episode, from the backend's usage. The
+        conversation is re-sent on every turn, so the total grows with the square of the
+        number of calls; 20 calls with lean tool outputs cost about 150,000 tokens.
     system_prompt : str
     """
 
@@ -118,9 +142,9 @@ class ToolAgentDetector:
     def __init__(
         self,
         backend: ChatBackend,
-        max_tool_calls: int = 12,
-        max_turns: int = 16,
-        max_tokens_per_episode: int = 150_000,
+        max_tool_calls: int = 40,
+        max_turns: int = 30,
+        max_tokens_per_episode: int = 400_000,
         system_prompt: str = SYSTEM_PROMPT,
     ):
         self._backend = backend
@@ -150,6 +174,7 @@ class ToolAgentDetector:
         ]
         tools = tool_definitions()
         transcript: list[dict] = []
+        thinking: list[str] = []
         usage = {"input_tokens": 0.0, "output_tokens": 0.0, "usd": 0.0}
         prediction: Prediction | None = None
         stop = "no_submission"
@@ -159,12 +184,14 @@ class ToolAgentDetector:
             for key in usage:
                 usage[key] += float(turn.usage.get(key, 0.0))
             messages.append(_assistant_message(turn))
+            thinking.append(turn.thinking)
             if not turn.tool_calls:
                 stop = "model_stopped"
                 break
             for call in turn.tool_calls:
                 n_calls += 1
                 result = call_tool(call.name, call.arguments, time, flux)
+                result["calls_remaining"] = self._max_tool_calls - n_calls
                 transcript.append({"tool": call.name, "arguments": call.arguments, "result": result})
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
                 if call.name == "submit_prediction" and "error" not in result:
@@ -191,6 +218,8 @@ class ToolAgentDetector:
                 "n_turns": len([message for message in messages if message["role"] == "assistant"]),
                 "usage": usage,
                 "transcript": transcript,
+                "conversation": messages[1:],  # the system prompt is identified by its hash in config
+                "thinking": thinking,
             }
         )
         return pred

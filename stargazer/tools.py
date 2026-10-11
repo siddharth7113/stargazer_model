@@ -72,8 +72,10 @@ def bls_peaks(
     Returns
     -------
     dict
-        ``peaks``: a list of ``period, t0, duration, depth_ppm, sde`` for the strongest
-        peaks, each at least 2 percent apart in period. ``n_periods_searched``.
+        ``peaks``: a list of ``period, t0, duration, depth_ppm, sde, n_events_in_data,
+        half_period, double_period`` for the strongest peaks, each at least 2 percent
+        apart in period. ``n_periods_searched``. The alias periods and the event count
+        are derived here so the model does not do arithmetic on them.
 
     Notes
     -----
@@ -102,13 +104,17 @@ def bls_peaks(
         period = float(res.period[index])
         if any(abs(period / peak["period"] - 1) < 0.02 for peak in peaks):
             continue
+        epoch = float(res.transit_time[index])
         peaks.append(
             {
                 "period": round(period, 5),
-                "t0": round(float(res.transit_time[index]), 4),
+                "t0": round(epoch, 4),
                 "duration": round(float(res.duration[index]), 3),
                 "depth_ppm": round(float(res.depth[index]) * 1e6, 1),
                 "sde": round((float(power[index]) - mean) / std, 2),
+                "n_events_in_data": int(np.floor((work_time.max() - epoch) / period)) + 1,
+                "half_period": round(period / 2, 5),
+                "double_period": round(period * 2, 5),
             }
         )
         if len(peaks) >= n_peaks:
@@ -121,7 +127,7 @@ def fold(
     flux: np.ndarray,
     period: float,
     t0: float,
-    n_bins: int = 50,
+    n_bins: int = 40,
     detrend_window_days: float = 0.75,
     phase_half_width: float = 0.5,
 ) -> dict:
@@ -141,9 +147,11 @@ def fold(
     Returns
     -------
     dict
-        ``phase`` (bin centres, in days from the transit centre), ``flux_ppm``
-        (binned flux minus one, in parts per million), ``n`` (points in each bin)
-        and ``depth_ppm`` (the deepest bin).
+        ``phase`` (bin centres, days from the transit centre), ``flux_ppm`` (binned
+        flux minus one, integer parts per million, null for an empty bin),
+        ``n_points`` (points in the window), ``n_empty_bins`` and ``depth_ppm`` (the
+        deepest bin). The output is kept short because the model re-reads it on every
+        later turn.
 
     Notes
     -----
@@ -163,9 +171,10 @@ def fold(
     centres = 0.5 * (edges[:-1] + edges[1:])
     flux_ppm = (binned - 1.0) * 1e6
     return {
-        "phase": [round(float(centre), 4) for centre in centres],
-        "flux_ppm": [None if np.isnan(value) else round(float(value), 1) for value in flux_ppm],
-        "n": [int(centre) for centre in counts],
+        "phase": [round(float(centre), 3) for centre in centres],
+        "flux_ppm": [None if np.isnan(value) else round(float(value)) for value in flux_ppm],
+        "n_points": int(mask.sum()),
+        "n_empty_bins": int((counts == 0).sum()),
         "depth_ppm": None if np.all(np.isnan(flux_ppm)) else round(float(-np.nanmin(flux_ppm)), 1),
     }
 
@@ -177,45 +186,67 @@ def odd_even(
     t0: float,
     duration: float,
     detrend_window_days: float = 0.75,
+    min_points_per_event: int = 3,
 ) -> dict:
     """Compare the depth of odd-numbered and even-numbered transits.
 
     Returns
     -------
     dict
-        ``odd_depth_ppm``, ``even_depth_ppm``, ``odd_n``, ``even_n``, ``difference_sigma``.
+        ``odd_depth_ppm``, ``even_depth_ppm``, ``odd_events``, ``even_events``,
+        ``difference_sigma`` and ``verdict``. The verdict is ``"consistent"`` when the
+        difference is below 3 sigma, ``"inconsistent"`` when at or above it, and
+        ``"insufficient_data"`` when either parity has fewer than two events.
 
     Notes
     -----
     An eclipsing binary at twice the true period shows two eclipses of different
     depth that a BLS search can mistake for one planet at half the period. A real
-    planet has equal odd and even depths. The difference in sigma is
+    planet has equal odd and even depths.
+
+    The depth of each event is the mean flux deficit of its in-transit points. The
+    depth of a parity is the mean over its events, and its standard error is the
+    standard deviation of the per-event depths divided by the square root of the
+    number of events. The difference in sigma is
 
     ``|d_odd - d_even| / sqrt(se_odd**2 + se_even**2)``
 
-    with each depth the mean in-transit flux deficit and each standard error the
-    point scatter divided by the square root of the number of in-transit points.
-    Above 3 sigma is a warning sign.
+    Using the scatter between events, rather than the point scatter divided by
+    sqrt(n), includes residual stellar variability after detrending. On an active
+    star the point-scatter error is many times too small and flags every planet as
+    a binary. The verdict field exists so the model reads a word, not a threshold.
     """
-    from stargazer.inject import point_scatter
-
     work_time, work_flux = detrend(time, flux, detrend_window_days)
     phase = ((work_time - t0 + 0.5 * period) % period) - 0.5 * period
     epoch = np.round((work_time - t0) / period).astype(int)
-    in_tr = np.abs(phase) < 0.5 * duration
-    sigma = point_scatter(work_flux)
-    out = {}
+    in_transit = np.abs(phase) < 0.5 * duration
+    stats = {}
     for name, parity in (("odd", 1), ("even", 0)):
-        mask = in_tr & (epoch % 2 == parity)
-        n_points = int(mask.sum())
-        depth = float(1.0 - work_flux[mask].mean()) if n_points else float("nan")
-        out[f"{name}_depth_ppm"] = None if n_points == 0 else round(depth * 1e6, 1)
-        out[f"{name}_n"] = n_points
-        out[f"_{name}_se"] = sigma / np.sqrt(n_points) if n_points else float("nan")
-        out[f"_{name}_depth"] = depth
-    se = np.hypot(out.pop("_odd_se"), out.pop("_even_se"))
-    difference = abs(out.pop("_odd_depth") - out.pop("_even_depth"))
-    out["difference_sigma"] = None if not np.isfinite(se) or se == 0 else round(float(difference / se), 2)
+        depths = []
+        for event in np.unique(epoch[in_transit & (epoch % 2 == parity)]):
+            points = work_flux[in_transit & (epoch == event)]
+            if len(points) >= min_points_per_event:
+                depths.append(1.0 - points.mean())
+        depths = np.array(depths)
+        stats[name] = {
+            "n_events": len(depths),
+            "depth": float(depths.mean()) if len(depths) else None,
+            "se": float(depths.std(ddof=1) / np.sqrt(len(depths))) if len(depths) >= 2 else None,
+        }
+    out = {
+        "odd_depth_ppm": None if stats["odd"]["depth"] is None else round(stats["odd"]["depth"] * 1e6, 1),
+        "even_depth_ppm": None if stats["even"]["depth"] is None else round(stats["even"]["depth"] * 1e6, 1),
+        "odd_events": stats["odd"]["n_events"],
+        "even_events": stats["even"]["n_events"],
+        "difference_sigma": None,
+        "verdict": "insufficient_data",
+    }
+    if stats["odd"]["se"] is not None and stats["even"]["se"] is not None:
+        combined = np.hypot(stats["odd"]["se"], stats["even"]["se"])
+        if combined > 0:
+            sigma = abs(stats["odd"]["depth"] - stats["even"]["depth"]) / combined
+            out["difference_sigma"] = round(float(sigma), 2)
+            out["verdict"] = "consistent" if sigma < 3 else "inconsistent"
     return out
 
 
@@ -321,7 +352,9 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
         name="summarize",
         description=(
-            "Describe the light curve: number of points, span in days, cadence, noise level in ppm, and gaps."
+            "Use first, once. Returns n_points, span_days, cadence_minutes, point_scatter_ppm "
+            "(the white-noise level; a transit needs depth well above it), flux_min and flux_max "
+            "(a range far from 1.0 means an active star), and gaps_days as [start, length] pairs."
         ),
         parameters={"type": "object", "properties": {}, "required": []},
         function=lambda time, flux: summarize(time, flux),
@@ -329,9 +362,13 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
         name="bls_peaks",
         description=(
-            "Detrend and run a Box Least Squares period search. Returns the five strongest peaks with "
-            "period (days), t0 (days from start), duration (days), depth_ppm and SDE. SDE above about 7 "
-            "is a candidate; below 6 is noise."
+            "Use after summarize to find candidate periods; rerun with detrend_window_days 0.3 if the star "
+            "is active and the peaks look like variability. Returns the five strongest distinct "
+            "peaks, each with period (days), t0 (days from start), duration (days), depth_ppm, sde, "
+            "n_events_in_data and the alias periods half_period and double_period. Read sde: on real "
+            "stars noise alone reaches 10 to 14; treat a peak as a candidate only when it also folds to "
+            "a clean dip and passes odd_even. Rerun with a different max_period only to search long "
+            "periods."
         ),
         parameters={
             "type": "object",
@@ -342,19 +379,32 @@ TOOLS: tuple[ToolSpec, ...] = (
                     nullable=True,
                     positive=True,
                 ),
+                "detrend_window_days": _number(
+                    "Detrending window, days. Default 0.75. Use 0.3 on an active star (flux range far "
+                    "from 1.0) to remove variability; a window shorter than 3 transit durations "
+                    "erases the transit.",
+                    0.75,
+                    positive=True,
+                ),
             },
             "required": [],
         },
-        function=lambda time, flux, min_period=0.5, max_period=None: bls_peaks(
-            time, flux, min_period=min_period, max_period=max_period
+        function=lambda time, flux, min_period=0.5, max_period=None, detrend_window_days=0.75: bls_peaks(
+            time,
+            flux,
+            min_period=min_period,
+            max_period=max_period,
+            detrend_window_days=detrend_window_days,
         ),
     ),
     ToolSpec(
         name="fold",
         description=(
-            "Fold the detrended light curve at a period and epoch. Returns a 50-bin phase curve in ppm "
-            "and the depth of the deepest bin. A real transit is one dip at phase zero. Use "
-            "phase_half_width 0.5 for the whole orbit and 0.05 to zoom on the transit."
+            "Use to check one candidate. Folds the detrended light curve at period and t0 and returns "
+            "phase (days from the transit centre), flux_ppm per bin (null when a bin is empty), "
+            "n_points, n_empty_bins and depth_ppm. A planet shows one dip centred at phase 0 with the "
+            "rest flat near 0 ppm. Use phase_half_width 0.5 to see the whole orbit (a second dip at "
+            "phase 0.5 means the true period is half) and 0.05 to see the transit shape."
         ),
         parameters={
             "type": "object",
@@ -364,18 +414,27 @@ TOOLS: tuple[ToolSpec, ...] = (
                 "phase_half_width": _number(
                     "Fraction of the period to show on each side of zero.", 0.5, positive=True
                 ),
+                "detrend_window_days": _number(
+                    "Detrending window, days. Use the same value as in bls_peaks.", 0.75, positive=True
+                ),
             },
             "required": ["period", "t0"],
         },
-        function=lambda time, flux, period, t0, phase_half_width=0.5: fold(
-            time, flux, period=period, t0=t0, phase_half_width=phase_half_width
+        function=lambda time, flux, period, t0, phase_half_width=0.5, detrend_window_days=0.75: fold(
+            time,
+            flux,
+            period=period,
+            t0=t0,
+            phase_half_width=phase_half_width,
+            detrend_window_days=detrend_window_days,
         ),
     ),
     ToolSpec(
         name="odd_even",
         description=(
-            "Compare the depths of odd and even transits at a period, epoch and duration. A difference "
-            "above 3 sigma suggests an eclipsing binary at twice the period."
+            "Compare the depths of odd and even transits at a period, epoch and duration. Read the "
+            "verdict field: consistent means planet-like; inconsistent means an eclipsing binary at "
+            "twice the period; insufficient_data means fewer than two events of one parity."
         ),
         parameters={
             "type": "object",
@@ -393,8 +452,11 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
         name="submit_prediction",
         description=(
-            "Submit the final answer. Call it exactly once, as the last action. If no convincing signal "
-            "exists, submit detected=false; a false alarm scores zero."
+            "Call exactly once, as the last action, before calls_remaining reaches 0. Submit "
+            "detected=true with period, t0, duration and depth only for a candidate that folds to a "
+            "clean dip and has odd_even verdict consistent. Otherwise submit detected=false. A false "
+            "alarm and a missing submission both score zero; a correct detected=false scores full marks "
+            "on a star with no planet."
         ),
         parameters={
             "type": "object",
@@ -435,10 +497,16 @@ def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray) ->
     """
     spec = TOOLS_BY_NAME.get(name)
     if spec is None:
-        return {"error": f"unknown tool: {name}. Available: {sorted(TOOLS_BY_NAME)}"}
+        return {"error": f"unknown tool: {name}", "available_tools": sorted(TOOLS_BY_NAME)}
     problems = spec.validate(arguments)
     if problems:
-        return {"error": "; ".join(problems)}
+        return {
+            "error": "; ".join(problems),
+            "expected_arguments": {
+                key: schema.get("description", "") for key, schema in spec.parameters["properties"].items()
+            },
+            "required": spec.parameters.get("required", []),
+        }
     try:
         return spec.function(time, flux, **arguments)
     except Exception as error:  # a tool failure is reported to the model, not raised

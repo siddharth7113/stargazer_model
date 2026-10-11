@@ -113,6 +113,7 @@ class OpenAICompatibleBackend:
 
 
 TOOL_CALL_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
+THINK_RE = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 
 
 class TinkerBackend:
@@ -258,8 +259,25 @@ class TinkerBackend:
         result = self._sampler.sample(prompt=prompt, num_samples=1, sampling_params=params).result()
         tokens = list(result.sequences[0].tokens)
         text = self._tokenizer.decode(tokens, skip_special_tokens=True)
-        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+        thinking, text = self.split_thinking(text)
         usage = {"input_tokens": float(prompt.length), "output_tokens": float(len(tokens)), "usd": 0.0}
         return AssistantTurn(
-            content=TOOL_CALL_RE.sub("", text).strip(), tool_calls=self.parse_tool_calls(text), usage=usage
+            content=TOOL_CALL_RE.sub("", text).strip(),
+            tool_calls=self.parse_tool_calls(text),
+            usage=usage,
+            thinking=thinking,
         )
+
+    @staticmethod
+    def split_thinking(text: str) -> tuple[str, str]:
+        """Separate ``<think>`` blocks from the answer. Return ``(thinking, rest)``.
+
+        A reasoning renderer may leave the opening tag implicit and end the trace with
+        ``</think>``; that case is handled by taking everything before the closing tag.
+        """
+        blocks = THINK_RE.findall(text)
+        rest = THINK_RE.sub("", text)
+        if not blocks and "</think>" in rest:
+            head, _, rest = rest.partition("</think>")
+            blocks = [head]
+        return "\n".join(block.strip() for block in blocks), rest.strip()
