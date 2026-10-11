@@ -15,6 +15,21 @@ import numpy as np
 
 from stargazer.baseline import bin_lc, detrend
 
+SEGMENT_BREAK_CADENCES = 5
+"""A gap longer than this many cadences splits a light curve into segments. The same
+value is the ``break_tolerance`` of the detrending filter in :func:`stargazer.baseline.detrend`."""
+
+MAD_TO_SIGMA = 1.4826
+"""Factor from the median absolute deviation to the standard deviation of a normal
+distribution, ``1 / Phi^-1(3/4)`` [1]_.
+
+References
+----------
+.. [1] Rousseeuw, P. J. and Croux, C. (1993). Alternatives to the median absolute
+   deviation. Journal of the American Statistical Association, 88, 1273.
+   https://doi.org/10.1080/01621459.1993.10476408
+"""
+
 
 def summarize(time: np.ndarray, flux: np.ndarray) -> dict:
     """Describe a light curve in a few numbers.
@@ -202,6 +217,8 @@ def single_events(
     durations_days: tuple[float, ...] = (0.04, 0.08, 0.125, 0.25, 0.5),
     n_events: int = 5,
     min_points: int = 3,
+    window_factor: float = 6.0,
+    edge_widths: float = 3.0,
 ) -> dict:
     """Find the strongest individual dips, without assuming they repeat.
 
@@ -209,67 +226,122 @@ def single_events(
     ----------
     time, flux : ndarray
     detrend_window_days : float
+        The shortest detrending window, days. Each box width uses the longer of this
+        value and ``window_factor`` times the width.
     durations_days : tuple of float
-        Box widths to try. The longest must stay below three times the detrend window
-        or the detrend step erases the dip.
+        Box widths to try, days.
     n_events : int
         Number of distinct events to return.
     min_points : int
         A box with fewer points, for example at a gap edge, is skipped.
+    window_factor : float
+        The detrending window for a box width is at least this many widths.
+    edge_widths : float
+        A box closer than this many widths to the start or the end of a segment is
+        skipped.
 
     Returns
     -------
     dict
         ``events``: a list of ``time`` (centre, days), ``duration`` (days),
-        ``depth_ppm``, ``snr`` and ``n_points`` for the strongest non-overlapping dips;
-        ``point_scatter_ppm``.
+        ``depth_ppm``, ``snr``, ``noise_ppm`` (the noise at the box timescale) and
+        ``n_points`` for the strongest non-overlapping dips; ``point_scatter_ppm``.
 
     Notes
     -----
     A periodic search needs at least two events. A planet with a period longer than
     half the data has at most one, and the mission pipelines report those only as
-    single-transit candidates. This tool scores each box of width ``d`` centred at
-    each time by
+    single-transit candidates. This tool scores each box of width ``d`` (days)
+    centred at each time by the single-event statistic of the Kepler pipeline [2]_,
 
-    ``snr = (1 - mean_flux_in_box) / (sigma / sqrt(n))``
+    ``snr = (median_box_mean - mean_flux_in_box) / sigma_d``
 
-    with ``sigma`` the point-to-point scatter and ``n`` the points in the box. That
-    is the single-event statistic of the Kepler pipeline [1]_. Boxes that straddle a
-    gap, where the points span more than 1.5 times the box width, are skipped. The
-    strongest boxes are kept greedily with a separation of at least two widths, so
-    one dip is not reported five times. An event is then a hypothesis: fold at a few
-    trial periods, or check whether a second event of the same depth exists.
+    where ``sigma_d`` is the noise at the box timescale: 1.4826 times the median
+    absolute deviation of the box means over every box of width ``d`` that does not
+    straddle a gap. On white noise ``sigma_d`` equals ``sigma / sqrt(n)`` with
+    ``sigma`` the point scatter and ``n`` the points in the box. On an active star
+    it is larger, in the way the combined differential photometric precision of the
+    Kepler pipeline [3]_ is larger, so slow variability does not produce an event
+    with a high statistic.
+
+    The Savitzky-Golay detrending in :func:`stargazer.baseline.detrend` keeps the
+    full depth of a dip only if its window is several times the dip's width. A
+    caller that chooses a short window for an active star would erase every long
+    event, so each box width is searched on its own detrended series with the window
+
+    ``w = max(detrend_window_days, window_factor * d)``
+
+    in days. A gap longer than five cadences splits the data into segments. A box
+    that crosses a segment break is skipped, and so is a box within ``edge_widths``
+    widths of the start or the end of its segment. At an edge the filter fits a
+    one-sided window and leaves a dip-shaped residual that reaches about three
+    widths into the segment; a full run reported it as the same false event on
+    every episode of a star. A segment shorter than two detrending windows is all
+    edge and is skipped. The strongest boxes are kept greedily with a
+    separation of at least two widths, so one dip is not reported five times. An
+    event is then a hypothesis: fold at a few trial periods, or check whether a
+    second event of the same depth exists.
 
     References
     ----------
-    .. [1] Jenkins, J. M. (2002). The impact of solar-like variability on the
+    .. [2] Jenkins, J. M. (2002). The impact of solar-like variability on the
        detectability of transiting terrestrial planets. The Astrophysical Journal,
        575, 493. https://doi.org/10.1086/341136
+    .. [3] Christiansen, J. L., et al. (2012). The derivation, properties, and value
+       of Kepler's combined differential photometric precision. Publications of the
+       Astronomical Society of the Pacific, 124, 1279. https://doi.org/10.1086/668847
     """
     from stargazer.inject import point_scatter
 
-    work_time, work_flux = detrend(time, flux, detrend_window_days)
-    sigma = point_scatter(work_flux)
-    cadence = float(np.median(np.diff(work_time)))
-    cumulative = np.concatenate([[0.0], np.cumsum(work_flux)])
+    detrended: dict[float, tuple[np.ndarray, np.ndarray, float]] = {}
     candidates = []
     for duration in durations_days:
+        window = max(detrend_window_days, window_factor * duration)
+        if window not in detrended:
+            work_time, work_flux = detrend(time, flux, window)
+            detrended[window] = (work_time, work_flux, point_scatter(work_flux))
+        work_time, work_flux, sigma = detrended[window]
+        cadence = float(np.median(np.diff(work_time)))
+        cumulative = np.concatenate([[0.0], np.cumsum(work_flux)])
+        breaks = np.where(np.diff(work_time) > SEGMENT_BREAK_CADENCES * cadence)[0]
+        segment_starts = np.concatenate([[work_time[0]], work_time[breaks + 1]])
+        segment_ends = np.concatenate([work_time[breaks], [work_time[-1]]])
         n_box = max(min_points, round(duration / cadence))
         if n_box >= len(work_flux):
             continue
         starts = np.arange(len(work_flux) - n_box + 1)
-        spans = work_time[starts + n_box - 1] - work_time[starts]
         means = (cumulative[starts + n_box] - cumulative[starts]) / n_box
-        snr = (1.0 - means) / (sigma / np.sqrt(n_box))
-        snr[spans > 1.5 * duration] = -np.inf
+        box_starts = work_time[starts]
+        box_ends = work_time[starts + n_box - 1]
+        segment_of_start = np.searchsorted(segment_starts, box_starts, side="right") - 1
+        segment_of_end = np.searchsorted(segment_starts, box_ends, side="right") - 1
+        start_edge = segment_starts[segment_of_start]
+        end_edge = segment_ends[segment_of_end]
+        margin = edge_widths * duration
+        whole = (
+            (segment_of_start == segment_of_end)
+            & (end_edge - start_edge >= 2.0 * window)
+            & (box_starts - start_edge >= margin)
+            & (end_edge - box_ends >= margin)
+        )
+        if not whole.any():
+            continue
+        level = float(np.median(means[whole]))
+        noise = float(MAD_TO_SIGMA * np.median(np.abs(means[whole] - level)))
+        if noise <= 0:
+            noise = sigma / np.sqrt(n_box)
+        snr = (level - means) / noise
+        snr[~whole] = -np.inf
         for index in np.argsort(-snr)[: 4 * n_events]:
             if not np.isfinite(snr[index]) or snr[index] <= 0:
                 break
             centre = 0.5 * (work_time[index] + work_time[index + n_box - 1])
-            candidates.append((float(snr[index]), float(centre), duration, float(1.0 - means[index]), n_box))
+            candidates.append(
+                (float(snr[index]), float(centre), duration, float(level - means[index]), noise, n_box)
+            )
     candidates.sort(reverse=True)
     events = []
-    for snr_value, centre, duration, depth, n_box in candidates:
+    for snr_value, centre, duration, depth, noise, n_box in candidates:
         if any(abs(centre - kept["time"]) < 2 * max(duration, kept["duration"]) for kept in events):
             continue
         events.append(
@@ -278,12 +350,15 @@ def single_events(
                 "duration": duration,
                 "depth_ppm": round(depth * 1e6, 1),
                 "snr": round(snr_value, 2),
+                "noise_ppm": round(noise * 1e6, 1),
                 "n_points": n_box,
             }
         )
         if len(events) >= n_events:
             break
-    return {"events": events, "point_scatter_ppm": round(sigma * 1e6, 1)}
+    shortest = min(detrended) if detrended else None
+    scatter = detrended[shortest][2] if shortest is not None else point_scatter(flux)
+    return {"events": events, "point_scatter_ppm": round(scatter * 1e6, 1)}
 
 
 def odd_even(
@@ -557,7 +632,8 @@ TOOLS: tuple[ToolSpec, ...] = (
             "Find the strongest individual dips without assuming they repeat. Use when bls_peaks finds "
             "nothing convincing, or when a planet could have only one or two transits in the data "
             "(long period). Returns up to five events with time (days from start), duration, "
-            "depth_ppm, snr and n_points. An event with snr above about 8 is a hypothesis, not a "
+            "depth_ppm, snr, noise_ppm (the noise at the event's timescale, which stellar variability "
+            "raises) and n_points. An event with snr above about 8 is a hypothesis, not a "
             "detection: look for a second event of the same depth and fold at the period between "
             "them. A lone event with no partner, snr above about 10, a transit-like duration (hours) "
             "and a flat curve around it can be submitted as a single event: detected=true with t0, "
@@ -567,7 +643,11 @@ TOOLS: tuple[ToolSpec, ...] = (
             "type": "object",
             "properties": {
                 "detrend_window_days": _number(
-                    "Detrending window, days. Use the same value as in bls_peaks.", 0.75, positive=True
+                    "Shortest detrending window, days. Each box width is searched with a window of at "
+                    "least six times the width, so a short window on an active star does not erase "
+                    "a long event.",
+                    0.75,
+                    positive=True,
                 ),
             },
             "required": [],

@@ -76,7 +76,7 @@ description written for the model. The agent gets the tool only when the test pa
 ### 3a Detection
 - [x] `summarize`: cadence, scatter, flux range, gaps
 - [x] `bls_peaks`: Box Least Squares with distinct peaks, alias periods, event counts, a detrend window, and masks
-- [x] `single_events`: single-event statistic over box widths, the regime BLS cannot see
+- [x] `single_events`: single-event statistic over box widths, the regime BLS cannot see; window tied to the box width and noise at the box timescale (LOGBOOK 2026-10-11)
 - [ ] Iterative multi-signal search: find, mask, repeat, until the next peak is noise (the pipeline's "multiple planet search")
 - [ ] Transit Least Squares as a second search with a physical transit shape, for shallow signals
 - [ ] Transit-shape fit with batman: depth, duration, impact parameter and their uncertainties; box versus V shape
@@ -96,6 +96,9 @@ description written for the model. The agent gets the tool only when the test pa
 ### 3c Reporting
 - [ ] `vetting_report`: one structured document from the tool results, in the form ExoFOP expects
 - [ ] Preregistered predictions: transit times and depths for the next sector, with frozen code and hashes
+
+### 3d Course notebooks
+- [ ] `examples/`: one Jupyter notebook for each tool, for a human reader, in the STYLE.md register, with plots. Each notebook shows one real episode, the tool's equation, the tool's output and what the plot shows. Added as each tool is finished.
 
 ## Phase 4: Data beyond one TESS sector
 
@@ -144,11 +147,14 @@ form"): the form scores a real single-transit detection, and the checks found th
 0.3-day detrending window erases single events longer than about four hours.
 
 First steps for the next session:
-1. `single_events`: detrend with a window tied to each box width, or a fit that masks
-   the box, with a test on a 6-hour event under a 0.3-day window (LOGBOOK finding).
-   Then Inkling-Small on all of s98_v2 into `results/full_v3form/`, with
-   `--renderer tml_v0`. The number to watch is completeness in the one-transit bin,
-   0 of 18 before.
+The full Inkling-Small run on s98_v2 with the single-event form is recorded (LOGBOOK,
+last entry): 2 of 18 single-transit planets found, the first ever, and a false-alarm
+rate of 33 percent against 11 percent, from repeated dips in the real light curves that
+the model reports as events.
+
+1. The systematics tool: flag a dip that touches a gap, the data's edges or a known
+   momentum dump, and a stellar-context tool with the rotation period and variability
+   amplitude. Then a stricter single-event rule in the prompt. Rerun s98_v2.
 2. Phase 3a: iterative multi-signal search and the transit-shape fit, with tests.
 3. Phase 3b: secondary eclipse search and the ephemeris match, the two cheapest vetting tools.
 4. Then the larger models on s98_v1 and s98_v2, three seeds each.

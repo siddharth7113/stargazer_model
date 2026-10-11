@@ -280,6 +280,34 @@ def test_single_events_finds_a_lone_transit(lc, star):
     assert all(abs(event["time"] - 20.0) > 0.2 for event in events[1:])  # no duplicate of the same dip
 
 
+def test_single_events_keeps_a_long_event_under_a_short_window(lc, star):
+    """A 6-hour 2000 ppm event survives a 0.3-day window, since each box width detrends with three widths."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=40.0, t0=20.0, depth=0.002, b=0.0, star=star)
+    assert truth.duration > 0.2  # about 6 hours for a 40-day orbit of a Sun-like star
+    injected = inject(relative, flux, truth)
+    in_transit = np.abs(relative - 20.0) < 0.05
+    erased = tools.detrend(relative, injected, 0.3)[1]
+    assert 1.0 - erased[in_transit].mean() < 0.0005  # the plain filter leaves under a quarter of the dip
+    events = tools.single_events(relative, injected, detrend_window_days=0.3)["events"]
+    assert abs(events[0]["time"] - 20.0) < 0.05 and events[0]["snr"] > 12
+
+
+def test_single_events_skips_the_edge_of_a_segment(lc):
+    """A ramp at the start of the data and after the gap is not an event: the filter is one-sided there."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    ramped = flux.copy()
+    for segment_start in (0.0, 14.0):
+        after = relative >= segment_start
+        ramped[after] *= 1.0 - 0.005 * np.exp(-(relative[after] - segment_start) / 0.1)
+    unguarded = tools.single_events(relative, ramped, edge_widths=0.0)["events"]
+    assert any(event["time"] < 0.5 or 14.0 < event["time"] < 14.5 for event in unguarded)
+    guarded = tools.single_events(relative, ramped)["events"]
+    assert all(event["time"] >= 0.5 and not 14.0 < event["time"] < 14.5 for event in guarded)
+
+
 def test_single_events_on_noise_are_weak(lc):
     """Pure noise gives only low-SNR events, well below the level a real dip reaches."""
     time, flux, _ = lc

@@ -497,3 +497,82 @@ therefore needs a detrending that does not see the box it tests: a window tied t
 box width (three times the width or more) or a fit that masks the box. This is a tool
 change for the next session, before the full s98_v2 run, since 9 of the 18 one-transit
 injections in s98_v2 are longer than 4 hours.
+
+**single_events: detrending tied to the box width, noise at the box timescale.**
+Each box width ``d`` now searches its own detrended series with window
+``max(detrend_window_days, 6 d)``, and the statistic divides by the noise at the box
+timescale, 1.4826 times the median absolute deviation of the box means, in place of
+``sigma / sqrt(n)``. Each event reports that noise as ``noise_ppm``. The reasons, from
+the offline scan on the three one-transit episodes (true-event snr at window 0.3):
+
+| factor, noise | ep_0004 (5.7 h) | ep_0007 (3.3 h) | ep_0012 (5.8 h) | top spurious event |
+|---|---|---|---|---|
+| 3, point scatter | 5.4 | 11.9 | 12.7 | 53 (12-hour box on ep_0012) |
+| 6, point scatter | 10.0 | 17.9 | 13.7 | 240 (12-hour box on ep_0012) |
+| 3, box timescale | 8.3 | 18.9 | 8.4 | 18 |
+| 6, box timescale | 10.4 | 18.5 | 8.5 | 12 |
+
+A wider window keeps more of a long dip (a Savitzky-Golay fit at three widths still
+halves a 6-hour dip on a real star), but with the point scatter as the noise, a wide
+window on an active star turns slow variability into events with an snr in the
+hundreds. The box-timescale noise removes those and keeps the true events, so the
+tool now gives the same events whichever window the model picks. On ep_0012 the true
+event sits at 8.5 because the star's variability at the 6-hour timescale is real
+noise; the earlier 13.7 was an underestimate of that noise. Test:
+``test_single_events_keeps_a_long_event_under_a_short_window`` (a 6-hour, 2000 ppm
+event under a 0.3-day window, where the plain filter keeps under a quarter of the
+depth). A tool change: runs from here are the `full_v3form` series.
+
+**Three one-transit episodes again with the fixed tool**
+(`results/smoke/agent_inkling_small_s98_v2_form3_single_fix.json`, $0.14). ep_0004:
+single_events now lists the true event first (snr 10.4, 1455 ppm); the model
+declined, citing an active star and the snr near the rule's 10. ep_0007: event hit
+again, score 1.0. ep_0012: the true event is third at snr 8.5; declined. One event
+hit of three, as before, but now the tool surfaces the signals and the decision is
+the model's. The full run is next.
+
+**Inkling-Small, full s98_v2 run with the single-event form and the first
+single_events fix** (`results/full_v3form/agent_inkling_small_s98_v2.json`, log
+beside it; renderer `tml_v0`, temperature 0.6, seed 0, eight workers, no errors,
+925 s, $10.15, 35,249 tokens an episode).
+
+```
+stargazer agent --episodes data/episodes/s98_v2 --backend tinker --model thinkingmachines/Inkling-Small \
+    --renderer tml_v0 --limit 0 --workers 8 --out results/full_v3form/agent_inkling_small_s98_v2.json
+```
+
+| run | false alarm | exact | with aliases | mean score | one transit | two | 3-5 | 6+ |
+|---|---|---|---|---|---|---|---|---|
+| v2tools (period form only) | 0.11 | 0.32 | 0.34 | 0.533 | 0/18 | 1/14 | 18% | 52% |
+| v3form | 0.33 | 0.31 | 0.32 | 0.445 | 2/18 | 2/14 | 27% | 42% |
+
+The form did what it was built for: two one-transit episodes scored (ep_0029 and
+ep_0079, events at snr 138 and 370), and the two-transit and three-to-five bins rose.
+It also opened a false-alarm channel. The model made 22 single-event submissions: 2
+hits, 7 on transit episodes but off the transit (`wrong_event`), 13 on null
+episodes. The 13 null false alarms and the 7 wrong events are the same six event
+times repeated across episodes of the same host star (t = 0.04, 0.27, 24.05, 14.57,
+15.07, 21.18 days), each within 0.14 day of the start or the end of a data segment.
+The Savitzky-Golay filter fits a one-sided window at a segment edge and leaves a
+dip-shaped residual, which the box search then reports with an snr of 12 to 33. The
+periodic form also moved: false alarms 8 to 11, wrong periods 6 to 12, and the
+six-plus bin fell from 52 to 42 percent; with one seed the share of variance in that
+is unknown.
+
+**single_events: segment-edge guard.** A box now has to lie inside one segment (a
+gap longer than five cadences splits segments), at least three box widths from the
+segment's start and end, in a segment at least two detrending windows long. The
+margin came from a scan over one to four widths on the seven repeated false events
+and the five true events above: at three widths five of the seven false events were
+gone and every true event stayed; the box-in-one-segment rule removed the sixth
+(a 12-hour box across a 0.2-day gap); the segment-length rule removed the last (a
+one-hour box in a 7.5-hour segment). After the guard the true event is the top
+event on ep_0004 (snr 11.4), ep_0007 (15.5) and ep_0012 (9.0), with the same list
+at windows 0.3 and 0.75. Test: `test_single_events_skips_the_edge_of_a_segment`
+(an exponential ramp at the data start and after the gap is reported without the
+guard and not with it). Model check on ep_0032, ep_0038, ep_0042 (the three
+repeated null false alarms) and ep_0004
+(`results/smoke/agent_inkling_small_s98_v2_edge_fix.json`, $0.18): two true nulls, one
+periodic false alarm at a 12.08-day noise peak (the prompt-rule item in the PLAN),
+ep_0004 declined again at snr 11.4. The full run with the guard is
+`results/full_v3form/agent_inkling_small_s98_v2_edge.json`, launched after the check.
