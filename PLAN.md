@@ -135,29 +135,24 @@ curve as three arrays, so each survey needs only a loader and a target list.
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-All runs of the day are finished and recorded: `results/full/` (old tools, three models on s98_v1), `results/full_v2tools/` (new tools: Qwen3.8-27B and Inkling-Small on s98_v1, Inkling-Small on s98_v2), baselines and sweeps for both sets. The repository is public at github.com/siddharth7113/stargazer_model; Read the Docs import is pending on the owner's account.
-
-The scorer now has the single-event submission form (LOGBOOK, "Single-event submission
-form"). The prompt and the submit tool changed with it, so every agent run before this
-point is on the old form; the s98_v2 baseline is unchanged because BLS always gives a
-period.
-
-The three-episode checks are done (LOGBOOK, "Three-episode checks of the single-event
-form"): the form scores a real single-transit detection, and the checks found that a
-0.3-day detrending window erases single events longer than about four hours.
+The day added the single-event submission form, four tools (search_signals,
+fit_transit, secondary_eclipse, and the rebuilt single_events with a window tied to
+the box width, noise at the box timescale and a segment-edge guard), and three full
+Inkling-Small runs on s98_v2 that measure each step: `results/full_v3form/` (the
+form, then the edge guard), `results/full_v4search/` (search_signals and the prompt
+rules; mean score 0.538 at an 11 percent false-alarm rate, the best so far). The
+`full_v5fit` run, with fit_transit and secondary_eclipse in the prompt, is the next
+number; if it is running, its file is `results/full_v5fit/agent_inkling_small_s98_v2.json`.
+Inkling-Small needs `--renderer tml_v0`.
 
 First steps for the next session:
-The full Inkling-Small run on s98_v2 with the single-event form is recorded (LOGBOOK,
-last entry): 2 of 18 single-transit planets found, the first ever, and a false-alarm
-rate of 33 percent against 11 percent, from repeated dips in the real light curves that
-the model reports as events.
-
-1. The systematics tool: flag a dip that touches a gap, the data's edges or a known
-   momentum dump, and a stellar-context tool with the rotation period and variability
-   amplitude. Then a stricter single-event rule in the prompt. Rerun s98_v2.
-2. Phase 3a: iterative multi-signal search and the transit-shape fit, with tests.
-3. Phase 3b: secondary eclipse search and the ephemeris match, the two cheapest vetting tools.
-4. Then the larger models on s98_v1 and s98_v2, three seeds each.
+1. Read the `full_v5fit` run against the table in the LOGBOOK. The two vetting tools
+   should cut wrong periods and false alarms; if they cost completeness, read the
+   trajectories of the new misses with `stargazer view`.
+2. Phase 3b: the ephemeris match against known eclipsing binaries and TOIs, the last
+   vetting tool that needs only the light curve's coordinates and the catalogues.
+3. The larger models on s98_v1 and s98_v2, three seeds each, and the course notebooks
+   (Phase 3d) for the tools that exist.
 
 ## Open questions
 

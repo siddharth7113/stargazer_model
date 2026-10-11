@@ -685,6 +685,8 @@ def secondary_eclipse(
     duration: float,
     detrend_window_days: float = 0.75,
     n_phases: int = 200,
+    primary_exclusion_durations: float = 3.0,
+    window_factor: float = 6.0,
 ) -> dict:
     """Look for a second dip in the folded light curve, at phase 0.5 and at any other phase.
 
@@ -701,6 +703,11 @@ def secondary_eclipse(
         Savitzky-Golay window, see :func:`stargazer.baseline.detrend`.
     n_phases : int
         Number of trial phases across the orbit.
+    primary_exclusion_durations : float
+        Trial phases within this many durations of the primary are left out of the
+        noise and of the search for another dip.
+    window_factor : float
+        The detrending window is at least this many durations.
 
     Returns
     -------
@@ -722,13 +729,18 @@ def secondary_eclipse(
     The detrended flux is folded on the period. The depth at a phase is the mean
     flux deficit of the points within half a duration of it. The noise is 1.4826
     times the median absolute deviation of the depths at ``n_phases`` trial phases,
-    excluding one duration on each side of phase 0, so stellar variability at the
-    transit timescale is part of it. The sigma of a depth is the depth over that
-    noise. The strongest other dip is the deepest trial phase outside the primary
-    window; a strong dip at a phase other than 0.5 means the period is wrong or a
-    second signal is present. The verdict is ``secondary_at_half_phase`` if the
-    phase-0.5 depth reaches 3 sigma, else ``dip_at_other_phase`` if the strongest
-    other dip reaches 5 sigma, else ``no_secondary``.
+    excluding three durations on each side of phase 0, so stellar variability at the
+    transit timescale is part of it. The exclusion is wide because the detrending
+    filter leaves a residual around a deep dip that reaches about two durations out,
+    and a three-episode check reported that residual as a dip at phase 0.03. The
+    detrending window is at least ``window_factor`` durations, as in
+    :func:`single_events`, so a short window cannot erase the dips the test looks
+    for. The sigma of a depth is the depth over that noise. The strongest other dip
+    is the deepest trial phase outside the primary window; a strong dip at a phase
+    other than 0.5 means the period is wrong or a second signal is present. The
+    verdict is ``secondary_at_half_phase`` if the phase-0.5 depth reaches 3 sigma,
+    else ``dip_at_other_phase`` if the strongest other dip reaches 5 sigma, else
+    ``no_secondary``.
 
     References
     ----------
@@ -737,7 +749,8 @@ def secondary_eclipse(
        (Q1-Q17 DR24). The Astrophysical Journal Supplement Series, 224, 12.
        https://doi.org/10.3847/0067-0049/224/1/12
     """
-    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    window = max(detrend_window_days, window_factor * duration)
+    work_time, work_flux = detrend(time, flux, window)
     phase = ((work_time - t0) / period) % 1.0
     half_width = 0.5 * duration / period
 
@@ -747,7 +760,7 @@ def secondary_eclipse(
         return float(1.0 - points.mean()) if len(points) >= 3 else None
 
     trials = np.arange(n_phases) / n_phases
-    away = np.abs(((trials + 0.5) % 1.0) - 0.5) > 2.0 * half_width
+    away = np.abs(((trials + 0.5) % 1.0) - 0.5) > 2.0 * primary_exclusion_durations * half_width
     depths = np.array(
         [depth_at(trial) if ok else np.nan for trial, ok in zip(trials, away, strict=True)], dtype=float
     )

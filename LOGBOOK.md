@@ -675,3 +675,46 @@ eclipse half an orbit later gives the binary verdict; a planet alone gives
 no_secondary; a second dip at phase 0.3 gives dip_at_other_phase at that phase. The
 prompt adds it after odd_even and requires no_secondary. The viewer summarises it.
 Tool and prompt change; the `full_v5fit` series includes it.
+
+**Three-episode check of secondary_eclipse**
+(`results/smoke/agent_inkling_small_s98_v2_secondary3.json`, Inkling-Small, `tml_v0`,
+$0.14, no errors). ep_0001 hit, verdict no_secondary (phase 0.5 at -0.7 sigma);
+ep_0000 and ep_0002 true null. On ep_0000 the tool reported dip_at_other_phase at
+phase 0.03 with 18 sigma: that is the detrending residual beside the 16.9-day
+candidate's own dip, 0.5 days from it, inside the one-duration exclusion the first
+version used. The exclusion around the primary is now three durations on each side,
+and the detrending window is at least six durations, as in single_events, because
+the model's 0.3-day window on a 6-hour box had flattened the fold to a noise of 33
+ppm and made a 370 ppm residual look like 11 sigma. With both changes the noise on
+ep_0000 is 149 ppm and the strongest other dip is 745 ppm at phase 0.195, 5.0 sigma,
+still dip_at_other_phase at the threshold; on a null episode with three orbits of an
+active star that is the honest reading, and the model must not submit it. The tests
+are unchanged; the next series carries the corrected tool.
+
+**Inkling-Small, full s98_v2 run with search_signals and the single-event prompt rules**
+(`results/full_v4search/agent_inkling_small_s98_v2.json`, log beside it; renderer
+`tml_v0`, temperature 0.6, seed 0, eight workers, no errors, 807 s, $7.86, 27,286
+tokens and 8.0 tool calls an episode; tools and prompt of commit `2683ebb`, so
+without fit_transit and secondary_eclipse).
+
+```
+stargazer agent --episodes data/episodes/s98_v2 --backend tinker --model thinkingmachines/Inkling-Small \
+    --renderer tml_v0 --limit 0 --workers 8 --out results/full_v4search/agent_inkling_small_s98_v2.json
+```
+
+| run | false alarm | exact | with aliases | mean score | one transit | two | 3-5 | 6+ | calls/ep | cost |
+|---|---|---|---|---|---|---|---|---|---|---|
+| v2tools | 0.11 | 0.32 | 0.34 | 0.533 | 0/18 | 1/14 | 4/22 | 38/73 | 9.7 | $9.16 |
+| v3form + edge guard | 0.12 | 0.28 | 0.34 | 0.515 | 2/18 | 2/14 | 6/22 | 33/73 | 9.6 | $9.65 |
+| v4search | 0.11 | 0.32 | 0.35 | 0.538 | 2/18 | 2/14 | 5/22 | 36/73 | 8.0 | $7.86 |
+
+Outcomes: 39 hits, 1 alias, 10 wrong periods, 5 event hits, 0 wrong events, 72
+misses, 65 true nulls, 8 false alarms. Five single-event submissions, all hits.
+Reading. The one-call search and the two prompt rules kept the gains of the event
+form (five event hits, the one-transit bin at 2 of 18) and removed its costs: the
+false-alarm rate is back at the v2tools level and no event was submitted at a wrong
+time. The mean score is the highest of the series, with 17 percent fewer tool calls
+and 14 percent less cost an episode. Wrong periods are 10 against 6 and 8; with one
+seed that spread is within what a seed moves. The faint regime is unchanged: the 72
+misses are the injections below expected snr 20, where the search statistic does
+not reach the noise ceiling.
