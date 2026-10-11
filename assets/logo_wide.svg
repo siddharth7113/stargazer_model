@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 256" width="850" height="256" role="img" aria-label="Star Gazer">
+  <title>Star Gazer</title>
+  <style>
+    .word { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, "Noto Sans", sans-serif; font-weight: 700; font-size: 100px; letter-spacing: -1.5px; }
+    .w1 { fill: #1F3A52; }
+    .w2 { fill: #2A9D8F; }
+    @media (prefers-color-scheme: dark) {
+      .w1 { fill: #FFF3DC; }
+      .w2 { fill: #4FC2B3; }
+    }
+  </style>
+  <g>
+    <rect x="8" y="8" width="240" height="240" rx="60" fill="#FFF3DC"/>
+    <polygon transform="rotate(-8 128 104)" points="128.0,34.0 149.7,74.1 194.6,82.4 163.2,115.4 169.1,160.6 128.0,141.0 86.9,160.6 92.8,115.4 61.4,82.4 106.3,74.1" fill="#FFC23D" stroke="#FFC23D" stroke-width="22" stroke-linejoin="round"/>
+    <g stroke="#2B5D87" stroke-width="7" stroke-linecap="round">
+      <line x1="98" y1="100" x2="112" y2="100"/>
+      <line x1="104" y1="116" x2="114" y2="116"/>
+    </g>
+    <circle cx="142" cy="108" r="19" fill="#2B5D87"/>
+    <path d="M48 188 C62 210 94 220 128 220 C162 220 194 210 208 188" fill="none" stroke="#2A9D8F" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text class="word" x="292" y="164"><tspan class="w1">Star</tspan><tspan class="w2"> Gazer</tspan></text>
+</svg>
