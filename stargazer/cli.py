@@ -172,14 +172,16 @@ def cmd_show(args: argparse.Namespace) -> None:
     from stargazer.viewer import load, render_trajectory
 
     results, truth = load(Path(args.results))
-    markup = render_trajectory(
+    trajectory = render_trajectory(
         results.preds[args.episode],
         truth[args.episode],
         results.rows[args.episode],
         show_thinking=not args.no_thinking,
         full_results=args.full,
     )
-    Console(width=args.width).print(f"[bold]== {args.episode}  system={results.system}[/bold]\n" + markup)
+    console = Console(width=args.width)
+    console.rule(f"[bold]{args.episode}[/bold]  system={results.system}", align="left")
+    console.print(trajectory)
 
 
 def cmd_view(args: argparse.Namespace) -> None:
