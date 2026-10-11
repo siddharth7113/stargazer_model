@@ -21,7 +21,7 @@
   <img alt="Python 3.13" src="https://img.shields.io/badge/python-3.13-blue">
   <img alt="Tests" src="https://img.shields.io/badge/tests-pytest-success">
   <img alt="Style" src="https://img.shields.io/badge/style-ruff-informational">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-lightgrey">
+  <img alt="License" src="https://img.shields.io/badge/license-BSD--3--Clause-lightgrey">
 </p>
 
 ---
@@ -181,5 +181,6 @@ diagrams, the scoring rules, the verifiability mechanisms and the references.
 
 ## License
 
-The code is MIT. TESS data are public domain, NASA. The logo is original work released
-with the code.
+The code is BSD 3-Clause: use and modify freely, keep the copyright notice, do not use
+the author's name to endorse derived work. TESS data are public domain, NASA. The logo
+is original work released with the code.

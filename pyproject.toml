@@ -3,7 +3,7 @@ name = "stargazer"
 version = "0.1.0"
 description = "Verifiable exoplanet-finding benchmark and RL environment built on TESS light curves"
 readme = "README.md"
-license = "MIT"
+license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [
