@@ -1,0 +1,58 @@
+{
+ "results": "results/baseline_bls_s98_v2_sde7.json",
+ "episode_set_hash": "d03935c59b8706b8715c3363c917eef30d09c65ebdba46c654079a86b453d731",
+ "stat": "sde",
+ "sweep": [
+  {
+   "threshold": 7.0,
+   "false_alarm_rate": 0.7397260273972602,
+   "completeness_exact": 0.31496062992125984,
+   "completeness_with_aliases": 0.3543307086614173,
+   "mean_score": 0.29875
+  },
+  {
+   "threshold": 9.0,
+   "false_alarm_rate": 0.6438356164383562,
+   "completeness_exact": 0.31496062992125984,
+   "completeness_with_aliases": 0.3464566929133858,
+   "mean_score": 0.332
+  },
+  {
+   "threshold": 11.0,
+   "false_alarm_rate": 0.3698630136986301,
+   "completeness_exact": 0.30708661417322836,
+   "completeness_with_aliases": 0.33070866141732286,
+   "mean_score": 0.42612500000000003
+  },
+  {
+   "threshold": 13.0,
+   "false_alarm_rate": 0.2054794520547945,
+   "completeness_exact": 0.29133858267716534,
+   "completeness_with_aliases": 0.31496062992125984,
+   "mean_score": 0.477625
+  },
+  {
+   "threshold": 15.0,
+   "false_alarm_rate": 0.0958904109589041,
+   "completeness_exact": 0.29133858267716534,
+   "completeness_with_aliases": 0.30708661417322836,
+   "mean_score": 0.5167499999999999
+  },
+  {
+   "threshold": 18.0,
+   "false_alarm_rate": 0.0684931506849315,
+   "completeness_exact": 0.25196850393700787,
+   "completeness_with_aliases": 0.25984251968503935,
+   "mean_score": 0.500875
+  },
+  {
+   "threshold": 21.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.14960629921259844,
+   "completeness_with_aliases": 0.14960629921259844,
+   "mean_score": 0.46
+  }
+ ],
+ "max_false_alarm": 0.05,
+ "chosen_threshold": 18.631159442554416
+}

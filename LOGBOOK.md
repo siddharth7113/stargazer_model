@@ -384,3 +384,14 @@ the thinking renderer so it plans before acting.
 Three-family comparison on s98_v1 with the old tools, at the agents' own false-alarm
 rates: Qwen3.8-27B 43 percent at 24 percent, Inkling-Small 40 percent at 19 percent,
 Nemotron-3.5-Lightning 11 percent at 26 percent, BLS 41 percent at 28 percent.
+
+**Episode set s98_v2 and its baseline.** Built with
+`stargazer build --targets data/targets_s98.json --n 200 --seed 2 --max-period 60 --out data/episodes/s98_v2`,
+hash `d03935c59b8706b8715c3363c917eef30d09c65ebdba46c654079a86b453d731`, verify OK.
+127 injections with at least one transit: 18 with one, 14 with two, 22 with three to
+five, 73 with six or more. BLS baseline (`results/baseline_bls_s98_v2_sde7.json`,
+sweep in `results/calibrate_bls_s98_v2.json`): completeness 0.25 at the 5 percent
+false-alarm threshold of 18.63, 0.29 at threshold 13 (false alarm 0.21). By transit
+count at the default threshold: one transit 0 percent, two 14 percent, three to five
+27 percent, six or more 51 percent. This is the set where `single_events` has to earn
+its place; BLS cannot find a single transit by construction.
