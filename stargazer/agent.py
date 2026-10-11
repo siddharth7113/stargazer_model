@@ -124,13 +124,14 @@ class ToolAgentDetector:
     Parameters
     ----------
     backend : ChatBackend
-    max_tool_calls : int
+    max_tool_calls : int, optional
         Safety stop, not a budget: it exists so a model that loops cannot run forever.
         Reaching it ends the episode as "none". Each tool result carries
         ``calls_remaining`` so the model can pace itself; a careful run uses 6 to 12.
-    max_turns : int
-        Hard cap on model calls per episode.
-    max_tokens_per_episode : int
+        None means the class default of 40.
+    max_turns : int, optional
+        Hard cap on model calls per episode. None means 30.
+    max_tokens_per_episode : int, optional
         Hard cap on input plus output tokens per episode, from the backend's usage. The
         conversation is re-sent on every turn, so the total grows with the square of the
         number of calls; 20 calls with lean tool outputs cost about 150,000 tokens.
@@ -139,18 +140,24 @@ class ToolAgentDetector:
 
     name = "tool_agent"
 
+    DEFAULT_MAX_TOOL_CALLS = 40
+    DEFAULT_MAX_TURNS = 30
+    DEFAULT_MAX_TOKENS = 400_000
+
     def __init__(
         self,
         backend: ChatBackend,
-        max_tool_calls: int = 40,
-        max_turns: int = 30,
-        max_tokens_per_episode: int = 400_000,
+        max_tool_calls: int | None = None,
+        max_turns: int | None = None,
+        max_tokens_per_episode: int | None = None,
         system_prompt: str = SYSTEM_PROMPT,
     ):
         self._backend = backend
-        self._max_tool_calls = max_tool_calls
-        self._max_turns = max_turns
-        self._max_tokens = max_tokens_per_episode
+        self._max_tool_calls = self.DEFAULT_MAX_TOOL_CALLS if max_tool_calls is None else max_tool_calls
+        self._max_turns = self.DEFAULT_MAX_TURNS if max_turns is None else max_turns
+        self._max_tokens = (
+            self.DEFAULT_MAX_TOKENS if max_tokens_per_episode is None else max_tokens_per_episode
+        )
         self._system_prompt = system_prompt
 
     @property

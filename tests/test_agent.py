@@ -172,3 +172,10 @@ def test_trajectory_keeps_conversation_and_thinking(lc, fake_tools):
     assert roles == ["user", "assistant", "tool", "assistant", "tool"]
     assert pred.extra["conversation"][1]["content"] == "I will search."
     assert pred.extra["thinking"] == ["hmm", ""]
+
+
+def test_none_caps_mean_defaults():
+    """The CLI passes None for an unset cap; None must select the default, never reach the countdown."""
+    config = ToolAgentDetector(FixedBackend([]), max_tool_calls=None, max_turns=None).config
+    assert config["max_tool_calls"] == ToolAgentDetector.DEFAULT_MAX_TOOL_CALLS
+    assert config["max_turns"] == ToolAgentDetector.DEFAULT_MAX_TURNS

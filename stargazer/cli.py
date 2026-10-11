@@ -132,6 +132,9 @@ def cmd_agent(args: argparse.Namespace) -> None:
     ids = es.ids[: args.limit] if args.limit else None
 
     def progress(episode_id, prediction, truth_record):
+        if "error" in prediction.extra:
+            print(f"{episode_id} {truth_record['kind']:8s} ERROR {prediction.extra['error']}", flush=True)
+            return
         usage = prediction.extra.get("usage", {})
         tokens = int(usage.get("input_tokens", 0) + usage.get("output_tokens", 0))
         extra = prediction.extra
