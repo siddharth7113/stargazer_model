@@ -395,3 +395,40 @@ false-alarm threshold of 18.63, 0.29 at threshold 13 (false alarm 0.21). By tran
 count at the default threshold: one transit 0 percent, two 14 percent, three to five
 27 percent, six or more 51 percent. This is the set where `single_events` has to earn
 its place; BLS cannot find a single transit by construction.
+
+**New tools on s98_v1: masked re-search and single_events** (runs launched 08:06,
+commit `c673f8d` tools and prompt, `results/full_v2tools/`).
+
+| system | tools | false alarm | completeness | mean score | wrong period | false alarms | tokens/ep | cost |
+|---|---|---|---|---|---|---|---|---|
+| Inkling-Small | old | 19% | 40% | 0.522 | 22 | 11 | 21,283 | ~$6 |
+| Inkling-Small | new | 5% | 36% | 0.535 | 9 | 3 | 31,295 | $9 |
+| Qwen3.8-27B | old | 24% | 43% | 0.527 | 37 | 14 | 56,808 | ~$60 |
+| Qwen3.8-27B | new | 21% | 41% | 0.528 | 24 | 12 | 67,736 | $76 |
+| BLS at 5% false alarm (SDE 18.6) | - | 3% | 32% | 0.505 | - | - | - | - |
+| BLS at SDE 11 | - | 28% | 41% | 0.502 | - | - | - | - |
+
+Reading. The new tools bought precision, not completeness. Inkling-Small's wrong
+periods fell from 22 to 9 and its false alarms from 11 to 3, so at a 5 percent
+false-alarm rate it now finds 36 percent against the baseline's 32 percent at the same
+rate: the first agent result above the thresholded BLS at a matched false-alarm rate.
+Qwen3.8-27B moved less and hit the 30-turn cap on 16 episodes, up from 6; more tools
+gave it more to explore. Both models used the masks heavily (177 and 352 masked
+searches) and called single_events on most episodes. Completeness in the SNR 7 to 20
+bins did not improve: the masked search removes wrong answers but does not surface the
+faint true signal, so the faint regime stays open.
+
+**Inkling-Small on s98_v2 with the new tools**
+(`results/full_v2tools/agent_inkling_small_s98_v2.json`): completeness 0.32 at a
+false-alarm rate of 0.11, mean score 0.53, $9. The BLS baseline on the same set gives
+0.29 at 0.21 (SDE 13) and 0.25 at 0.05. By transit count: one transit 0 of 18, two
+1 of 14, three to five 18 percent, six or more 52 percent.
+
+**Benchmark finding.** single_events was called on 169 of 200 episodes and found the
+lone events, but no single-transit episode scored, because a submission needs a period
+and a lone event has none. The scorer cannot reward the very thing the tool finds. A
+single-transit candidate is a real astronomical result (the mission pipelines publish
+them as such), so the scorer needs a second submission form: `detected=true` with an
+event time, duration and depth and no period, credited when the event time falls on an
+injected transit. Without it, every system scores zero on the regime the project cares
+most about. This is the first item for the next session, ahead of more tools.

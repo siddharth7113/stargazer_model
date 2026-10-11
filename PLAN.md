@@ -44,7 +44,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Scorer with alias credit, explicit tolerances, zero-transit injections scored as null
 - [x] BLS baseline; threshold chosen from null episodes (18.6 on s98_v1 for a 5 percent false-alarm rate)
 - [x] Episode sets: s98_v1 (periods to 20 days) and s98_v2 (periods to 60 days, single transits common)
-- [ ] Baseline on s98_v2 recorded in the LOGBOOK
+- [x] Baseline on s98_v2 recorded in the LOGBOOK
 - [ ] One small episode set committed to git for tests and demonstrations
 - [ ] Repeat each comparison run with three seeds and report mean and spread
 
@@ -58,9 +58,10 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Full trajectory saved for each episode; `stargazer view` and `stargazer show`; `stargazer compare`
 - [x] Parallel evaluation with a worker pool; models as separate processes
 - [x] First full comparison on s98_v1: Inkling-Small and Qwen3.8-27B level with thresholded BLS (LOGBOOK)
-- [ ] Nemotron-3.5-Lightning full run on s98_v1 recorded
-- [ ] Same models on s98_v1 with the masked search and single_events: does completeness rise at the same false-alarm rate?
-- [ ] Inkling-Small on s98_v2: how do agents do when single transits are common?
+- [x] Nemotron-3.5-Lightning full run on s98_v1 recorded (11 percent; loops to the turn cap)
+- [x] Same models on s98_v1 with the masked search and single_events: precision rose (Inkling 36 percent at 5 percent false alarm, above BLS); faint-regime completeness did not
+- [x] Inkling-Small on s98_v2: 32 percent at 11 percent false alarm; zero single-transit hits because the scorer requires a period
+- [ ] Scorer: a single-event submission form (event time, duration, depth, no period) credited against injected transit times; set-level metrics for it
 - [ ] Prompt rule: a peak near the noise level with no second line of evidence is "none" (wrong periods were noise peaks)
 - [ ] Larger models on the same sets: Kimi K2.6, Nemotron 3 Ultra, Inkling, Qwen3.5-397B-A17B
 
@@ -129,14 +130,10 @@ curve as three arrays, so each survey needs only a loader and a target list.
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-Running at the time of writing, with results landing in `results/full/` and
-`results/full_v2tools/`: Nemotron-3.5 on s98_v1 (old tools); Qwen3.8-27B and
-Inkling-Small on s98_v1 with the new tools; Inkling-Small on s98_v2; the BLS baseline on
-s98_v2 (`results/baseline_bls_s98_v2_sde7.json`). A subagent is rewriting
-`stargazer/viewer.py`; its tests are in `tests/test_viewer.py`.
+All runs of the day are finished and recorded: `results/full/` (old tools, three models on s98_v1), `results/full_v2tools/` (new tools: Qwen3.8-27B and Inkling-Small on s98_v1, Inkling-Small on s98_v2), baselines and sweeps for both sets. The repository is public at github.com/siddharth7113/stargazer_model; Read the Docs import is pending on the owner's account.
 
 First steps for the next session:
-1. `stargazer compare` on the finished files; record the tables in LOGBOOK; tick the Phase 2 boxes they settle.
+1. Scorer: the single-event submission form, so single-transit episodes can score (LOGBOOK, benchmark finding).
 2. Phase 3a: iterative multi-signal search and the transit-shape fit, with tests.
 3. Phase 3b: secondary eclipse search and the ephemeris match, the two cheapest vetting tools.
 4. Then the larger models on s98_v1 and s98_v2, three seeds each.
