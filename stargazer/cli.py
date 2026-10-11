@@ -17,7 +17,7 @@ def cmd_targets(args: argparse.Namespace) -> None:
     """Select host stars for a sector and save the targets file."""
     from stargazer.targets import save_targets, select_targets
 
-    selection = select_targets(args.sector, args.n_episodes, args.seed, tmag_max=args.tmag_max)
+    selection = select_targets(args.sector, args.n, args.seed, tmag_max=args.tmag_max)
     save_targets(selection, args.out)
     print(f"selected {selection['n_selected']} / {selection['n_requested']} targets -> {args.out}")
     print(f"sector 2-min stars: {selection['n_two_minute_in_sector']}")
@@ -54,7 +54,7 @@ def cmd_build(args: argparse.Namespace) -> None:
     from stargazer.targets import load_targets
 
     cfg = BuildConfig(
-        n=args.n_episodes,
+        n_episodes=args.n,
         seed=args.seed,
         null_frac=args.null_frac,
         period_range=(args.min_period, args.max_period),

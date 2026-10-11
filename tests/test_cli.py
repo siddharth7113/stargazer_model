@@ -45,9 +45,6 @@ def test_agent_command_forwards_renderer_temperature_and_seed(monkeypatch):
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    class StopHereError(Exception):
-        pass
-
     def stop(path):
         raise StopHereError
 
@@ -74,3 +71,61 @@ def test_agent_command_forwards_renderer_temperature_and_seed(monkeypatch):
         cli_module.cmd_agent(args)
     assert captured["renderer"] == "qwen3_8_xhigh_reasoning"
     assert captured["temperature"] == 0.5 and captured["seed"] == 3 and captured["base_model"] == "m"
+
+
+def test_build_command_forwards_arguments(monkeypatch, tmp_path):
+    """Every build flag reaches BuildConfig; a mismatch here silently builds the wrong set."""
+    import stargazer.cli as cli_module
+    import stargazer.episodes as episodes_module
+    import stargazer.targets as targets_module
+
+    captured = {}
+
+    def fake_build(targets, cache, out_dir, cfg, targets_path=None):
+        captured.update({"out": out_dir, "cfg": cfg, "targets_path": targets_path})
+        raise StopHereError
+
+    monkeypatch.setattr(targets_module, "load_targets", lambda path: {"targets": []})
+    monkeypatch.setattr(episodes_module.EpisodeSet, "build", staticmethod(fake_build))
+    args = cli_module.build_parser().parse_args(
+        [
+            "build",
+            "--targets",
+            "t.json",
+            "--out",
+            str(tmp_path),
+            "--n",
+            "7",
+            "--seed",
+            "3",
+            "--max-period",
+            "60",
+        ]
+    )
+    with pytest.raises(StopHereError):
+        cli_module.cmd_build(args)
+    assert captured["cfg"].n_episodes == 7 and captured["cfg"].seed == 3
+    assert captured["cfg"].period_range == (0.5, 60.0) and captured["cfg"].depth_range == (1e-4, 1e-2)
+
+
+class StopHereError(Exception):
+    """Raised by a stub to end a command once the call under test has been captured."""
+
+
+def test_targets_command_forwards_arguments(monkeypatch):
+    """The targets flags reach select_targets with the right names."""
+    import stargazer.cli as cli_module
+    import stargazer.targets as targets_module
+
+    captured = {}
+
+    def fake_select(sector, n_targets, seed, tmag_max):
+        captured.update({"sector": sector, "n_targets": n_targets, "seed": seed, "tmag_max": tmag_max})
+        raise StopHereError
+
+    monkeypatch.setattr(targets_module, "select_targets", fake_select)
+    args = cli_module.build_parser().parse_args(["targets", "--sector", "98", "--n", "12", "--seed", "4"])
+    args.out = "x"
+    with pytest.raises(StopHereError):
+        cli_module.cmd_targets(args)
+    assert captured == {"sector": 98, "n_targets": 12, "seed": 4, "tmag_max": 12.0}
