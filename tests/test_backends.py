@@ -97,9 +97,18 @@ def test_tinker_split_thinking_without_tags():
 
 def test_recommended_sampling_by_mode():
     """Non-thinking renderers get the 0.7/0.8/20 model-card values; thinking renderers get 0.6/0.95/20."""
-    assert recommended_sampling("qwen3_8_disable_thinking") == {"temperature": 0.7, "top_p": 0.8, "top_k": 20}
+    plain = recommended_sampling("qwen3_8_disable_thinking")
+    assert (plain["temperature"], plain["top_p"], plain["top_k"]) == (0.7, 0.8, 20)
     assert recommended_sampling("qwen3_instruct")["temperature"] == 0.7
-    assert recommended_sampling("qwen3_8_xhigh_reasoning") == {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
+    thinking = recommended_sampling("qwen3_8_xhigh_reasoning")
+    assert (thinking["temperature"], thinking["top_p"], thinking["top_k"]) == (0.6, 0.95, 20)
+
+
+def test_recommended_max_tokens_is_larger_for_thinking():
+    """A thinking model writes its reasoning before the tool call, so its output cap must be larger."""
+    thinking = recommended_sampling("qwen3_8_xhigh_reasoning")["max_tokens"]
+    assert thinking > recommended_sampling("qwen3_instruct")["max_tokens"]
+    assert TinkerBackend(renderer="qwen3_8_xhigh_reasoning").config["max_tokens"] == 8192
 
 
 def test_tinker_backend_uses_recommended_defaults_and_records_seed():

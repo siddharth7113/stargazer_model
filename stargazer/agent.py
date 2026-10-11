@@ -81,12 +81,16 @@ class AssistantTurn:
     thinking : str
         The model's reasoning trace when the backend exposes one, else empty. It is
         stored in the trajectory and never sent back to the model.
+    truncated : bool
+        True when the backend cut the output at its token cap, so a missing tool call
+        may be an unfinished turn rather than a decision to stop.
     """
 
     content: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
     usage: dict[str, float] = field(default_factory=dict)
     thinking: str = ""
+    truncated: bool = False
 
 
 class ChatBackend(Protocol):
@@ -131,6 +135,10 @@ class ToolAgentDetector:
         None means the class default of 40.
     max_turns : int, optional
         Hard cap on model calls per episode. None means 30.
+    max_nudges : int
+        How many times a turn without a tool call gets a reminder before the episode
+        ends as ``model_stopped``. A thinking model that runs out of output tokens
+        mid-sentence, or answers in prose, gets a second chance this way.
     max_tokens_per_episode : int, optional
         Hard cap on input plus output tokens per episode, from the backend's usage. The
         conversation is re-sent on every turn, so the total grows with the square of the
@@ -143,6 +151,15 @@ class ToolAgentDetector:
     DEFAULT_MAX_TOOL_CALLS = 40
     DEFAULT_MAX_TURNS = 30
     DEFAULT_MAX_TOKENS = 400_000
+    DEFAULT_MAX_NUDGES = 2
+    NUDGE = (
+        "Your last reply contained no tool call, so nothing happened. Reply with a tool call: "
+        "continue the analysis, or call submit_prediction with your answer."
+    )
+    NUDGE_TRUNCATED = (
+        "Your last reply was cut off at the output limit before any tool call. Keep your text "
+        "short and reply with a tool call: continue the analysis, or call submit_prediction."
+    )
 
     def __init__(
         self,
@@ -150,6 +167,7 @@ class ToolAgentDetector:
         max_tool_calls: int | None = None,
         max_turns: int | None = None,
         max_tokens_per_episode: int | None = None,
+        max_nudges: int | None = None,
         system_prompt: str = SYSTEM_PROMPT,
     ):
         self._backend = backend
@@ -158,6 +176,7 @@ class ToolAgentDetector:
         self._max_tokens = (
             self.DEFAULT_MAX_TOKENS if max_tokens_per_episode is None else max_tokens_per_episode
         )
+        self._max_nudges = self.DEFAULT_MAX_NUDGES if max_nudges is None else max_nudges
         self._system_prompt = system_prompt
 
     @property
@@ -169,6 +188,7 @@ class ToolAgentDetector:
             "max_tool_calls": self._max_tool_calls,
             "max_turns": self._max_turns,
             "max_tokens_per_episode": self._max_tokens,
+            "max_nudges": self._max_nudges,
             "system_prompt_sha256": hashlib.sha256(self._system_prompt.encode()).hexdigest(),
             "tools": [tool["function"]["name"] for tool in tool_definitions()],
         }
@@ -186,6 +206,7 @@ class ToolAgentDetector:
         prediction: Prediction | None = None
         stop = "no_submission"
         n_calls = 0
+        n_nudges = 0
         for _turn in range(self._max_turns):
             turn = self._backend.complete(messages, tools)
             for key in usage:
@@ -193,8 +214,13 @@ class ToolAgentDetector:
             messages.append(_assistant_message(turn))
             thinking.append(turn.thinking)
             if not turn.tool_calls:
-                stop = "model_stopped"
-                break
+                if n_nudges >= self._max_nudges:
+                    stop = "model_stopped"
+                    break
+                n_nudges += 1
+                nudge = self.NUDGE_TRUNCATED if turn.truncated else self.NUDGE
+                messages.append({"role": "user", "content": nudge})
+                continue
             for call in turn.tool_calls:
                 n_calls += 1
                 result = call_tool(call.name, call.arguments, time, flux)
@@ -222,6 +248,7 @@ class ToolAgentDetector:
             {
                 "stop": stop,
                 "n_tool_calls": n_calls,
+                "n_nudges": n_nudges,
                 "n_turns": len([message for message in messages if message["role"] == "assistant"]),
                 "usage": usage,
                 "transcript": transcript,

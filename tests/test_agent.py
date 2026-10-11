@@ -95,10 +95,37 @@ def test_tools_are_called_with_the_episode_arrays(lc, fake_tools):
 
 
 def test_model_stopping_without_submission_is_none(lc, fake_tools):
-    """A model that answers in prose and never submits scores as "none" with stop ``model_stopped``."""
+    """A model that answers in prose on every turn is nudged twice, then scores none as model_stopped."""
     time, flux, flux_err = lc
-    pred = ToolAgentDetector(FixedBackend([AssistantTurn(content="I give up")])).detect(time, flux, flux_err)
-    assert not pred.detected and pred.extra["stop"] == "model_stopped"
+    backend = FixedBackend([AssistantTurn(content="I give up")] * 5)
+    pred = ToolAgentDetector(backend).detect(time, flux, flux_err)
+    assert not pred.detected and pred.extra["stop"] == "model_stopped" and pred.extra["n_nudges"] == 2
+    assert len(backend.seen) == 3
+
+
+def test_nudge_after_prose_turn_lets_the_model_recover(lc, fake_tools):
+    """A prose turn gets a user reminder; a tool call on the next turn continues the episode normally."""
+    time, flux, flux_err = lc
+    backend = FixedBackend([AssistantTurn(content="Let me think..."), _submit(detected=False)])
+    pred = ToolAgentDetector(backend).detect(time, flux, flux_err)
+    assert pred.extra["stop"] == "submitted" and pred.extra["n_nudges"] == 1
+    assert backend.seen[1][-1] == {"role": "user", "content": ToolAgentDetector.NUDGE}
+
+
+def test_truncated_turn_gets_the_truncation_nudge(lc, fake_tools):
+    """When the backend reports the output was cut at its cap, the reminder says to be brief."""
+    time, flux, flux_err = lc
+    backend = FixedBackend([AssistantTurn(content="very long", truncated=True), _submit(detected=False)])
+    ToolAgentDetector(backend).detect(time, flux, flux_err)
+    assert backend.seen[1][-1]["content"] == ToolAgentDetector.NUDGE_TRUNCATED
+
+
+def test_nudges_are_configurable(lc, fake_tools):
+    """``max_nudges=0`` restores the strict behaviour: one prose turn ends the episode."""
+    time, flux, flux_err = lc
+    backend = FixedBackend([AssistantTurn(content="done")])
+    pred = ToolAgentDetector(backend, max_nudges=0).detect(time, flux, flux_err)
+    assert pred.extra["stop"] == "model_stopped" and len(backend.seen) == 1
 
 
 def test_max_tool_calls_cap(lc, fake_tools):

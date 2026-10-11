@@ -116,18 +116,25 @@ class OpenAICompatibleBackend:
             "output_tokens": float(getattr(resp.usage, "completion_tokens", 0) or 0),
             "usd": float(getattr(resp.usage, "cost", 0.0) or 0.0),
         }
-        return AssistantTurn(content=choice.message.content or "", tool_calls=calls, usage=usage)
+        return AssistantTurn(
+            content=choice.message.content or "",
+            tool_calls=calls,
+            usage=usage,
+            truncated=choice.finish_reason == "length",
+        )
 
 
 SAMPLING_DEFAULTS: dict[str, dict[str, float | int]] = {
-    "thinking": {"temperature": 0.6, "top_p": 0.95, "top_k": 20},
-    "non_thinking": {"temperature": 0.7, "top_p": 0.8, "top_k": 20},
+    "thinking": {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "max_tokens": 8192},
+    "non_thinking": {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "max_tokens": 2048},
 }
 """Sampling parameters recommended by the Qwen3 model cards [1]_ for each mode.
 
 The cards discourage greedy decoding (temperature 0) because it degrades quality and can
 cause endless repetition. The Tinker cookbook uses 0.7 for its tool-use benchmark, which
-agrees with the non-thinking row.
+agrees with the non-thinking row. ``max_tokens`` is the output cap per turn: a thinking
+model writes its reasoning before the tool call, so it needs several thousand tokens;
+the cards suggest 32k for hard problems, and 8192 is enough for one analysis step.
 
 References
 ----------
@@ -162,8 +169,7 @@ class TinkerBackend:
     renderer : str
         Chat template name from ``tinker_cookbook.renderers``. ``qwen3_disable_thinking``
         runs without a thinking block; ``qwen3`` enables the thinking mode.
-    max_tokens : int
-    temperature, top_p, top_k : float or int, optional
+    max_tokens, temperature, top_p, top_k : int or float, optional
         None means the value from :func:`recommended_sampling` for the renderer.
     seed : int
         Sampling seed, recorded in config. Repeat a run with other seeds to measure
@@ -186,7 +192,7 @@ class TinkerBackend:
         base_model: str = "Qwen/Qwen3-8B",
         model_path: str | None = None,
         renderer: str = "qwen3_disable_thinking",
-        max_tokens: int = 2000,
+        max_tokens: int | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
         top_k: int | None = None,
@@ -195,8 +201,8 @@ class TinkerBackend:
         self._base_model = base_model
         self._model_path = model_path
         self._renderer_name = renderer
-        self._max_tokens = max_tokens
         defaults = recommended_sampling(renderer)
+        self._max_tokens = defaults["max_tokens"] if max_tokens is None else max_tokens
         self._temperature = defaults["temperature"] if temperature is None else temperature
         self._top_p = defaults["top_p"] if top_p is None else top_p
         self._top_k = defaults["top_k"] if top_k is None else top_k
@@ -308,7 +314,8 @@ class TinkerBackend:
             stop=self._renderer.get_stop_sequences(),
         )
         result = self._sampler.sample(prompt=prompt, num_samples=1, sampling_params=params).result()
-        tokens = list(result.sequences[0].tokens)
+        sequence = result.sequences[0]
+        tokens = list(sequence.tokens)
         text = self._tokenizer.decode(tokens, skip_special_tokens=True)
         thinking, text = self.split_thinking(text)
         usage = {"input_tokens": float(prompt.length), "output_tokens": float(len(tokens)), "usd": 0.0}
@@ -317,6 +324,7 @@ class TinkerBackend:
             tool_calls=self.parse_tool_calls(text),
             usage=usage,
             thinking=thinking,
+            truncated=getattr(sequence, "stop_reason", "stop") == "length",
         )
 
     @staticmethod
