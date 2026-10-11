@@ -88,6 +88,31 @@ classDiagram
     Results ..> EpisodeSet : records hash
 ```
 
+## Modules
+
+```
+stargazer/
+  types.py       Prediction and the Detector protocol
+  data.py        LightCurveCache: download and cache TESS 2-minute light curves
+  targets.py     select_targets: host stars with no TOI, with TIC parameters
+  inject.py      batman transit injection and the truth record
+  episodes.py    EpisodeSet and BuildConfig
+  score.py       scoring rules and set-level metrics
+  evaluate.py    evaluate and Results, with a worker pool
+  baseline.py    BLSDetector
+  tools.py       analysis tools with JSON Schemas, one registry for every backend
+  agent.py       ToolAgentDetector and the ChatBackend protocol
+  backends.py    OpenAICompatibleBackend (OpenRouter, vLLM, Ollama) and TinkerBackend
+  calibrate.py   threshold choice from recorded statistics
+  compare.py     one table for several results files
+  viewer.py      terminal trajectory viewer
+  provenance.py  hashes, manifests, git commit
+  cli.py         command line
+tests/           one unit-test file for each module; tests/integration/ for cross-module checks
+scripts/         pre-commit lint hooks
+docs/            Sphinx documentation with Mermaid diagrams
+```
+
 ## Data flow
 
 ```{mermaid}

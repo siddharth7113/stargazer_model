@@ -74,4 +74,4 @@ each model.
 
 ## Layout
 
-See README.md for the module map. The public API is in `stargazer/__init__.py`.
+The module map is in docs/architecture.md. The public API is in `stargazer/__init__.py`.
