@@ -164,40 +164,26 @@ def cmd_agent(args: argparse.Namespace) -> None:
 
 def cmd_show(args: argparse.Namespace) -> None:
     """Print the trajectory of one episode from a results file: truth, thinking, tool calls, answer."""
-    from stargazer.episodes import EpisodeSet
-    from stargazer.evaluate import Results
+    from rich.console import Console
 
-    results = Results.load(args.results)
-    truth = EpisodeSet(results.episode_set).truth[args.episode]
-    prediction = results.preds[args.episode]
-    row = results.rows[args.episode]
-    model = results.config.get("backend_model") or results.config.get("backend_base_model")
-    print(f"== {args.episode}  system={results.system}  model={model}")
-    transit = truth.get("transit", {})
-    print(
-        f"truth: kind={truth['kind']} snr={truth.get('snr', 0):.1f} n_transits={truth.get('n_transits')} "
-        f"period={transit.get('period', float('nan')):.4f} t0={transit.get('t0', float('nan')):.3f}"
+    from stargazer.viewer import load, render_trajectory
+
+    results, truth = load(Path(args.results))
+    markup = render_trajectory(
+        results.preds[args.episode],
+        truth[args.episode],
+        results.rows[args.episode],
+        show_thinking=not args.no_thinking,
+        full_results=args.full,
     )
-    print(
-        f"score: outcome={row['outcome']} score={row['score']}  stop={prediction.get('stop')} "
-        f"calls={prediction.get('n_tool_calls')} tokens={prediction.get('usage')}"
-    )
-    turn = 0
-    for message in prediction.get("conversation", []):
-        if message["role"] == "assistant":
-            turn += 1
-            thought = (prediction.get("thinking") or [""] * turn)[turn - 1]
-            if thought:
-                print(f"\n[turn {turn} thinking]\n{thought if args.full else thought[: args.width]}")
-            if message.get("content"):
-                said = message["content"] if args.full else message["content"][: args.width]
-                print(f"\n[turn {turn} says] {said}")
-            for call in message.get("tool_calls", []):
-                print(f"[turn {turn} calls] {call['function']['name']}({call['function']['arguments']})")
-        elif message["role"] == "tool":
-            content = message["content"]
-            print(f"[result] {content if args.full else content[: args.width]}")
-    print(f"\nreasoning: {prediction.get('reasoning', '')}")
+    Console(width=args.width).print(f"[bold]== {args.episode}  system={results.system}[/bold]\n" + markup)
+
+
+def cmd_view(args: argparse.Namespace) -> None:
+    """Open the terminal viewer on a results file."""
+    from stargazer.viewer import run_viewer
+
+    run_viewer(Path(args.results))
 
 
 def cmd_calibrate(args: argparse.Namespace) -> None:
@@ -324,9 +310,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = sub.add_parser("show", help="print one episode's trajectory from a results file")
     parser.add_argument("--results", required=True)
     parser.add_argument("--episode", required=True)
-    parser.add_argument("--width", type=int, default=400, help="characters shown per message")
-    parser.add_argument("--full", action="store_true", help="print every message in full")
+    parser.add_argument("--width", type=int, default=120, help="console width in characters")
+    parser.add_argument("--full", action="store_true", help="print tool results in full")
+    parser.add_argument("--no-thinking", action="store_true", help="hide the thinking trace")
     parser.set_defaults(func=cmd_show)
+
+    parser = sub.add_parser("view", help="browse the trajectories in a results file (terminal UI)")
+    parser.add_argument("--results", required=True)
+    parser.set_defaults(func=cmd_view)
 
     parser = sub.add_parser("calibrate", help="sweep the detection threshold on a results file")
     parser.add_argument("--results", required=True)

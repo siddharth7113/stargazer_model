@@ -19,10 +19,15 @@ def test_baseline_command_defaults():
     assert args.period_rtol == 0.01 and args.limit == 0
 
 
-def test_show_command_has_width_and_full():
-    """The trajectory printer truncates messages at a width unless --full is given."""
+def test_show_command_defaults():
+    """The trajectory printer uses a 120-column console, shortened results and visible thinking."""
     args = build_parser().parse_args(["show", "--results", "r", "--episode", "ep_0001"])
-    assert args.width == 400 and args.full is False
+    assert args.width == 120 and args.full is False and args.no_thinking is False
+
+
+def test_view_command_takes_results():
+    """The terminal viewer needs only the results file."""
+    assert build_parser().parse_args(["view", "--results", "r"]).results == "r"
 
 
 def test_agent_command_forwards_renderer_temperature_and_seed(monkeypatch):
