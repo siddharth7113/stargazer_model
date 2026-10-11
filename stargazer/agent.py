@@ -23,7 +23,30 @@ import numpy as np
 from stargazer.tools import call_tool, tool_definitions
 from stargazer.types import Prediction
 
-SYSTEM_PROMPT = """You are an exoplanet astronomer. You have one TESS light curve of one star. Decide
+BASE_PROMPT = """You are an exoplanet astronomer. You have one TESS light curve of one star. Decide
+whether it contains a transiting planet and, if so, report its period and epoch, or the
+time of its one transit if the data hold only one.
+
+How you are scored: full marks for the right period (within 1 percent) and an epoch within
+half a transit duration of a real transit; half marks for the half or double period; full
+marks for a single event whose t0 falls on the only transit in the data, half marks if the
+data held more transits; full marks for detected=false on a star with no planet; zero for
+a false alarm, a wrong period, an event on no transit, a missed planet, or no submission.
+
+You cannot see the data. You see tool results. The tools are the ones an astronomer uses
+to find and vet a transit; each returns numbers and, where there is a judgement, a verdict
+word. Use them as you see fit, then call submit_prediction once. Every tool result has
+calls_remaining, a safety limit; submit before it reaches 0. Units: days from the start of
+the light curve for time; fractional depth for depth (0.0005 means 500 ppm)."""
+
+PROMPTS: dict[str, str] = {}
+"""The system prompts by name. ``base`` states the task, the scoring and the units and
+leaves the method to the model. ``rules`` adds the procedure and the decision rules that
+the runs of 2026-10-11 produced, one for each failure read in a trajectory. The gap
+between the two on one model is the value of the hand-written policy, which the
+reinforcement-learning phase must learn from the reward instead."""
+
+RULES_PROMPT = """You are an exoplanet astronomer. You have one TESS light curve of one star. Decide
 whether it contains a transiting planet and, if so, report its period and epoch, or the
 time of its one transit if the data hold only one.
 
@@ -72,6 +95,10 @@ Every tool result has calls_remaining, a safety limit. Take the calls you need; 
 analysis uses about 6 to 12. Submit before it reaches 0; when it is 1, submit what you have.
 Units: days from the start of the light curve for time; fractional depth for depth
 (0.0005 means 500 ppm)."""
+
+PROMPTS.update({"base": BASE_PROMPT, "rules": RULES_PROMPT})
+SYSTEM_PROMPT = BASE_PROMPT
+"""The default system prompt, ``base``."""
 
 
 @dataclass
@@ -170,6 +197,8 @@ class ToolAgentDetector:
         conversation is re-sent on every turn, so the total grows with the square of the
         number of calls; 20 calls with lean tool outputs cost about 150,000 tokens.
     system_prompt : str
+        One of :data:`PROMPTS` or any other text. The config records its name when it
+        is one of the named prompts, and its hash in every case.
     """
 
     name = "tool_agent"
@@ -215,6 +244,9 @@ class ToolAgentDetector:
             "max_turns": self._max_turns,
             "max_tokens_per_episode": self._max_tokens,
             "max_nudges": self._max_nudges,
+            "system_prompt": next(
+                (name for name, text in PROMPTS.items() if text == self._system_prompt), "custom"
+            ),
             "system_prompt_sha256": hashlib.sha256(self._system_prompt.encode()).hexdigest(),
             "tools": [tool["function"]["name"] for tool in tool_definitions()],
         }

@@ -6,7 +6,7 @@ import json
 import pytest
 
 from stargazer import agent as agent_module
-from stargazer.agent import SYSTEM_PROMPT, AssistantTurn, ToolAgentDetector, ToolCall
+from stargazer.agent import PROMPTS, SYSTEM_PROMPT, AssistantTurn, ToolAgentDetector, ToolCall
 
 
 class FixedBackend:
@@ -191,7 +191,22 @@ def test_config_records_backend_caps_and_prompt_hash():
     assert config["backend"] == "fixed" and config["backend_model"] == "fixed"
     assert config["max_tool_calls"] == 5
     assert config["system_prompt_sha256"] == hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()
+    assert config["system_prompt"] == "base"
     assert "submit_prediction" in config["tools"]
+
+
+def test_config_names_the_rules_prompt_and_marks_a_custom_one():
+    """A named prompt is recorded by name; any other text is ``custom``, so a results file says what ran."""
+    assert (
+        ToolAgentDetector(FixedBackend([]), system_prompt=PROMPTS["rules"]).config["system_prompt"] == "rules"
+    )
+    assert ToolAgentDetector(FixedBackend([]), system_prompt="be brief").config["system_prompt"] == "custom"
+
+
+def test_base_prompt_has_no_procedure_or_thresholds():
+    """The base prompt states the task, the scoring and the units; the steps and numbers are in the rules."""
+    assert "1. summarize" not in PROMPTS["base"] and "sde 10" not in PROMPTS["base"]
+    assert "Decision rules" in PROMPTS["rules"] and len(PROMPTS["base"]) < len(PROMPTS["rules"])
 
 
 def test_trajectory_keeps_conversation_and_thinking(lc, fake_tools):

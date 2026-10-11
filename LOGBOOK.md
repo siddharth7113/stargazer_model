@@ -834,3 +834,15 @@ decide it by odd_even, secondary_eclipse and the depth; the prompt says so and n
 longer requires flat_bottom. Offline, the five lost hits now read grazing_uncertain
 (ep_0046 at 0.92, ep_0107 at 1.00, ep_0061 at 0.90). The grazing test accepts either
 of the two upper verdicts. Tool and prompt change: the next series is `full_v7shape`.
+
+**Two system prompts: base and rules.** The owner asked whether the prompt had become
+a hand-written decision agent. It had: 49 lines, a seven-step procedure and six
+numeric rules, each from one trajectory of one model. The prompt is now split.
+`base` (15 lines) states the task, the scoring, that the tools exist and return
+verdict words, the budget and the units, and leaves the method to the model.
+`rules` is the full text as it stood. `stargazer agent --prompt base|rules` selects
+one, default base, and the results config records the name and the hash. The gap
+between the two on one model is the value of the hand-written policy; that is what
+the reinforcement-learning phase must learn from the reward, so from here the rules
+block is frozen and new knowledge goes into tools as verdicts. The `full_v7base`
+series starts with Inkling-Small on s98_v2 with the base prompt.

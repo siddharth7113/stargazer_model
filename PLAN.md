@@ -146,11 +146,16 @@ false-alarm rate (LOGBOOK), the best so far; it also showed that a lone transit 
 with an epoch in a gap was reported as two events, which is fixed. Inkling-Small needs
 `--renderer tml_v0`. The course notebooks (Phase 3d) exist for every tool and the scorer.
 
+The prompt is split into `base` (the task, the scoring, the units) and `rules` (the
+procedure and decision rules of 2026-10-11, frozen). The owner wants the model to
+learn the rules, so runs use `--prompt base` from here and the rules prompt is a
+comparison row. The `full_v6count` run is read in the LOGBOOK; the `full_v7base`
+run with the base prompt is the next number.
+
 First steps for the next session:
-1. Run the `full_v6count` series (the event count by points in transit and the prompt
-   rule for one-event signals): three episodes including ep_0029 and ep_0079 first,
-   then all of s98_v2 into `results/full_v6count/`. The one-transit bin should return
-   to 2 of 18 or better with the false-alarm rate near 3 percent.
+1. Read `results/full_v7base/agent_inkling_small_s98_v2.json` against the v6count
+   row. The gap is the value of the rules block. Then the same with the rules prompt
+   and the three-way shape verdict if the gap is large, so both rows share the tools.
 2. Phase 3b: the ephemeris match against known eclipsing binaries and TOIs, the last
    vetting tool that needs only the light curve's coordinates and the catalogues.
 3. The larger models on s98_v1 and s98_v2, three seeds each, and the course notebooks

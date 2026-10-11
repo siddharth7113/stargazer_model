@@ -10,6 +10,7 @@ def test_agent_command_defaults():
     args = build_parser().parse_args(["agent", "--episodes", "x", "--model", "m"])
     assert args.max_tool_calls is None and args.limit == 3 and args.backend == "openai"
     assert args.renderer == "qwen3_disable_thinking"
+    assert args.prompt == "base"
     assert args.temperature is None and args.seed == 0
 
 

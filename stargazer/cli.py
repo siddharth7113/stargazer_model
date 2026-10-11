@@ -108,7 +108,7 @@ def cmd_score(args: argparse.Namespace) -> None:
 
 def cmd_agent(args: argparse.Namespace) -> None:
     """Run the tool-using agent with a model backend on a few episodes and score it."""
-    from stargazer.agent import ToolAgentDetector
+    from stargazer.agent import PROMPTS, ToolAgentDetector
     from stargazer.episodes import EpisodeSet
     from stargazer.evaluate import evaluate
 
@@ -133,7 +133,7 @@ def cmd_agent(args: argparse.Namespace) -> None:
             seed=args.seed,
         )
     es = EpisodeSet(args.episodes)
-    det = ToolAgentDetector(backend, max_tool_calls=args.max_tool_calls)
+    det = ToolAgentDetector(backend, max_tool_calls=args.max_tool_calls, system_prompt=PROMPTS[args.prompt])
     ids = es.ids[: args.limit] if args.limit else None
 
     def progress(episode_id, prediction, truth_record):
@@ -307,6 +307,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--renderer",
         default="qwen3_disable_thinking",
         help="tinker_cookbook renderer name, for example qwen3_8_disable_thinking for Qwen3.8",
+    )
+    parser.add_argument(
+        "--prompt",
+        choices=["base", "rules"],
+        default="base",
+        help="system prompt: base states the task only; rules adds the procedure and decision rules",
     )
     parser.add_argument(
         "--temperature", type=float, default=None, help="default: the model card value for the renderer"
