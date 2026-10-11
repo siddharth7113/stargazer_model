@@ -45,6 +45,13 @@ error; the truth lives in a separate file only the scorer reads.
 
 ## Quick start
 
+<p align="center">
+  <img src="assets/quickstart.gif" alt="Quick start: baseline, agent, trajectory, compare" width="900">
+</p>
+
+The recording above is scripted in `assets/quickstart.tape` and regenerated with
+[VHS](https://github.com/charmbracelet/vhs), so it always shows the current commands.
+
 ```bash
 git clone git@github.com:siddharth7113/stargazer_model.git star_finder && cd star_finder
 uv venv && uv pip install -e ".[dev,docs,tinker,view]"
