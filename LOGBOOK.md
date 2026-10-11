@@ -369,3 +369,18 @@ behaviour of the agents is worse than the 19 to 24 percent measured on nulls alo
 No extra alias credit is warranted. The fix is on the tool and decision side: the
 masked re-search, the single-event search, and a stricter rule in the prompt that a
 peak with SDE near the noise level and no second line of evidence is "none".
+
+**Nemotron-3.5-Lightning-30B-A3B, full s98_v1 run, old tools**
+(`results/full/agent_nemotron35_lightning_s98_v1.json`, renderer
+`nemotron3_disable_thinking`, temperature 0.7, seed 0): completeness 0.11 at a
+false-alarm rate of 0.26, mean score 0.29, 239,000 tokens an episode, 73 seconds an
+episode. It reached the 30-turn cap on most episodes and so never submitted; the few
+submissions it made were often right. This is a behaviour problem, not a capability
+problem: the model keeps folding and re-folding instead of deciding. Cheap at $0.50 per
+million tokens, but a quarter of a million tokens for a non-answer is not cheap. To
+try next: a stricter stop rule in the prompt and a lower safety cap for this model, or
+the thinking renderer so it plans before acting.
+
+Three-family comparison on s98_v1 with the old tools, at the agents' own false-alarm
+rates: Qwen3.8-27B 43 percent at 24 percent, Inkling-Small 40 percent at 19 percent,
+Nemotron-3.5-Lightning 11 percent at 26 percent, BLS 41 percent at 28 percent.
