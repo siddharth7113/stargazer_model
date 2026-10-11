@@ -121,3 +121,15 @@ def test_tinker_parse_tool_calls_fallback_skips_malformed():
     )
     calls = TinkerBackend.parse_tool_calls(text)
     assert len(calls) == 1 and calls[0].name == "fold" and calls[0].arguments == {"period": 3.0}
+
+
+def test_tinker_price_table_has_the_comparison_models():
+    """The models we evaluate must have a price, or their runs report no cost."""
+    from stargazer.backends import TINKER_SAMPLING_USD_PER_MILLION
+
+    for model in (
+        "Qwen/Qwen3.8-27B",
+        "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+        "thinkingmachines/Inkling-Small",
+    ):
+        assert TINKER_SAMPLING_USD_PER_MILLION[model] > 0

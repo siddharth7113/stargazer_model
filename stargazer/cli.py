@@ -143,9 +143,10 @@ def cmd_agent(args: argparse.Namespace) -> None:
         usage = prediction.extra.get("usage", {})
         tokens = int(usage.get("input_tokens", 0) + usage.get("output_tokens", 0))
         extra = prediction.extra
+        cost = f" usd={usage['usd']:.4f}" if "usd" in usage else ""
         print(
             f"{episode_id} {truth_record['kind']:8s} det={prediction.detected!s:5s} stop={extra.get('stop')} "
-            f"calls={extra.get('n_tool_calls')} tokens={tokens} usd={usage.get('usd', 0):.4f}",
+            f"calls={extra.get('n_tool_calls')} tokens={tokens}{cost}",
             flush=True,
         )
 
@@ -157,9 +158,11 @@ def cmd_agent(args: argparse.Namespace) -> None:
         / f"agent_{args.backend}_{tag}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
     )
     res.save(out)
-    total_usd = sum(prediction.get("usage", {}).get("usd", 0) for prediction in res.preds.values())
+    costs = [pred["usage"]["usd"] for pred in res.preds.values() if "usd" in pred.get("usage", {})]
     print(json.dumps(res.summary, indent=1))
-    print(f"total reported cost usd={total_usd:.4f}\nresults -> {out}")
+    if costs:
+        print(f"estimated cost usd={sum(costs):.2f} over {len(costs)} episodes")
+    print(f"results -> {out}")
 
 
 def cmd_show(args: argparse.Namespace) -> None:

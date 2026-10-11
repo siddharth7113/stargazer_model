@@ -171,11 +171,18 @@ def test_usage_is_summed_across_turns(lc, fake_tools):
     """Cost and tokens are accumulated over every backend call in the episode."""
     time, flux, flux_err = lc
     turns = [
-        AssistantTurn(tool_calls=[ToolCall("1", "summarize", {})], usage={"usd": 0.01}),
-        AssistantTurn(content="x", usage={"usd": 0.02}),
+        AssistantTurn(tool_calls=[ToolCall("1", "summarize", {})], usage={"usd": 0.01, "input_tokens": 5}),
+        AssistantTurn(content="x", usage={"usd": 0.02, "input_tokens": 7}),
     ]
     pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
-    assert pred.extra["usage"]["usd"] == pytest.approx(0.03)
+    assert pred.extra["usage"]["usd"] == pytest.approx(0.03) and pred.extra["usage"]["input_tokens"] == 12
+
+
+def test_usage_has_no_cost_when_backend_reports_none(lc, fake_tools):
+    """A backend without a price gives no usd key; a zero would be a false statement about cost."""
+    time, flux, flux_err = lc
+    pred = ToolAgentDetector(FixedBackend([_submit(detected=False)])).detect(time, flux, flux_err)
+    assert "usd" not in pred.extra["usage"]
 
 
 def test_config_records_backend_caps_and_prompt_hash():
