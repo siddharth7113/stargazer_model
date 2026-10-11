@@ -40,8 +40,9 @@ You cannot see the data. You see tool results. Follow this procedure:
    rest is noise. Treat every signal as a hypothesis, not a result. If residual_sde is near
    min_sde, bls_peaks with the signals in masks shows what is left.
 3. For each signal, strongest first: fold at phase_half_width 0.5, then 0.05, then fit_transit,
-   then odd_even. fit_transit must say flat_bottom and density plausible; v_shaped or an
-   implausible density means an eclipsing binary or a wrong period.
+   then odd_even, then secondary_eclipse. fit_transit must say flat_bottom and density
+   plausible; v_shaped or an implausible density means an eclipsing binary or a wrong
+   period. secondary_eclipse must say no_secondary; secondary_at_half_phase is a binary.
 4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
    fold shows no clear dip, test half_period or the next signal.
 5. If a signal fails the checks, go to the next one: a strong feature that is not a planet
@@ -53,8 +54,8 @@ You cannot see the data. You see tool results. Follow this procedure:
 7. submit_prediction, once.
 
 Decision rules: a periodic planet is one clean dip at phase 0 in the zoomed fold, a flat
-curve away from it, a fit_transit shape of flat_bottom with a plausible density, and
-odd_even verdict consistent. A single event is one dip with snr
+curve away from it, a fit_transit shape of flat_bottom with a plausible density, odd_even
+verdict consistent, and secondary_eclipse verdict no_secondary. A single event is one dip with snr
 above about 10, a duration of hours, a depth below 5 percent (50,000 ppm; deeper is a
 stellar companion, not a planet), and no partner of the same depth. On a star whose flux
 range is more than 5 percent, a lone dip is variability unless a second event of the same

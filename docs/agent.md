@@ -46,6 +46,7 @@ On each turn:
 | `fold` | `period`, `t0`, `phase_half_width`, `detrend_window_days` | a 40-bin phase curve and its depth |
 | `fit_transit` | `period`, `t0`, `duration`, `detrend_window_days` | a batman fit: depth, duration, impact parameter, host density with a verdict, shape, significance |
 | `odd_even` | `period`, `t0`, `duration` | odd and even depths, their difference in sigma, and a verdict |
+| `secondary_eclipse` | `period`, `t0`, `duration`, `detrend_window_days` | the depth at phase 0.5 and the strongest other dip, in sigma, with a verdict |
 | `submit_prediction` | `detected`, `period`, `t0`, `duration`, `depth`, `reasoning` | ends the episode |
 
 `masks` takes a list of `{period, t0, duration}` objects. The masked points are removed

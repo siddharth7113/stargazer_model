@@ -267,6 +267,20 @@ def test_summary_line_of_fit_transit_gives_shape_and_verdicts():
     )
 
 
+def test_summary_line_of_secondary_eclipse_leads_with_the_verdict():
+    """The verdict word comes first; the depths and sigmas behind it follow."""
+    result = {
+        "verdict": "secondary_at_half_phase",
+        "secondary_depth_ppm": 3980.0,
+        "secondary_sigma": 12.4,
+        "strongest_other_phase": 0.5,
+        "strongest_other_sigma": 12.4,
+    }
+    assert summary_line(_result("secondary_eclipse", result)) == (
+        "verdict secondary_at_half_phase · phase 0.5 3,980 ppm 12.4\u03c3 · other phase 0.50 12.4\u03c3"
+    )
+
+
 def test_summary_line_of_single_events_gives_count_and_first_event():
     """The single-event search reports how many events it found and the strongest one."""
     result = {"events": [{"time": 20.0, "snr": 23.12, "depth_ppm": 9800.0}, {"time": 5.0}]}

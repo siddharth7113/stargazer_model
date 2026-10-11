@@ -540,6 +540,15 @@ def _odd_even_line(arguments: dict, data: dict) -> str:
     )
 
 
+def _secondary_line(arguments: dict, data: dict) -> str:
+    """Summarise a ``secondary_eclipse`` result: the verdict, the phase-0.5 depth, the strongest other dip."""
+    depth = _field(data, "secondary_depth_ppm", "{:,.0f}")
+    secondary = f"phase 0.5 {depth} ppm {_field(data, 'secondary_sigma', '{:.1f}')}\u03c3"
+    other_phase = _field(data, "strongest_other_phase", "{:.2f}")
+    other = f"other phase {other_phase} {_field(data, 'strongest_other_sigma', '{:.1f}')}\u03c3"
+    return f"verdict {_field(data, 'verdict')} · {secondary} · {other}"
+
+
 def _submit_line(arguments: dict, data: dict) -> str:
     """Summarise a ``submit_prediction`` call from its arguments: detection, period or event, epoch."""
     if not arguments.get("detected"):
@@ -559,6 +568,7 @@ SUMMARY_LINES: dict[str, Callable[[dict, dict], str]] = {
     "fold": _fold_line,
     "fit_transit": _fit_line,
     "odd_even": _odd_even_line,
+    "secondary_eclipse": _secondary_line,
     "submit_prediction": _submit_line,
 }
 """One-line summary of the result of each tool. Other tools get one line of JSON."""

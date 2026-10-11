@@ -677,6 +677,110 @@ def odd_even(
     return out
 
 
+def secondary_eclipse(
+    time: np.ndarray,
+    flux: np.ndarray,
+    period: float,
+    t0: float,
+    duration: float,
+    detrend_window_days: float = 0.75,
+    n_phases: int = 200,
+) -> dict:
+    """Look for a second dip in the folded light curve, at phase 0.5 and at any other phase.
+
+    Parameters
+    ----------
+    time, flux : ndarray
+    period : float
+        Period, days.
+    t0 : float
+        Epoch of a transit centre, days.
+    duration : float
+        Transit duration, days; the width of the box the search uses.
+    detrend_window_days : float
+        Savitzky-Golay window, see :func:`stargazer.baseline.detrend`.
+    n_phases : int
+        Number of trial phases across the orbit.
+
+    Returns
+    -------
+    dict
+        ``primary_depth_ppm``; ``secondary_depth_ppm`` and ``secondary_sigma`` at
+        phase 0.5; ``strongest_other_phase``, ``strongest_other_depth_ppm`` and
+        ``strongest_other_sigma`` for the deepest box away from the primary;
+        ``noise_ppm``; ``verdict``: ``no_secondary``, ``secondary_at_half_phase`` or
+        ``dip_at_other_phase``.
+
+    Notes
+    -----
+    A self-luminous companion is eclipsed in turn, so an eclipsing binary shows a
+    second dip half an orbit after the primary. A planet's secondary eclipse in the
+    TESS band is below the noise of one sector for all but the hottest giants, so a
+    secondary at 3 sigma or more marks the candidate as a binary. This is the
+    secondary-eclipse test of the Kepler Robovetter [9]_.
+
+    The detrended flux is folded on the period. The depth at a phase is the mean
+    flux deficit of the points within half a duration of it. The noise is 1.4826
+    times the median absolute deviation of the depths at ``n_phases`` trial phases,
+    excluding one duration on each side of phase 0, so stellar variability at the
+    transit timescale is part of it. The sigma of a depth is the depth over that
+    noise. The strongest other dip is the deepest trial phase outside the primary
+    window; a strong dip at a phase other than 0.5 means the period is wrong or a
+    second signal is present. The verdict is ``secondary_at_half_phase`` if the
+    phase-0.5 depth reaches 3 sigma, else ``dip_at_other_phase`` if the strongest
+    other dip reaches 5 sigma, else ``no_secondary``.
+
+    References
+    ----------
+    .. [9] Coughlin, J. L., et al. (2016). Planetary candidates observed by Kepler.
+       VII. The first fully uniform catalog based on the entire 48-month data set
+       (Q1-Q17 DR24). The Astrophysical Journal Supplement Series, 224, 12.
+       https://doi.org/10.3847/0067-0049/224/1/12
+    """
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    phase = ((work_time - t0) / period) % 1.0
+    half_width = 0.5 * duration / period
+
+    def depth_at(trial: float) -> float | None:
+        offset = np.abs(((phase - trial + 0.5) % 1.0) - 0.5)
+        points = work_flux[offset < half_width]
+        return float(1.0 - points.mean()) if len(points) >= 3 else None
+
+    trials = np.arange(n_phases) / n_phases
+    away = np.abs(((trials + 0.5) % 1.0) - 0.5) > 2.0 * half_width
+    depths = np.array(
+        [depth_at(trial) if ok else np.nan for trial, ok in zip(trials, away, strict=True)], dtype=float
+    )
+    valid = np.isfinite(depths)
+    level = float(np.nanmedian(depths)) if valid.any() else 0.0
+    noise = float(MAD_TO_SIGMA * np.nanmedian(np.abs(depths[valid] - level))) if valid.any() else 0.0
+    primary = depth_at(0.0)
+    secondary = depth_at(0.5)
+    strongest = int(np.nanargmax(depths)) if valid.any() else None
+
+    def sigma_of(depth: float | None) -> float | None:
+        return None if depth is None or noise <= 0 else round((depth - level) / noise, 2)
+
+    secondary_sigma = sigma_of(secondary)
+    other_sigma = sigma_of(float(depths[strongest])) if strongest is not None else None
+    if secondary_sigma is not None and secondary_sigma >= 3.0:
+        verdict = "secondary_at_half_phase"
+    elif other_sigma is not None and other_sigma >= 5.0:
+        verdict = "dip_at_other_phase"
+    else:
+        verdict = "no_secondary"
+    return {
+        "primary_depth_ppm": None if primary is None else round(primary * 1e6, 1),
+        "secondary_depth_ppm": None if secondary is None else round(secondary * 1e6, 1),
+        "secondary_sigma": secondary_sigma,
+        "strongest_other_phase": None if strongest is None else round(float(trials[strongest]), 3),
+        "strongest_other_depth_ppm": None if strongest is None else round(float(depths[strongest]) * 1e6, 1),
+        "strongest_other_sigma": other_sigma,
+        "noise_ppm": round(noise * 1e6, 1),
+        "verdict": verdict,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Tool registry: one definition of each tool for every backend.
 # ---------------------------------------------------------------------------
@@ -1020,6 +1124,30 @@ TOOLS: tuple[ToolSpec, ...] = (
         },
         function=lambda time, flux, period, t0, duration: odd_even(
             time, flux, period=period, t0=t0, duration=duration
+        ),
+    ),
+    ToolSpec(
+        name="secondary_eclipse",
+        description=(
+            "Look for a second dip in the fold at a period, epoch and duration. Read the verdict: "
+            "secondary_at_half_phase means an eclipsing binary (a self-luminous companion); "
+            "dip_at_other_phase means the period is wrong or a second signal is present; "
+            "no_secondary is planet-like. Also returns the depths and sigmas behind the verdict."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "period": _number("Period, days.", positive=True),
+                "t0": _number("Epoch, days from the start."),
+                "duration": _number("Transit duration, days.", positive=True),
+                "detrend_window_days": _number(
+                    "Detrending window, days. Use the same value as in the search.", 0.75, positive=True
+                ),
+            },
+            "required": ["period", "t0", "duration"],
+        },
+        function=lambda time, flux, period, t0, duration, detrend_window_days=0.75: secondary_eclipse(
+            time, flux, period=period, t0=t0, duration=duration, detrend_window_days=detrend_window_days
         ),
     ),
     ToolSpec(

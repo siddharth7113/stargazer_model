@@ -661,3 +661,17 @@ density of 0.013 g/cc, verdict too_low_for_a_dwarf, and the model declined it fo
 that reason. ep_0001 hit: flat_bottom, density plausible, 33 sigma, odd_even
 consistent, submitted at 0.7764 days. ep_0002 true null: no signal. The model called
 fit_transit between the fold and odd_even on each candidate, as the procedure says.
+
+**Tool: `secondary_eclipse`, the Robovetter's secondary test.** Folds the detrended
+flux at a period and epoch, measures the box-mean depth at phase 0.5 and at 200
+trial phases, and takes the noise as 1.4826 times the median absolute deviation of
+the trial depths outside the primary window, so stellar variability at the transit
+timescale is in it. Returns the primary and secondary depths, the secondary's sigma,
+the strongest dip at any other phase with its sigma, and a verdict:
+secondary_at_half_phase (3 sigma at phase 0.5, an eclipsing binary),
+dip_at_other_phase (5 sigma elsewhere, a wrong period or a second signal), else
+no_secondary. Reference: Coughlin et al. 2016. Tests: a primary with a 0.4-depth
+eclipse half an orbit later gives the binary verdict; a planet alone gives
+no_secondary; a second dip at phase 0.3 gives dip_at_other_phase at that phase. The
+prompt adds it after odd_even and requires no_secondary. The viewer summarises it.
+Tool and prompt change; the `full_v5fit` series includes it.

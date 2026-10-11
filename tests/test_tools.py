@@ -188,6 +188,9 @@ def test_registry_periods_durations_and_depth_are_positive():
         ("fit_transit", "detrend_window_days"),
         ("odd_even", "period"),
         ("odd_even", "duration"),
+        ("secondary_eclipse", "period"),
+        ("secondary_eclipse", "duration"),
+        ("secondary_eclipse", "detrend_window_days"),
         ("single_events", "detrend_window_days"),
         ("submit_prediction", "period"),
         ("submit_prediction", "duration"),
@@ -351,6 +354,41 @@ def test_fit_transit_density_of_a_sun_like_host_is_about_one(lc, star):
     expected = 3.0 * np.pi / (G_SI * (3.0 * 86400.0) ** 2) * truth.a_rs**3 / 1000.0
     assert abs(expected - 1.5) < 0.3  # 0.95 solar radii at log g 4.45
     assert abs(result["stellar_density_gcc"] / expected - 1) < 0.5
+
+
+def test_secondary_eclipse_flags_a_dip_at_half_phase(lc, star):
+    """A primary with a shallower eclipse half an orbit later is a binary: the verdict says so."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    primary = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star)
+    secondary = make_truth(period=3.0, t0=2.5, depth=0.004, b=0.0, star=star)
+    binary = inject(relative, inject(relative, flux, primary), secondary)
+    result = tools.secondary_eclipse(relative, binary, period=3.0, t0=1.0, duration=primary.duration)
+    assert result["verdict"] == "secondary_at_half_phase" and result["secondary_sigma"] > 3
+    ratio = result["secondary_depth_ppm"] / result["primary_depth_ppm"]
+    assert 0.15 < ratio < 0.6  # box means over the primary's duration; the shorter secondary averages lower
+
+
+def test_secondary_eclipse_is_absent_for_a_planet(lc, star):
+    """A planet alone leaves phase 0.5 flat, so the verdict is ``no_secondary``."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    planet = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star)
+    result = tools.secondary_eclipse(
+        relative, inject(relative, flux, planet), period=3.0, t0=1.0, duration=planet.duration
+    )
+    assert result["verdict"] == "no_secondary" and abs(result["secondary_sigma"]) < 3
+
+
+def test_secondary_eclipse_reports_a_dip_at_another_phase(lc, star):
+    """A second dip at phase 0.3 is not a secondary eclipse; the verdict points at a second signal."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    primary = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star)
+    other = make_truth(period=3.0, t0=1.9, depth=0.01, b=0.0, star=star)
+    both = inject(relative, inject(relative, flux, primary), other)
+    result = tools.secondary_eclipse(relative, both, period=3.0, t0=1.0, duration=primary.duration)
+    assert result["verdict"] == "dip_at_other_phase" and abs(result["strongest_other_phase"] - 0.3) < 0.02
 
 
 def test_single_events_finds_a_lone_transit(lc, star):

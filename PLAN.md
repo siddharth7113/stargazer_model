@@ -84,7 +84,7 @@ description written for the model. The agent gets the tool only when the test pa
 
 ### 3b Vetting against false positives
 - [x] `odd_even`: per-event depths with a verdict word
-- [ ] Secondary eclipse search at phase 0.5 and at the period's half
+- [x] Secondary eclipse search at phase 0.5 and at any other phase; `secondary_eclipse` (LOGBOOK 2026-10-11)
 - [ ] Ephemeris match: is the period and epoch a known eclipsing binary, TOI or nearby variable?
 - [ ] Centroid motion from the target pixel file: does the dip come from the target or a neighbour?
 - [ ] Difference imaging: in-transit minus out-of-transit image, where is the signal?
