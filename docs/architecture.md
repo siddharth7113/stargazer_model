@@ -1,7 +1,7 @@
 # Architecture
 
-The package is a software development kit (SDK). The command line is a thin layer
-over the SDK. A training loop or a language-model harness imports the SDK directly.
+Star Gazer is a Python library with a thin command line over it. The command line
+calls the same functions that a training loop or a language-model harness imports.
 
 ## Components
 
@@ -111,8 +111,8 @@ flowchart LR
     res --> file[results/*.json]
 ```
 
-The detector sees only the episode file. The scorer sees only the prediction and the
-truth.
+A detector reads only the episode file. The scorer reads the prediction and the truth
+record.
 
 ## An evaluation run
 
@@ -140,8 +140,9 @@ sequenceDiagram
 
 ## The agent
 
-A language model takes part through :class:`stargazer.agent.ToolAgentDetector`. The
-loop belongs to Star Gazer. A provider only implements ``complete(messages, tools)``.
+A language model is run through :class:`stargazer.agent.ToolAgentDetector`, which
+holds the system prompt, the tool definitions and the loop. A backend implements one
+method, ``complete(messages, tools)``, that returns the next assistant turn.
 
 ```{mermaid}
 sequenceDiagram
@@ -177,7 +178,7 @@ turn without a tool call gets a reminder before the episode ends.
 
 ## The reinforcement-learning view
 
-In tier 3 the same objects become an environment. `EpisodeSet` supplies the episode on
-`reset`. The tools are the functions in `baseline.py` and `inject.py`, exposed one at a
-time. `score_episode` is the reward. `Results` is the evaluation log. The training loop
-owns the policy and the optimiser. Star Gazer owns the data, the tools and the reward.
+In tier 3 the same objects form an environment. `EpisodeSet` supplies the episode on
+`reset`, the functions in `tools.py` are the actions, `score_episode` is the reward and
+`Results` is the evaluation log. The training loop owns the policy and the optimiser;
+the package supplies the data, the tools and the reward.

@@ -1,6 +1,8 @@
 # Verifiability
 
-The project is reporducible, follow the section guidelines to reproduce the numbers:
+This page lists the mechanisms that make a number in this project reproducible: the
+seeds, the file manifests, the separation of truth from episode data, the provenance
+fields in a results file, the offline test suite and the logbook.
 
 ## Seeds
 
@@ -25,9 +27,9 @@ flowchart LR
 
 ## Separated truth
 
-The detector reads only the episode file. The scorer reads the truth file. The code
-enforces this in `EpisodeSet.build`, which writes the two files from different
-dictionaries. `tests/test_episodes.py` checks that an episode file holds only `time`,
+A detector reads only the episode file and the scorer reads the truth file.
+`EpisodeSet.build` writes the two from different dictionaries, so no field of the truth
+can reach an episode file. `tests/test_episodes.py` checks that an episode file holds only `time`,
 `flux` and `flux_err`.
 
 ## Provenance in results
@@ -47,15 +49,15 @@ dictionaries. `tests/test_episodes.py` checks that an episode file holds only `t
 with the same cadence and gap structure as TESS, so each test knows the exact noise
 level and gap position.
 
-In the suite, one test checks one behaviour of one function. The docstring of the test
-states the behaviour and the reason for the check. There is one test file for each
-module in `tests/`. Tests that cross module boundaries live in `tests/integration/`
-with the `integration` marker. They check that the parts fit, and a unit test must fail
-first on a unit-level bug. Pre-commit hooks in `scripts/` check style rules such as "no
-single-letter names". The pre-commit hook also runs the suite before each commit.
+Each test covers one behaviour of one function, and its docstring states what is
+checked and why. There is one test file for each module in `tests/`, and
+tests that cross module boundaries are in `tests/integration/` with the `integration`
+marker. Style rules such as "no single-letter names" are pre-commit hooks in
+`scripts/`; the pre-commit configuration also runs the test suite before each
+commit.
 
 ## Logbook
 
-Each run that gives a number in a document has a LOGBOOK entry. The entry gives the
-date, the exact command and the results file. A reader can rerun the command and
-compare.
+Each run whose number appears in a document has an entry in LOGBOOK.md with the date,
+the exact command and the results file, so the command can be rerun and the number
+compared.

@@ -1,9 +1,12 @@
 # Star Gazer
 
-Star Gazer is a benchmark and a reinforcement-learning environment for exoplanet
-detection in light curves. A language model uses the classical tools of an astronomer,
-and the benchmark scores its answers against an exact answer key. Every number that the
-benchmark produces is reproducible.
+Star Gazer is a Python package for measuring how well a language model finds
+transiting planets in TESS light curves. It builds test sets by injecting synthetic
+transits into real light curves, runs a detector on them, scores the predictions
+against the injected truth and records the provenance of each run. The package also
+contains the classical Box Least Squares pipeline as a baseline, a set of analysis
+tools that a language model can call, and backends for OpenAI-compatible servers and
+for Tinker.
 
 ::::{grid} 1 2 2 3
 :gutter: 3

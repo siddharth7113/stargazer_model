@@ -72,14 +72,15 @@ uv pip install -e ".[openai]"
 stargazer agent --episodes data/episodes/s98_v1 --model qwen/qwen3-32b --limit 3
 ```
 
-Sampling uses the model-card values for the renderer: temperature 0.7, top_p 0.8 and
-top_k 20 in non-thinking mode, 0.6, 0.95 and 20 in thinking mode. Temperature 0 is not
-the default. Model cards discourage greedy decoding, and greedy decoding does not make a
-hosted model deterministic. A run records its seed. To measure run-to-run variance, repeat the
-run with `--seed 1`, `--seed 2` and report the mean and spread.
+The sampling parameters default to the values in the model card for the renderer:
+temperature 0.7, top_p 0.8 and top_k 20 in non-thinking mode, and 0.6, 0.95 and 20 in
+thinking mode. Greedy decoding is discouraged by the model cards and does not make a
+hosted model deterministic, so temperature 0 is not a default. The seed is recorded in
+the results file; to measure run-to-run variance, repeat the run with `--seed 1` and
+`--seed 2` and report the mean and spread.
 
-The default `--limit 3` runs three episodes. Read the transcript in the results file
-before a larger run. Install the `tinker` extra to use the Tinker backend.
+The default `--limit 3` runs three episodes. Read their transcripts before a larger
+run. The Tinker backend needs the `tinker` extra.
 
 ```bash
 uv pip install -e ".[tinker]"
@@ -117,9 +118,10 @@ right pane shows the truth next to the prediction, and the stop reason, tokens a
 stargazer compare results/baseline_bls_s98_v1_sde7.json results/full/agent_*.json
 ```
 
-The command refuses files from different episode sets. It prints completeness next to
-the false-alarm rate, because an agent has no threshold to sweep, and the completeness
-in each SNR bin.
+The command accepts only files scored on the same episode set. It prints the
+false-alarm rate, the completeness and the mean score of each system, then a second
+table of completeness by SNR bin. An agent has no detection statistic to sweep, so its
+completeness is read at the false-alarm rate it produced.
 
 ## Score external predictions
 

@@ -58,9 +58,9 @@ The hash of each set is in its `manifest.json` and in every results file scored 
 
 ## Episode files
 
-An episode file holds three arrays: `time`, `flux` and `flux_err`. The time starts at
-zero. The file holds no TIC ID, no sector, no coordinates and no stellar parameters.
-This prevents a detector from looking up the answer.
+An episode file holds three arrays, `time`, `flux` and `flux_err`, with the time
+counted from zero. It holds no TIC ID, sector, coordinates or stellar parameters, so a
+detector has nothing with which to look up the star.
 
 ```{mermaid}
 flowchart TB

@@ -59,5 +59,5 @@ file and the target, so the threshold is a function of recorded data.
 
 ## Use as a reward
 
-`score_episode` has no dependency on files or the network. A training loop can call it
-on each rollout. The tolerances are arguments, so a curriculum can tighten them.
+`score_episode` reads no files and uses no network, so a training loop can call it on
+each rollout. The tolerances are arguments and a curriculum can tighten them.
