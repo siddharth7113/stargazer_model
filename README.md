@@ -3,7 +3,7 @@
 Star Gazer is a benchmark and a reinforcement-learning environment for exoplanet
 detection in TESS light curves. Every number it produces is reproducible.
 
-Status: **tier 1 (detection) in progress**. [PLAN.md](PLAN.md) holds the phased plan.
+Status: **tier 1 (detection) running**: the BLS baseline and three model families (Qwen3.8-27B, Nemotron 3.5 Lightning, Inkling-Small) are evaluated on the same 200-episode set; see the logbook for the numbers. [PLAN.md](PLAN.md) holds the phased plan.
 [LOGBOOK.md](LOGBOOK.md) holds a dated record of each run. [STYLE.md](STYLE.md) holds the
 writing rules for this repository.
 

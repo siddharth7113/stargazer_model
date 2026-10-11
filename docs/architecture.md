@@ -163,9 +163,17 @@ sequenceDiagram
 
 Two backends exist. ``OpenAICompatibleBackend`` speaks the chat-completions API with
 function calling, which OpenRouter, vLLM and Ollama accept. ``TinkerBackend`` samples
-from a base model or a trained checkpoint on Tinker and parses tool calls from text in
-the Qwen3 convention. The tool definitions live once, in ``stargazer.tools.TOOLS``,
-with a JSON Schema for each, and the loop validates every call before it runs.
+from a base model or a trained checkpoint on Tinker. It declares the tools and parses
+replies through the cookbook renderer of the model family, so Qwen, Nemotron and
+Inkling each see their own native tool format. The tool definitions live once, in
+``stargazer.tools.TOOLS``, with a JSON Schema for each, and the loop validates every
+call before it runs.
+
+The tools are ``summarize``, ``bls_peaks`` (with optional masks of rejected signals so a
+strong feature cannot hide a weaker periodic one), ``single_events`` (the strongest
+individual dips, for planets with one or two transits in the data), ``fold``,
+``odd_even`` and ``submit_prediction``. Each tool result carries ``calls_remaining``. A
+turn without a tool call gets a reminder before the episode ends.
 
 ## The reinforcement-learning view
 

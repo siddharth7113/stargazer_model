@@ -47,6 +47,15 @@ Transit count
 : The number of transit events with at least three in-transit points. A long period can
   give zero or one.
 
+## Episode sets built so far
+
+| set | seed | periods | hosts | note |
+|---|---|---|---|---|
+| s98_v1 | 1 | 0.5 to 20 days | 39 | nearly every injection has six or more transits in a 57-day sector |
+| s98_v2 | 2 | 0.5 to 60 days | 39 | single and double transits are common |
+
+The hash of each set is in its `manifest.json` and in every results file scored on it.
+
 ## Episode files
 
 An episode file holds three arrays: `time`, `flux` and `flux_err`. The time starts at
