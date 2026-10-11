@@ -221,6 +221,15 @@ def cmd_calibrate(args: argparse.Namespace) -> None:
         print(f"sweep -> {args.out}")
 
 
+def cmd_compare(args: argparse.Namespace) -> None:
+    """Print a comparison table for several results files on one episode set."""
+    from stargazer.compare import compare, format_table
+
+    rows, episode_set_hash = compare([Path(path) for path in args.results])
+    print(f"episode set {episode_set_hash[:12]}\n")
+    print(format_table(rows))
+
+
 def cmd_verify(args: argparse.Namespace) -> None:
     """Recompute manifests. Exit with code 1 if a mismatch exists."""
     from stargazer.provenance import Manifest
@@ -326,6 +335,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-false-alarm", type=float, default=0.05)
     parser.add_argument("--out", default=None)
     parser.set_defaults(func=cmd_calibrate)
+
+    parser = sub.add_parser("compare", help="table of several results files on one episode set")
+    parser.add_argument("results", nargs="+")
+    parser.set_defaults(func=cmd_compare)
 
     parser = sub.add_parser("verify", help="recompute SHA-256 manifests")
     parser.add_argument("dirs", nargs="+")

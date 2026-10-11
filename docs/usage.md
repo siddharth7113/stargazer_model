@@ -87,6 +87,27 @@ uv pip install -e ".[tinker]"
 stargazer agent --episodes data/episodes/s98_v1 --backend tinker --model Qwen/Qwen3-8B --limit 3
 ```
 
+## Read the trajectories
+
+```bash
+stargazer view --results results/full/agent_qwen38_27b_s98_v1.json   # terminal viewer
+stargazer show --results results/full/agent_qwen38_27b_s98_v1.json --episode ep_0001
+```
+
+The viewer lists every episode with its truth, outcome and score. The right pane shows
+the model's thinking, each tool call, a shortened result and any nudge. Press `t` to
+hide thinking and `r` to see full tool results.
+
+## Compare systems
+
+```bash
+stargazer compare results/baseline_bls_s98_v1_sde7.json results/full/agent_*.json
+```
+
+The command refuses files from different episode sets. It prints completeness next to
+the false-alarm rate, because an agent has no threshold to sweep, and the completeness
+in each SNR bin.
+
 ## Score external predictions
 
 If a system runs outside Python, write its predictions as JSON keyed by episode id and

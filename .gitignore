@@ -6,7 +6,7 @@ data/cache/
 .pytest_cache/
 .ruff_cache/
 uv.lock
-results/*.log
+results/**/*.log
 docs/_build/
 docs/generated/
 .env
