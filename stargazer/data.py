@@ -27,7 +27,12 @@ META_KEYS = {
 
 @dataclass
 class LightCurve:
-    """A light curve and the metadata that injection needs.
+    """One star's brightness over time, with the stellar parameters.
+
+    A light curve is a time series of the brightness of one star. TESS measures a
+    star every two minutes for about 27 days, one sector. The benchmark injects
+    synthetic transits into light curves of stars with no known planet. The stellar
+    radius and surface gravity in ``meta`` set the transit geometry.
 
     Parameters
     ----------
@@ -49,7 +54,13 @@ class LightCurve:
 
 
 class LightCurveCache:
-    """A directory cache of SPOC 2-minute light curves. The key is (TIC, sector).
+    """Download TESS light curves once and read them from disk after that.
+
+    The cache is a directory of ``.npz`` files. The key of a file is the TESS Input
+    Catalog (TIC) identifier of the star and the sector number. ``fetch`` downloads
+    a light curve from the Mikulski Archive for Space Telescopes (MAST) if the file
+    does not exist. ``load`` reads a cached file. A manifest of file hashes makes the
+    cache verifiable.
 
     Parameters
     ----------

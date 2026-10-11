@@ -1,4 +1,10 @@
-"""Core types shared across the package: predictions and the detector protocol."""
+"""The interface between a detection system and the benchmark.
+
+A detection system of any kind, from a Box Least Squares search to a language-model
+agent, implements :class:`Detector`. The benchmark hands it one episode, which is one
+light curve as three arrays, and receives one :class:`Prediction`. The scorer in
+:mod:`stargazer.score` compares the prediction with the hidden truth of the episode.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +16,14 @@ import numpy as np
 
 @dataclass
 class Prediction:
-    """What a detector says about one episode.
+    """The answer a detection system gives for one light curve.
+
+    A detection system looks at one light curve, called an episode, and reports
+    whether it found a transit signal. If it did, it reports the signal's period,
+    epoch, duration and depth. The benchmark compares this answer with the hidden
+    truth of the episode. A prediction is the only output the benchmark needs from
+    a system, so a system in any language can take part by writing predictions as
+    JSON.
 
     Parameters
     ----------
@@ -57,10 +70,28 @@ class Prediction:
 
 @runtime_checkable
 class Detector(Protocol):
-    """An object that analyses one light curve and returns a :class:`Prediction`.
+    """The interface that each detection system implements.
+
+    A detection system receives one light curve as three arrays, analyses it, and
+    returns a :class:`Prediction`. The benchmark does not care how the system works.
+    The system can be a classical period search, a neural network or a language
+    model that calls tools. :class:`stargazer.baseline.BLSDetector` is the reference
+    implementation.
 
     An implementation must be deterministic for a given ``config``. This lets a
-    results file reproduce a run.
+    results file reproduce a run. The ``config`` must hold each value that changes
+    the output, for example thresholds, window sizes, model names and prompts.
+
+    Examples
+    --------
+    >>> class AlwaysNone:
+    ...     name = "always_none"
+    ...     config = {}
+    ...
+    ...     def detect(self, time, flux, flux_err):
+    ...         return Prediction(detected=False)
+    >>> isinstance(AlwaysNone(), Detector)
+    True
     """
 
     name: str

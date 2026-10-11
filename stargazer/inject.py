@@ -27,7 +27,14 @@ DAY = 86400.0
 
 @dataclass(frozen=True)
 class TransitTruth:
-    """Injected transit parameters.
+    """The hidden answer for one injected transit.
+
+    When the benchmark injects a synthetic transit into a light curve, it stores the
+    parameters of that transit in this record. The scorer compares a detector's
+    prediction with it. The detector never sees it. The record holds the free
+    parameters (period, epoch, depth, impact parameter) and the derived geometry
+    (radius ratio, semi-major axis, inclination, duration, limb darkening), so a
+    reader can rebuild the exact model without the code that drew it.
 
     Parameters
     ----------
@@ -290,7 +297,7 @@ def sample_truth(
     time: np.ndarray,
     star: dict,
     period_range: tuple[float, float] = (0.5, 20.0),
-    depth_range: tuple[float, float] = (2e-4, 2e-2),
+    depth_range: tuple[float, float] = (1e-4, 1e-2),
     b_max: float = 0.9,
 ) -> TransitTruth:
     """Draw one injection. Period and depth are log-uniform. Impact parameter is uniform.

@@ -27,7 +27,7 @@ def cmd_targets(a: argparse.Namespace) -> None:
 def cmd_fetch(a: argparse.Namespace) -> None:
     """Download light curves for each target. Record failures."""
     from stargazer.data import LightCurveCache
-    from stargazer.provenance import write_manifest
+    from stargazer.provenance import Manifest
     from stargazer.targets import load_targets
 
     cache = LightCurveCache(a.cache)
@@ -40,7 +40,7 @@ def cmd_fetch(a: argparse.Namespace) -> None:
         except Exception as e:
             failed.append({"tic": t["tic"], "error": str(e)[:200]})
             print(f"FAILED TIC {t['tic']}: {e}", file=sys.stderr, flush=True)
-    m = write_manifest(cache.root, pattern="*.npz")
+    m = Manifest.of_directory(cache.root, pattern="*.npz").write(cache.root)
     print(f"cached {ok}, failed {len(failed)}, manifest {m}")
     if failed:
         (cache.root / "fetch_failures.json").write_text(json.dumps(failed, indent=2))
@@ -105,13 +105,48 @@ def cmd_score(a: argparse.Namespace) -> None:
     print(f"results -> {out}")
 
 
+def cmd_calibrate(a: argparse.Namespace) -> None:
+    """Sweep the detection threshold on a results file and print the table."""
+    from stargazer.calibrate import choose_threshold, threshold_sweep
+    from stargazer.episodes import EpisodeSet
+    from stargazer.evaluate import Results
+
+    res = Results.load(a.results)
+    truth = EpisodeSet(res.episode_set).truth
+    thresholds = [float(x) for x in a.thresholds.split(",")]
+    rows = threshold_sweep(res, truth, thresholds, stat=a.stat)
+    print(f"{'threshold':>9} {'false_alarm':>11} {'compl_exact':>11} {'compl_alias':>11} {'mean_score':>10}")
+    for r in rows:
+        print(
+            f"{r['threshold']:9.2f} {r['false_alarm_rate']:11.3f} {r['completeness_exact']:11.3f} "
+            f"{r['completeness_with_aliases']:11.3f} {r['mean_score']:10.3f}"
+        )
+    chosen = choose_threshold(res, truth, max_false_alarm=a.max_false_alarm, stat=a.stat)
+    print(f"lowest threshold with false-alarm rate <= {a.max_false_alarm}: {chosen:.3f}")
+    if a.out:
+        Path(a.out).write_text(
+            json.dumps(
+                {
+                    "results": a.results,
+                    "episode_set_hash": res.episode_set_hash,
+                    "stat": a.stat,
+                    "sweep": rows,
+                    "max_false_alarm": a.max_false_alarm,
+                    "chosen_threshold": chosen,
+                },
+                indent=1,
+            )
+        )
+        print(f"sweep -> {a.out}")
+
+
 def cmd_verify(a: argparse.Namespace) -> None:
     """Recompute manifests. Exit with code 1 if a mismatch exists."""
-    from stargazer.provenance import verify_manifest
+    from stargazer.provenance import Manifest
 
     problems = []
     for d in a.dirs:
-        p = verify_manifest(Path(d))
+        p = Manifest.read(Path(d)).verify(Path(d))
         print(f"{d}: {'OK' if not p else f'{len(p)} problems'}")
         problems += p
     for p in problems:
@@ -146,8 +181,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--null-frac", type=float, default=0.3)
     p.add_argument("--min-period", type=float, default=0.5)
     p.add_argument("--max-period", type=float, default=20.0)
-    p.add_argument("--min-depth", type=float, default=2e-4)
-    p.add_argument("--max-depth", type=float, default=2e-2)
+    p.add_argument("--min-depth", type=float, default=1e-4)
+    p.add_argument("--max-depth", type=float, default=1e-2)
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("baseline", help="run the BLS baseline on an episode set and score it")
@@ -165,6 +200,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--period-rtol", type=float, default=0.01)
     p.add_argument("--out", default=None)
     p.set_defaults(func=cmd_score)
+
+    p = sub.add_parser("calibrate", help="sweep the detection threshold on a results file")
+    p.add_argument("--results", required=True)
+    p.add_argument("--stat", default="sde")
+    p.add_argument("--thresholds", default="5,6,7,8,9,10,12,15")
+    p.add_argument("--max-false-alarm", type=float, default=0.05)
+    p.add_argument("--out", default=None)
+    p.set_defaults(func=cmd_calibrate)
 
     p = sub.add_parser("verify", help="recompute SHA-256 manifests")
     p.add_argument("dirs", nargs="+")

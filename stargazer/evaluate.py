@@ -11,14 +11,20 @@ from pathlib import Path
 import numpy as np
 
 from stargazer.episodes import EpisodeSet
-from stargazer.provenance import git_commit, utc_now
+from stargazer.provenance import GitState, utc_timestamp
 from stargazer.score import score_set
 from stargazer.types import Detector, Prediction
 
 
 @dataclass
 class Results:
-    """The data needed to reproduce and audit one evaluation run.
+    """The output of one evaluation run, with its provenance.
+
+    An evaluation run applies one detector to each episode of one episode set and
+    scores each prediction. This record holds each prediction, each score row, the
+    set-level summary, the detector configuration, the hash of the episode set, the
+    git commit and the time. With these a reader can rerun the evaluation and get
+    the same numbers. :meth:`save` writes it as JSON. :meth:`load` reads it back.
 
     Parameters
     ----------
@@ -47,8 +53,8 @@ class Results:
     def to_dict(self) -> dict:
         """Return the JSON document layout."""
         return {
-            "created": self.created or utc_now(),
-            "git_commit": self.git_commit if self.git_commit is not None else git_commit(),
+            "created": self.created or utc_timestamp(),
+            "git_commit": self.git_commit if self.git_commit is not None else str(GitState.current()),
             "system": self.system,
             "config": self.config,
             "episode_set": self.episode_set,

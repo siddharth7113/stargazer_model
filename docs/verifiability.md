@@ -11,7 +11,7 @@ output records the seed. The same seed and the same inputs give identical output
 
 ## Manifests
 
-`write_manifest` records the SHA-256 of each file in a directory. `verify_manifest`
+`Manifest.of_directory` records the SHA-256 of each file in a directory. `Manifest.verify`
 recomputes the hashes and reports each mismatch. The episode-set hash is the SHA-256
 of the manifest. A results file records that hash, so a reader can confirm which
 episodes produced a number.

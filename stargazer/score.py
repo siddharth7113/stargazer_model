@@ -1,4 +1,9 @@
-"""Tier 1 detection scorer.
+"""Compare a prediction with the hidden truth of an episode and give a score.
+
+The scorer is the reward function of the benchmark. It takes what a detection
+system claimed about one light curve and what was in fact injected, and returns a
+number between 0 and 1 with an outcome label. It has no dependency on files or the
+network, so a training loop can call it on each rollout.
 
 Rules. Each tolerance is an explicit argument, so a run can change it and record it.
 
@@ -62,6 +67,10 @@ def score_episode(
 
     Score: ``period_credit * (0.7 + 0.3 * epoch_ok)``. The weights make a correct
     period with a wrong epoch worth more than an alias with a correct epoch.
+
+    An injected episode whose transits all fall in data gaps, or after the end of
+    the data, has ``n_transits == 0``. No detector can find it. The scorer treats it
+    as a null episode: "none" scores 1.0 and a detection scores 0.0.
     """
     if isinstance(pred, dict):
         pred = Prediction.from_dict(pred)
@@ -75,7 +84,7 @@ def score_episode(
         "score": 0.0,
         "outcome": None,
     }
-    if truth["kind"] == "null":
+    if truth["kind"] == "null" or truth.get("n_transits", 1) == 0:
         row["score"] = 0.0 if pred.detected else 1.0
         row["outcome"] = "false_alarm" if pred.detected else "true_null"
         return row
@@ -119,8 +128,12 @@ def summarize(rows: dict[str, dict], truth: dict) -> dict:
         Mean score, false-alarm rate on nulls, exact and alias-inclusive completeness
         on injections, and completeness binned by expected SNR and by transit count.
     """
-    nulls = [r for r in rows.values() if r["kind"] == "null"]
-    trans = {k: r for k, r in rows.items() if r["kind"] == "transit"}
+
+    def _is_null(k: str) -> bool:
+        return truth[k]["kind"] == "null" or truth[k].get("n_transits", 1) == 0
+
+    nulls = [rows[k] for k in rows if _is_null(k)]
+    trans = {k: rows[k] for k in rows if not _is_null(k)}
     summary = {
         "n_episodes": len(rows),
         "n_null": len(nulls),

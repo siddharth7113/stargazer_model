@@ -69,3 +69,11 @@ def test_summarize_bins():
     assert s["by_snr"]["10-20"]["completeness"] == 1.0
     assert s["by_snr"]["0-5"]["completeness"] == 0.0
     assert s["by_n_transits"]["1-1"]["n"] == 1
+
+
+def test_injected_but_no_transit_in_data_scores_as_null():
+    gone = {**T, "n_transits": 0, "snr": 0.0}
+    assert score_episode({"detected": False}, gone)["outcome"] == "true_null"
+    assert score_episode({"detected": True, "period": 3.0, "t0": 1.0}, gone)["outcome"] == "false_alarm"
+    s = summarize({"g": score_episode({"detected": False}, gone)}, {"g": gone})
+    assert s["n_null"] == 1 and s["n_transit"] == 0

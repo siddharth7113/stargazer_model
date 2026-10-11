@@ -1,98 +1,167 @@
-"""Helpers that make every output traceable: hashes, git commit, timestamps."""
+"""Make each output traceable to its inputs.
+
+The benchmark claims that each number is reproducible. These classes supply the
+evidence. :class:`Manifest` records and verifies the SHA-256 of each file in a
+directory. :class:`GitState` records the commit that produced a file, so a results file can
+name the exact code behind its numbers. :func:`utc_timestamp` gives the time.
+"""
 
 from __future__ import annotations
 
 import hashlib
 import json
 import subprocess
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
 
-def sha256_file(path: Path) -> str:
-    """Return the hex SHA-256 of a file. Read the file in 1 MiB chunks.
-
-    Parameters
-    ----------
-    path : Path
-        File to hash.
-    """
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def sha256_bytes(data: bytes) -> str:
-    """Return the hex SHA-256 of a bytes object."""
-    return hashlib.sha256(data).hexdigest()
-
-
-def git_commit() -> str | None:
-    """Return the git HEAD commit. Append ``-dirty`` if the working tree has changes.
-
-    Returns
-    -------
-    str or None
-        None when not inside a git repository.
-    """
-    try:
-        out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
-        dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
-        return out.stdout.strip() + ("-dirty" if dirty.stdout.strip() else "")
-    except Exception:
-        return None
-
-
-def utc_now() -> str:
+def utc_timestamp() -> str:
     """Return the current UTC time as an ISO 8601 string with second precision."""
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
-def write_manifest(directory: Path, pattern: str = "**/*", name: str = "manifest.json") -> Path:
-    """Write the SHA-256 of each file under a directory to a manifest file.
+@dataclass(frozen=True)
+class Digest:
+    """A SHA-256 digest as a hex string.
 
     Parameters
     ----------
-    directory : Path
-        Root to scan.
-    pattern : str
-        Glob pattern relative to ``directory``.
-    name : str
-        Manifest file name. The manifest does not list itself.
+    hex : str
+        64 lower-case hex characters.
 
-    Returns
-    -------
-    Path
-        The manifest that was written.
+    Examples
+    --------
+    >>> Digest.of_bytes(b"").hex[:16]
+    'e3b0c44298fc1c14'
     """
-    directory = Path(directory)
-    entries = {
-        str(p.relative_to(directory)): sha256_file(p)
-        for p in sorted(directory.glob(pattern))
-        if p.is_file() and p.name != name
-    }
-    out = directory / name
-    out.write_text(json.dumps({"created": utc_now(), "files": entries}, indent=2, sort_keys=True))
-    return out
+
+    hex: str
+
+    @classmethod
+    def of_file(cls, path: Path) -> Digest:
+        """Hash a file with the standard library's streaming digest."""
+        with open(path, "rb") as f:
+            return cls(hashlib.file_digest(f, "sha256").hexdigest())
+
+    @classmethod
+    def of_bytes(cls, data: bytes) -> Digest:
+        """Hash a bytes object."""
+        return cls(hashlib.sha256(data).hexdigest())
+
+    def __str__(self) -> str:
+        return self.hex
 
 
-def verify_manifest(directory: Path, name: str = "manifest.json") -> list[str]:
-    """Recompute hashes and compare with the manifest.
+@dataclass
+class Manifest:
+    """The SHA-256 of each file in a directory, with the time it was recorded.
 
-    Returns
-    -------
-    list of str
-        Human-readable problems. An empty list means every file matches.
+    A manifest lets any reader confirm that a directory of data files is the one a
+    results file refers to. :meth:`of_directory` builds one. :meth:`write` saves it
+    as ``manifest.json`` inside the directory. :meth:`read` opens a saved one.
+    :meth:`verify` recomputes each hash and reports each mismatch.
+
+    Parameters
+    ----------
+    files : dict of str to str
+        Path relative to the directory, mapped to its SHA-256 hex digest.
+    created : str
+        UTC time the hashes were computed, ISO 8601.
     """
-    directory = Path(directory)
-    manifest = json.loads((directory / name).read_text())
-    problems = []
-    for rel, digest in manifest["files"].items():
-        p = directory / rel
-        if not p.exists():
-            problems.append(f"missing: {rel}")
-        elif sha256_file(p) != digest:
-            problems.append(f"hash mismatch: {rel}")
-    return problems
+
+    FILENAME = "manifest.json"
+
+    files: dict[str, str] = field(default_factory=dict)
+    created: str = ""
+
+    @classmethod
+    def of_directory(cls, directory: Path, pattern: str = "**/*") -> Manifest:
+        """Hash each file under a directory. The manifest file itself is skipped.
+
+        Parameters
+        ----------
+        directory : Path
+        pattern : str
+            Glob relative to ``directory``.
+        """
+        directory = Path(directory)
+        files = {
+            str(p.relative_to(directory)): Digest.of_file(p).hex
+            for p in sorted(directory.glob(pattern))
+            if p.is_file() and p.name != cls.FILENAME
+        }
+        return cls(files=files, created=utc_timestamp())
+
+    @classmethod
+    def read(cls, directory: Path) -> Manifest:
+        """Open the manifest saved in a directory."""
+        d = json.loads((Path(directory) / cls.FILENAME).read_text())
+        return cls(files=d["files"], created=d["created"])
+
+    def write(self, directory: Path) -> Path:
+        """Save as ``manifest.json`` in the directory. Return the path."""
+        out = Path(directory) / self.FILENAME
+        out.write_text(json.dumps({"created": self.created, "files": self.files}, indent=2, sort_keys=True))
+        return out
+
+    def verify(self, directory: Path) -> list[str]:
+        """Recompute each hash against the files in ``directory``.
+
+        Returns
+        -------
+        list of str
+            One line for each missing file or hash mismatch. Empty means intact.
+        """
+        directory = Path(directory)
+        problems = []
+        for rel, digest in self.files.items():
+            p = directory / rel
+            if not p.exists():
+                problems.append(f"missing: {rel}")
+            elif Digest.of_file(p).hex != digest:
+                problems.append(f"hash mismatch: {rel}")
+        return problems
+
+    @staticmethod
+    def digest_of(directory: Path) -> Digest:
+        """Return the digest of the saved manifest file. This identifies the directory."""
+        return Digest.of_file(Path(directory) / Manifest.FILENAME)
+
+
+@dataclass(frozen=True)
+class GitState:
+    """The git commit of the working tree, and whether the tree had uncommitted changes.
+
+    Parameters
+    ----------
+    commit : str or None
+        Full SHA of HEAD. None if the directory is not a git repository.
+    dirty : bool
+        True if ``git status --porcelain`` printed anything.
+
+    Examples
+    --------
+    >>> str(GitState(commit="abc123", dirty=True))
+    'abc123-dirty'
+    """
+
+    commit: str | None
+    dirty: bool = False
+
+    @classmethod
+    def current(cls, cwd: Path | None = None) -> GitState:
+        """Read the state of the repository that contains ``cwd``."""
+        try:
+            head = subprocess.run(
+                ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=cwd
+            )
+            status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=cwd)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return cls(commit=None)
+        return cls(commit=head.stdout.strip(), dirty=bool(status.stdout.strip()))
+
+    def __str__(self) -> str:
+        if self.commit is None:
+            return "no-git"
+        return self.commit + ("-dirty" if self.dirty else "")

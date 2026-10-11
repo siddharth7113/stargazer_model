@@ -18,12 +18,16 @@ import numpy as np
 from stargazer import __version__
 from stargazer.data import LightCurveCache
 from stargazer.inject import expected_snr, inject, point_scatter, sample_truth, transit_count
-from stargazer.provenance import git_commit, sha256_file, utc_now, verify_manifest, write_manifest
+from stargazer.provenance import Digest, GitState, Manifest, utc_timestamp
 
 
 @dataclass(frozen=True)
 class BuildConfig:
-    """The values that determine an episode set for a given cache and targets file.
+    """The settings that define how an episode set is built.
+
+    Given the same cache of light curves, the same targets file and the same
+    ``BuildConfig``, :meth:`EpisodeSet.build` produces identical files. The config is
+    stored in the episode set, so a reader can rebuild it.
 
     Parameters
     ----------
@@ -41,11 +45,24 @@ class BuildConfig:
     seed: int
     null_frac: float = 0.3
     period_range: tuple[float, float] = (0.5, 20.0)
-    depth_range: tuple[float, float] = (2e-4, 2e-2)
+    depth_range: tuple[float, float] = (1e-4, 1e-2)
 
 
 class EpisodeSet:
-    """A built episode set on disk.
+    """A set of light curves with hidden answers, ready for evaluation.
+
+    An episode set is the unit of evaluation. It is a directory with:
+
+    - ``episodes/ep_NNNN.npz``: one file for each episode, holding only ``time``,
+      ``flux`` and ``flux_err``. A detector sees these and nothing else.
+    - ``truth.json``: for each episode, whether a transit was injected and with what
+      parameters, plus the host star and the expected signal-to-noise ratio. Only the
+      scorer reads this.
+    - ``config.json``: the :class:`BuildConfig`, the git commit and the targets file hash.
+    - ``manifest.json``: the SHA-256 of each file. The hash of the manifest identifies
+      the set in results files.
+
+    Use :meth:`build` to create a set and the constructor to open an existing one.
 
     Parameters
     ----------
@@ -77,7 +94,7 @@ class EpisodeSet:
     @property
     def hash(self) -> str:
         """SHA-256 of the manifest. This hash identifies the exact set."""
-        return sha256_file(self.root / "manifest.json")
+        return Manifest.digest_of(self.root).hex
 
     def load(self, ep_id: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Return ``(time, flux, flux_err)`` for one episode."""
@@ -92,7 +109,7 @@ class EpisodeSet:
 
     def verify(self) -> list[str]:
         """Recompute each hash. An empty list means the set is intact."""
-        return verify_manifest(self.root)
+        return Manifest.read(self.root).verify(self.root)
 
     @classmethod
     def build(
@@ -168,18 +185,18 @@ class EpisodeSet:
 
         (out_dir / "truth.json").write_text(json.dumps(truth, indent=1, sort_keys=True))
         config = {
-            "created": utc_now(),
+            "created": utc_timestamp(),
+            "git_commit": str(GitState.current()),
             "stargazer_version": __version__,
-            "git_commit": git_commit(),
             "build": {
                 **cfg.__dict__,
                 "period_range": list(cfg.period_range),
                 "depth_range": list(cfg.depth_range),
             },
             "targets_file": str(targets_path) if targets_path else None,
-            "targets_sha256": sha256_file(targets_path) if targets_path else None,
+            "targets_sha256": Digest.of_file(targets_path).hex if targets_path else None,
             "n_available_hosts": len(hosts),
         }
         (out_dir / "config.json").write_text(json.dumps(config, indent=2))
-        write_manifest(out_dir)
+        Manifest.of_directory(out_dir).write(out_dir)
         return cls(out_dir)

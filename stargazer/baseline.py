@@ -109,7 +109,13 @@ def bin_lc(
 
 
 class BLSDetector:
-    """Box Least Squares baseline. It implements the :class:`~stargazer.types.Detector` protocol.
+    """The reference detection system: a classical Box Least Squares (BLS) search.
+
+    BLS (Kovacs et al. 2002) folds the light curve at each trial period and looks
+    for a box-shaped dip. It is the standard first-pass transit search. This class
+    is the floor that each other system must beat, and it is the simplest example
+    of the :class:`~stargazer.types.Detector` protocol. It also shows where a
+    periodic search fails: single transits and shallow signals on active stars.
 
     Parameters
     ----------

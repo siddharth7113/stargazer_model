@@ -32,6 +32,10 @@ Depth
 : The scorer flags `depth_ok` if the predicted depth is within a factor of two of the
   truth. The flag does not change the score.
 
+Injected episode with no transit in the data
+: If every transit falls in a gap or after the end of the data, `n_transits` is zero.
+  The scorer treats the episode as null. "None" scores 1.0. A detection scores 0.0.
+
 ## One episode set
 
 `summarize` aggregates the rows.

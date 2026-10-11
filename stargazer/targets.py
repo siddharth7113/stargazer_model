@@ -22,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stargazer.provenance import sha256_bytes, utc_now
+from stargazer.provenance import Digest, utc_timestamp
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
 TIC_COLUMNS = [
@@ -57,7 +57,7 @@ def download_toi_tics(url: str = TOI_URL) -> tuple[set[int], str]:
                 tics.add(int(float(v)))
             except ValueError:
                 continue
-    return tics, sha256_bytes(raw)
+    return tics, Digest.of_bytes(raw).hex
 
 
 def sector_two_minute_tics(sector: int) -> list[int]:
@@ -137,7 +137,7 @@ def select_targets(
     rng = np.random.default_rng(seed)
     all_tics = sector_two_minute_tics(sector)
     toi_tics, toi_hash = download_toi_tics()
-    toi_time = utc_now()
+    toi_time = utc_timestamp()
     candidates = [t for t in all_tics if t not in toi_tics]
     pool = [int(t) for t in rng.choice(candidates, size=min(len(candidates), n * oversample), replace=False)]
     params = tic_params(pool)
@@ -160,7 +160,7 @@ def select_targets(
             if len(chosen) >= n:
                 break
     return {
-        "created": utc_now(),
+        "created": utc_timestamp(),
         "sector": sector,
         "seed": seed,
         "n_requested": n,

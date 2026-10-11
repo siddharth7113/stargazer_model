@@ -21,8 +21,8 @@ Evidence: LOGBOOK 2026-10-11.
 - [x] `select_targets` reads the 2-minute target list of a sector from MAST
 - [x] The TOI cross-match removes each star with a TOI. The targets file records the TOI CSV hash and date
 - [x] The targets file records radius, Teff, logg, Tmag and mass from the TIC
-- [ ] `LightCurveCache.fetch` caches light curves as `.npz`. A manifest records each SHA-256
-- [ ] At least 40 host stars cached for one sector
+- [x] `LightCurveCache.fetch` caches light curves as `.npz`. A manifest records each SHA-256
+- [x] At least 40 host stars cached for one sector (41 in sector 98)
 
 Acceptance: `stargazer verify data/cache` passes. The targets file lists the TOI CSV hash.
 
@@ -31,7 +31,8 @@ Acceptance: `stargazer verify data/cache` passes. The targets file lists the TOI
 - [x] Test: the depth at mid-transit matches rp/rs squared within the limb-darkening tolerance
 - [x] Test: the same seed gives identical episode files
 - [x] The truth record stores the expected SNR and the transit count of each episode
-- [x] Episode mix: 30 percent null, 70 percent injected. Periods 0.5 to 20 days. Depths 200 ppm to 2 percent
+- [x] Episode mix: 30 percent null, 70 percent injected. Periods 0.5 to 20 days. Depths 100 ppm to 1 percent
+- [x] An injected episode with no transit in the data is scored as null
 - [ ] One small episode set (20 episodes) committed to git
 
 Acceptance: `tests/test_inject.py` and `tests/test_episodes.py` pass.

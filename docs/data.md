@@ -28,7 +28,7 @@ download time.
 | Parameter | Distribution | Range |
 |-----------|-------------|-------|
 | period | log-uniform | 0.5 to 20 days |
-| depth | log-uniform | 200 ppm to 2 percent |
+| depth | log-uniform | 100 ppm to 1 percent |
 | impact parameter | uniform | 0 to 0.9 |
 | epoch | uniform | start to start plus one period |
 
