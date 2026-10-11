@@ -780,3 +780,12 @@ number of epochs with at least three points in transit, so both episodes report 
 and the prompt says that a signal with one event is a single event and that
 odd_even with one event and none of the other parity means the same. A test covers
 an epoch inside the gap. Tool and prompt change: the next series is `full_v6count`.
+
+**Three-episode check of the event count by points in transit**
+(`results/smoke/agent_inkling_small_s98_v2_count3.json`, Inkling-Small, `tml_v0`,
+ids ep_0029, ep_0079, ep_0004, through `evaluate`). All three are event hits, score
+1.0 each. On ep_0029 and ep_0079 the model read n_events_in_data 1 and odd_even's
+one event against none, called single_events and submitted the lone dip. On ep_0004,
+the faint one-transit injection (expected snr 16) that the model declined in two
+earlier checks, it submitted the event at snr 11.4 for the same reasons. The full run
+is `results/full_v6count/`.
