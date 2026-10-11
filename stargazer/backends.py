@@ -47,8 +47,7 @@ class OpenAICompatibleBackend:
     -----
     The request sets ``extra_body={"usage": {"include": True}}``. OpenRouter then
     returns the cost of the call in US dollars in ``usage.cost``, which the backend
-    reports as ``usd`` so a run can stop at a spend cap. Other providers ignore the
-    field and ``usd`` stays zero; set prices on the command line instead.
+    reports as ``usd``. Other providers ignore the field and no ``usd`` is reported.
     """
 
     name = "openai_compatible"
@@ -118,8 +117,10 @@ class OpenAICompatibleBackend:
         usage = {
             "input_tokens": float(getattr(resp.usage, "prompt_tokens", 0) or 0),
             "output_tokens": float(getattr(resp.usage, "completion_tokens", 0) or 0),
-            "usd": float(getattr(resp.usage, "cost", 0.0) or 0.0),
         }
+        cost = getattr(resp.usage, "cost", None)
+        if cost is not None:
+            usage["usd"] = float(cost)
         return AssistantTurn(
             content=choice.message.content or "",
             tool_calls=calls,
@@ -144,6 +145,36 @@ References
 ----------
 .. [1] Qwen Team (2025). Qwen3 model cards, "Best Practices" section.
    https://huggingface.co/Qwen/Qwen3-8B
+"""
+
+
+TINKER_SAMPLING_USD_PER_MILLION: dict[str, float] = {
+    "Qwen/Qwen3-8B": 0.60,
+    "Qwen/Qwen3.5-4B": 1.005,
+    "Qwen/Qwen3.5-9B": 0.807,
+    "Qwen/Qwen3.5-35B-A3B-Base": 1.335,
+    "Qwen/Qwen3.6-35B-A3B": 1.335,
+    "Qwen/Qwen3.6-27B": 5.595,
+    "Qwen/Qwen3.8-27B": 5.595,
+    "Qwen/Qwen3.5-397B-A17B": 7.50,
+    "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": 0.495,
+    "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16": 0.495,
+    "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16": 1.44,
+    "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16": 6.225,
+    "thinkingmachines/Inkling-Small": 1.44,
+    "thinkingmachines/Inkling": 4.68,
+    "moonshotai/Kimi-K2.6": 5.49,
+    "openai/gpt-oss-20b": 0.45,
+    "openai/gpt-oss-120b": 0.84,
+    "zai-org/GLM-5.3-Flash:peft:262144": 2.11,
+    "zai-org/GLM-5.3:peft:262144": 12.15,
+    "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144": 3.60,
+    "deepseek-ai/DeepSeek-V3.1": 4.215,
+}
+"""Tinker sampling price in US dollars per million tokens, from the models and pricing
+page read on 2026-10-11. Sampling is billed on prompt plus sampled tokens. The table is
+an estimate for reporting; the Tinker console is the bill. A model not listed here
+gets no cost field.
 """
 
 
@@ -377,7 +408,10 @@ class TinkerBackend:
             text = (
                 text + "\n" + "\n".join(getattr(call, "raw_text", str(call)) for call in unparsed)
             ).strip()
-        usage = {"input_tokens": float(prompt.length), "output_tokens": float(len(tokens)), "usd": 0.0}
+        usage = {"input_tokens": float(prompt.length), "output_tokens": float(len(tokens))}
+        price = TINKER_SAMPLING_USD_PER_MILLION.get(self._base_model)
+        if price is not None:
+            usage["usd"] = (prompt.length + len(tokens)) * price / 1e6
         return AssistantTurn(
             content=text,
             tool_calls=calls,

@@ -77,7 +77,8 @@ class AssistantTurn:
         Text the model wrote, possibly empty.
     tool_calls : list of ToolCall
     usage : dict
-        ``input_tokens`` and ``output_tokens``; ``usd`` when the provider reports cost.
+        ``input_tokens`` and ``output_tokens``; ``usd`` only when the backend knows the
+        cost, from the provider or from a price table. Never zero as a placeholder.
     thinking : str
         The model's reasoning trace when the backend exposes one, else empty. It is
         stored in the trajectory and never sent back to the model.
@@ -202,15 +203,15 @@ class ToolAgentDetector:
         tools = tool_definitions()
         transcript: list[dict] = []
         thinking: list[str] = []
-        usage = {"input_tokens": 0.0, "output_tokens": 0.0, "usd": 0.0}
+        usage: dict[str, float] = {"input_tokens": 0.0, "output_tokens": 0.0}
         prediction: Prediction | None = None
         stop = "no_submission"
         n_calls = 0
         n_nudges = 0
         for _turn in range(self._max_turns):
             turn = self._backend.complete(messages, tools)
-            for key in usage:
-                usage[key] += float(turn.usage.get(key, 0.0))
+            for key, value in turn.usage.items():
+                usage[key] = usage.get(key, 0.0) + float(value)
             messages.append(_assistant_message(turn))
             thinking.append(turn.thinking)
             if not turn.tool_calls:
