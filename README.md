@@ -171,8 +171,8 @@ with them are described in LOGBOOK.md.
 | `search_signals` | search, mask the strongest signal, search again, until the rest is noise | done |
 | `single_events` | strongest individual dips by the single-event statistic, with the noise at each timescale | done |
 | `fold` | binned phase curve at a period and epoch | done |
+| `fit_transit` | batman fit: depth, duration, impact parameter, host density and shape verdicts | done |
 | `odd_even` | per-event depth comparison with a verdict | done |
-| transit-shape fit, duration consistency | detection | planned |
 | secondary eclipse, ephemeris match, centroid motion, difference imaging, Gaia dilution | vetting | planned |
 | vetting report, preregistered predictions | reporting | planned |
 

@@ -252,6 +252,21 @@ def test_summary_line_of_search_signals_gives_count_top_signal_and_residual():
     )
 
 
+def test_summary_line_of_fit_transit_gives_shape_and_verdicts():
+    """The fit line carries what a reader checks first: depth, duration, geometry and the two verdicts."""
+    result = {
+        "depth_ppm": 9850.0,
+        "duration_hours": 2.61,
+        "impact_parameter": 0.31,
+        "shape": "flat_bottom",
+        "density_verdict": "plausible",
+        "significance_sigma": 41.2,
+    }
+    assert summary_line(_result("fit_transit", result)) == (
+        "depth 9,850 ppm · 2.61 h · b 0.31 · flat_bottom · density plausible · 41.2\u03c3"
+    )
+
+
 def test_summary_line_of_single_events_gives_count_and_first_event():
     """The single-event search reports how many events it found and the strongest one."""
     result = {"events": [{"time": 20.0, "snr": 23.12, "depth_ppm": 9800.0}, {"time": 5.0}]}

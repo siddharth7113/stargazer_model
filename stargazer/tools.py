@@ -435,6 +435,177 @@ def single_events(
     return {"events": events, "point_scatter_ppm": round(scatter * 1e6, 1)}
 
 
+FIT_LIMB_DARKENING_TEFF = 5500.0
+"""Effective temperature, kelvin, whose TESS quadratic limb-darkening coefficients the
+transit fit uses. The tool sees only a light curve, so it takes a Sun-like star."""
+
+GRAZING_BOUND = 0.9
+"""Value of ``b + k`` (impact parameter plus radius ratio) at or above which the fitted
+geometry is reported as ``v_shaped``. At 1.0 the planet disc crosses the limb at
+mid-transit; the margin below it covers the fit's degeneracy between ``b`` and ``k``
+on a near-grazing dip."""
+
+DENSITY_VERDICTS: tuple[tuple[float, str], ...] = (
+    (0.1, "too_low_for_a_dwarf"),
+    (20.0, "plausible"),
+    (np.inf, "too_high"),
+)
+"""Upper bound of the fitted stellar density, g cm^-3, and the verdict for a value below
+it. The first row that exceeds the value wins. A main-sequence star has 0.1 to 20."""
+
+
+def fit_transit(
+    time: np.ndarray,
+    flux: np.ndarray,
+    period: float,
+    t0: float,
+    duration: float,
+    detrend_window_days: float = 0.75,
+    bin_minutes: float = 5.0,
+) -> dict:
+    r"""Fit a physical transit model to the folded light curve at one period and epoch.
+
+    Parameters
+    ----------
+    time, flux : ndarray
+    period : float
+        Period, days.
+    t0 : float
+        Epoch of a transit centre, days.
+    duration : float
+        First guess of the total transit duration, days, for example from a peak.
+    detrend_window_days : float
+        Savitzky-Golay window, see :func:`stargazer.baseline.detrend`.
+    bin_minutes : float
+        Width of the phase bins the fit uses.
+
+    Returns
+    -------
+    dict
+        ``depth_ppm`` and ``depth_err_ppm``, ``duration_hours``, ``t0`` (refined, days),
+        ``rp_rs``, ``a_rs``, ``impact_parameter``, ``stellar_density_gcc`` and
+        ``density_verdict``, ``shape`` (``flat_bottom`` or ``v_shaped``),
+        ``significance_sigma``, ``n_bins`` and ``n_in_transit``.
+
+    Notes
+    -----
+    The fit is the vetting step a pipeline runs after the box search [5]_. The
+    detrended flux is folded on the period, kept within 2.5 durations of the epoch,
+    binned, and fitted with the batman model [6]_ of :func:`stargazer.inject.transit_model`
+    by nonlinear least squares. The free parameters are the epoch offset, the radius
+    ratio :math:`k = R_p / R_\star`, the scaled semi-major axis :math:`a / R_\star` and
+    the impact parameter :math:`b`. The quadratic limb-darkening coefficients are fixed
+    at the TESS values of Claret [7]_ for a star of :data:`FIT_LIMB_DARKENING_TEFF`
+    kelvin, because the tool does not know the host.
+
+    The depth is :math:`k^2` in parts per million. The duration is :math:`T_{14}` from
+    :func:`stargazer.inject.transit_duration`. The stellar density follows from the
+    period and :math:`a / R_\star` alone, for a circular orbit and a planet of
+    negligible mass [8]_,
+
+    .. math::
+       \rho_\star = \frac{3 \pi}{G P^2} \left( \frac{a}{R_\star} \right)^3
+
+    with :math:`G` in SI, :math:`P` in seconds and the result converted to
+    :math:`\mathrm{g\,cm^{-3}}`. A main-sequence host has a density between 0.1 and
+    20, so a value outside that range means the dip is not a transit of a dwarf at
+    this period; :data:`DENSITY_VERDICTS` holds the bounds. The shape is
+    ``flat_bottom`` if the planet disc lies well inside the stellar disc at
+    mid-transit, :math:`b + k < 0.9` (:data:`GRAZING_BOUND`), and ``v_shaped``
+    otherwise, a grazing geometry that a blended or grazing eclipsing binary produces
+    more often than a planet. The significance is
+    :math:`\sqrt{\chi^2_\mathrm{flat} - \chi^2_\mathrm{fit}}`, the improvement of
+    the transit model over a flat line, in sigma. The depth error is the square root
+    of the diagonal of the covariance :math:`(J^T J)^{-1}` at the solution, scaled by
+    the reduced chi-square.
+
+    References
+    ----------
+    .. [5] Twicken, J. D., et al. (2018). Kepler data validation I: architecture,
+       diagnostic tests, and data products for vetting transiting planet candidates.
+       Publications of the Astronomical Society of the Pacific, 130, 064502.
+       https://doi.org/10.1088/1538-3873/aab694
+    .. [6] Kreidberg, L. (2015). batman: BAsic Transit Model cAlculatioN in Python.
+       Publications of the Astronomical Society of the Pacific, 127, 1161.
+       https://doi.org/10.1086/683602
+    .. [7] Claret, A. (2017). Limb and gravity-darkening coefficients for the TESS
+       satellite. Astronomy and Astrophysics, 600, A30.
+       https://doi.org/10.1051/0004-6361/201629705
+    .. [8] Seager, S. and Mallén-Ornelas, G. (2003). A unique solution of planet and
+       star parameters from an extrasolar planet transit light curve. The
+       Astrophysical Journal, 585, 1038. https://doi.org/10.1086/346105
+    """
+    from scipy.optimize import least_squares
+
+    from stargazer.inject import (
+        DAY,
+        G_SI,
+        TransitTruth,
+        limb_darkening_for_teff,
+        transit_duration,
+        transit_model,
+    )
+
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    phase = ((work_time - t0 + 0.5 * period) % period) - 0.5 * period
+    window = max(2.5 * duration, 0.2)
+    keep = np.abs(phase) < window
+    phase, work_flux = phase[keep], work_flux[keep]
+    bin_phase, bin_flux, bin_err = bin_lc(phase + window, work_flux, bin_minutes)
+    bin_phase = bin_phase - window
+    bin_err = np.where(
+        bin_err > 0, bin_err, np.nanmedian(bin_err[bin_err > 0]) if (bin_err > 0).any() else 1.0
+    )
+    u1, u2 = limb_darkening_for_teff(FIT_LIMB_DARKENING_TEFF)
+
+    def truth_of(params: np.ndarray) -> TransitTruth:
+        dt0, rp_rs, a_rs, b = params
+        b = min(b, 0.999 * a_rs)
+        inc = float(np.degrees(np.arccos(b / a_rs)))
+        return TransitTruth(period, dt0, rp_rs, a_rs, inc, b, u1, u2, 0.0, rp_rs**2)
+
+    def residuals(params: np.ndarray) -> np.ndarray:
+        return (bin_flux - transit_model(bin_phase, truth_of(params))) / bin_err
+
+    in_box = np.abs(bin_phase) < 0.5 * duration
+    depth_guess = max(float(1.0 - np.mean(bin_flux[in_box])) if in_box.any() else 1e-4, 1e-5)
+    start = np.array([0.0, np.sqrt(depth_guess), period / (np.pi * duration), 0.3])
+    lower = np.array([-0.5 * duration, 0.002, 1.2, 0.0])
+    upper = np.array([0.5 * duration, 0.6, 2000.0, 1.5])
+    start = np.clip(start, lower + 1e-9, upper - 1e-9)
+    solution = least_squares(residuals, start, bounds=(lower, upper), method="trf")
+    dt0, rp_rs, a_rs = solution.x[:3]
+    fitted = truth_of(solution.x)
+    chi2_fit = float(np.sum(solution.fun**2))
+    chi2_flat = float(np.sum(((bin_flux - 1.0) / bin_err) ** 2))
+    dof = max(len(bin_flux) - 4, 1)
+    jacobian = solution.jac
+    try:
+        covariance = np.linalg.inv(jacobian.T @ jacobian) * max(chi2_fit / dof, 1.0)
+        rp_err = float(np.sqrt(max(covariance[1, 1], 0.0)))
+    except np.linalg.LinAlgError:
+        rp_err = float("nan")
+    fitted_duration = transit_duration(period, a_rs, fitted.inc_deg, rp_rs, fitted.b)
+    density_si = 3.0 * np.pi / (G_SI * (period * DAY) ** 2) * a_rs**3  # kg m^-3
+    density_gcc = float(density_si / 1000.0)
+    verdict = next(name for bound, name in DENSITY_VERDICTS if density_gcc < bound)
+    return {
+        "depth_ppm": round(float(rp_rs**2) * 1e6, 1),
+        "depth_err_ppm": round(2.0 * rp_rs * rp_err * 1e6, 1) if np.isfinite(rp_err) else None,
+        "duration_hours": round(fitted_duration * 24.0, 2),
+        "t0": round(float(t0 + dt0), 4),
+        "rp_rs": round(float(rp_rs), 4),
+        "a_rs": round(float(a_rs), 2),
+        "impact_parameter": round(float(fitted.b), 3),
+        "stellar_density_gcc": round(density_gcc, 3),
+        "density_verdict": verdict,
+        "shape": "flat_bottom" if fitted.b + rp_rs < GRAZING_BOUND else "v_shaped",
+        "significance_sigma": round(float(np.sqrt(max(chi2_flat - chi2_fit, 0.0))), 1),
+        "n_bins": len(bin_flux),
+        "n_in_transit": int(np.sum(np.abs(bin_phase) < 0.5 * fitted_duration)),
+    }
+
+
 def odd_even(
     time: np.ndarray,
     flux: np.ndarray,
@@ -800,6 +971,35 @@ TOOLS: tuple[ToolSpec, ...] = (
             t0=t0,
             phase_half_width=phase_half_width,
             detrend_window_days=detrend_window_days,
+        ),
+    ),
+    ToolSpec(
+        name="fit_transit",
+        description=(
+            "Fit a physical transit model (batman) to one candidate at period, t0 and duration. Returns "
+            "depth_ppm with depth_err_ppm, duration_hours, a refined t0, impact_parameter, "
+            "stellar_density_gcc with density_verdict (plausible for a dwarf star between 0.1 and 20; "
+            "too_low_for_a_dwarf or too_high means the dip does not fit a planet at this period), shape "
+            "(flat_bottom is planet-like; v_shaped is grazing, as eclipsing binaries often are) and "
+            "significance_sigma (the improvement over a flat line). Use after the fold and before "
+            "odd_even on every candidate you consider submitting."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "period": _number("Period, days.", positive=True),
+                "t0": _number("Epoch of a transit centre, days from the start."),
+                "duration": _number(
+                    "First guess of the transit duration, days, from the peak.", positive=True
+                ),
+                "detrend_window_days": _number(
+                    "Detrending window, days. Use the same value as in the search.", 0.75, positive=True
+                ),
+            },
+            "required": ["period", "t0", "duration"],
+        },
+        function=lambda time, flux, period, t0, duration, detrend_window_days=0.75: fit_transit(
+            time, flux, period=period, t0=t0, duration=duration, detrend_window_days=detrend_window_days
         ),
     ),
     ToolSpec(

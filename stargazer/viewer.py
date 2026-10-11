@@ -518,6 +518,16 @@ def _fold_line(arguments: dict, data: dict) -> str:
     return f"depth {_field(data, 'depth_ppm', '{:,.0f}')} ppm · {len(flux)} bins · {empty} empty"
 
 
+def _fit_line(arguments: dict, data: dict) -> str:
+    """Summarise a ``fit_transit`` result: depth, duration, shape, density verdict, significance."""
+    depth = _field(data, "depth_ppm", "{:,.0f}")
+    hours = _field(data, "duration_hours", "{:.2f}")
+    impact = _field(data, "impact_parameter", "{:.2f}")
+    sigma = _field(data, "significance_sigma", "{:.1f}")
+    verdicts = f"{_field(data, 'shape')} · density {_field(data, 'density_verdict')}"
+    return f"depth {depth} ppm · {hours} h · b {impact} · {verdicts} · {sigma}\u03c3"
+
+
 def _odd_even_line(arguments: dict, data: dict) -> str:
     """Summarise an ``odd_even`` result: the verdict, both depths with their events, the difference."""
     odd_events = data.get("odd_events", data.get("odd_n", "?"))
@@ -547,6 +557,7 @@ SUMMARY_LINES: dict[str, Callable[[dict, dict], str]] = {
     "search_signals": _signals_line,
     "single_events": _events_line,
     "fold": _fold_line,
+    "fit_transit": _fit_line,
     "odd_even": _odd_even_line,
     "submit_prediction": _submit_line,
 }

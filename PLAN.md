@@ -79,8 +79,8 @@ description written for the model. The agent gets the tool only when the test pa
 - [x] `single_events`: single-event statistic over box widths, the regime BLS cannot see; window tied to the box width and noise at the box timescale (LOGBOOK 2026-10-11)
 - [x] Iterative multi-signal search: find, mask, repeat, until the next peak is noise (the pipeline's "multiple planet search"); `search_signals` (LOGBOOK 2026-10-11)
 - [ ] Transit Least Squares as a second search with a physical transit shape, for shallow signals
-- [ ] Transit-shape fit with batman: depth, duration, impact parameter and their uncertainties; box versus V shape
-- [ ] Duration consistency: does the fitted duration match the stellar density and period? (Seager and Mallén-Ornelas)
+- [x] Transit-shape fit with batman: depth, duration, impact parameter and their uncertainties; box versus V shape; `fit_transit` (LOGBOOK 2026-10-11)
+- [x] Duration consistency: `fit_transit` reports the host density from the period and a/R* with a verdict for a dwarf host (Seager and Mallén-Ornelas); the comparison with the TIC density needs the host parameters, which a tool does not see (LOGBOOK 2026-10-11)
 
 ### 3b Vetting against false positives
 - [x] `odd_even`: per-event depths with a verdict word

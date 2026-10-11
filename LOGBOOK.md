@@ -609,3 +609,47 @@ odd_even consistent, 8 calls); ep_0000 true null (one signal at sde 10.9, folded
 a noisy dip, declined); ep_0002 true null (zero signals, residual 7.7, 6 calls). The
 model used search_signals at step 2 on every episode and still called bls_peaks once
 for its own check. No errors. The full run is `results/full_v4search/`.
+
+**Inkling-Small, full s98_v2 run with the segment-edge guard**
+(`results/full_v3form/agent_inkling_small_s98_v2_edge.json`, same command as the
+v3form run with `_edge` in the output name; no errors, 879 s, $9.65, 33,513 tokens
+an episode).
+
+| run | false alarm | exact | with aliases | mean score | one transit | two | 3-5 | 6+ | event submissions |
+|---|---|---|---|---|---|---|---|---|---|
+| v2tools (period form only) | 0.11 | 0.32 | 0.34 | 0.533 | 0/18 | 1/14 | 4/22 | 38/73 | 0 |
+| v3form | 0.33 | 0.31 | 0.32 | 0.445 | 2/18 | 2/14 | 6/22 | 31/73 | 22: 2 hits, 7 wrong, 13 false |
+| v3form + edge guard | 0.12 | 0.28 | 0.34 | 0.515 | 2/18 | 2/14 | 6/22 | 33/73 | 9: 6 hits, 2 wrong, 1 false |
+| BLS, SDE 18.6 | 0.05 | 0.25 | - | - | 0/18 | 2/14 | 27% | 51% | - |
+
+The guard closed the channel: event-form false alarms fell from 13 to 1 and wrong
+events from 7 to 2. The one left (ep_0086, t = 33.49 days) is the same feature that
+gave the wrong event on ep_0060, a real dip of one host star that is not at a
+segment edge; only a vetting tool can reject it. Six event hits: two one-transit
+episodes (ep_0029, ep_0079), two with two transits, one with three and one with
+five, where the periodic search had missed. The false-alarm rate is back at the
+v2tools level with the same alias-inclusive completeness, and the one-transit bin
+went from 0 to 2 of 18. Exact completeness is lower (0.28 against 0.32) because an
+event hit on a multi-transit episode scores 0.5 and does not count as exact, and
+because the period form found 34 hits against 41; with one seed the second
+difference is within what a seed can move. The 16 one-transit misses are the faint
+regime: the model declines events near snr 10 on active stars, which is the rule
+the prompt gives it.
+
+**Tool: `fit_transit`, the physical transit fit.** Folds the detrended flux at a
+period and epoch, keeps 2.5 durations around the transit, bins to 5 minutes and
+fits the batman model of the injector by least squares with the epoch offset, the
+radius ratio, a/R* and the impact parameter free; limb darkening fixed at the Claret
+TESS values for 5500 K, because the tool sees only a light curve. Returns the depth
+with an error from the covariance, the duration, a refined t0, a/R*, the impact
+parameter, the host density from the period and a/R* (Seager and Mallén-Ornelas
+2003) with a verdict (plausible for 0.1 to 20 g/cc), the shape (flat_bottom for
+b + k below 0.9, else v_shaped) and the significance over a flat line. The shape
+bound sits below 1 because the fit of a near-grazing dip trades b against k: a
+b=0.98, k=0.10 injection fitted to b=0.915, k=0.065. Tests: a 1 percent b=0.3
+injection returns depth, duration and a/R* within 20 percent, flat_bottom and a
+plausible density; b=0.98 returns v_shaped; noise gives a significance below 3
+sigma; the density of the Sun-like test host comes back near 1.5 g/cc. The prompt
+puts fit_transit between the folds and odd_even and requires flat_bottom with a
+plausible density. The viewer summarises the result. Tool and prompt change, so the
+next full runs after the `full_v4search` series are `full_v5fit`.

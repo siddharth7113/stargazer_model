@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from stargazer import tools
-from stargazer.inject import inject, make_truth
+from stargazer.inject import G_SI, inject, make_truth
 from stargazer.tools import TOOLS, TOOLS_BY_NAME, ToolSpec, call_tool, tool_definitions
 
 
@@ -183,6 +183,9 @@ def test_registry_periods_durations_and_depth_are_positive():
         ("fold", "period"),
         ("fold", "phase_half_width"),
         ("fold", "detrend_window_days"),
+        ("fit_transit", "period"),
+        ("fit_transit", "duration"),
+        ("fit_transit", "detrend_window_days"),
         ("odd_even", "period"),
         ("odd_even", "duration"),
         ("single_events", "detrend_window_days"),
@@ -302,6 +305,52 @@ def test_search_signals_stops_at_max_signals(lc, star):
     injected = inject(relative, flux, make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star))
     result = tools.search_signals(relative, injected, max_signals=1)
     assert len(result["signals"]) == 1 and result["stop"] == "max_signals" and result["residual_sde"] is None
+
+
+def test_fit_transit_recovers_depth_duration_and_geometry(lc, star):
+    """A 1 percent, b=0.3 injection fits back to its depth, duration and a/R* within 20 percent."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.3, star=star)
+    result = tools.fit_transit(
+        relative, inject(relative, flux, truth), period=3.0, t0=1.0, duration=truth.duration
+    )
+    assert abs(result["depth_ppm"] / 1e4 - 1) < 0.2
+    assert abs(result["duration_hours"] / (truth.duration * 24) - 1) < 0.2
+    assert abs(result["a_rs"] / truth.a_rs - 1) < 0.2
+    assert result["shape"] == "flat_bottom" and result["significance_sigma"] > 20
+    assert result["density_verdict"] == "plausible"
+
+
+def test_fit_transit_calls_a_grazing_dip_v_shaped(lc, star):
+    """A grazing injection, b near 1, has no flat bottom and comes back ``v_shaped``."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.98, star=star)
+    result = tools.fit_transit(
+        relative, inject(relative, flux, truth), period=3.0, t0=1.0, duration=truth.duration
+    )
+    assert result["shape"] == "v_shaped" and result["impact_parameter"] > 0.9
+
+
+def test_fit_transit_on_noise_has_low_significance(lc):
+    """With no dip the transit model improves little on a flat line; the significance stays below 3 sigma."""
+    time, flux, _ = lc
+    result = tools.fit_transit(time - time.min(), flux, period=3.0, t0=1.0, duration=0.1)
+    assert result["significance_sigma"] < 3.0
+
+
+def test_fit_transit_density_of_a_sun_like_host_is_about_one(lc, star):
+    """The fitted a/R* and period give the host density; a Sun-like host comes back near 1.5 g/cc."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.1, star=star)
+    result = tools.fit_transit(
+        relative, inject(relative, flux, truth), period=3.0, t0=1.0, duration=truth.duration
+    )
+    expected = 3.0 * np.pi / (G_SI * (3.0 * 86400.0) ** 2) * truth.a_rs**3 / 1000.0
+    assert abs(expected - 1.5) < 0.3  # 0.95 solar radii at log g 4.45
+    assert abs(result["stellar_density_gcc"] / expected - 1) < 0.5
 
 
 def test_single_events_finds_a_lone_transit(lc, star):
