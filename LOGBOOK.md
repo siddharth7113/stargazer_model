@@ -855,3 +855,61 @@ secondary_eclipse on its own, in an order of its choosing. ep_0001 hit (12 calls
 ep_0002 true null (6 calls), ep_0000 false alarm: the 16.9-day one-dip signal
 submitted as a period, which the rules prompt's one-event rule had blocked. That is
 the expected shape of the gap. The full run is `results/full_v7base/`.
+
+**Inkling-Small, full s98_v2 run with the base prompt**
+(`results/full_v7base/agent_inkling_small_s98_v2.json`, log beside it; `--prompt
+base`, renderer `tml_v0`, temperature 0.6, seed 0, eight workers, no errors, 851 s,
+$9.43, 32,734 tokens and 8.9 tool calls an episode; tools of commit `1c8ee67`, the
+same as the rules row below except the three-way shape verdict).
+
+```
+stargazer agent --episodes data/episodes/s98_v2 --backend tinker --model thinkingmachines/Inkling-Small \
+    --renderer tml_v0 --prompt base --limit 0 --workers 8 --out results/full_v7base/agent_inkling_small_s98_v2.json
+```
+
+| prompt | false alarm | exact | with aliases | mean score | one transit | two | 3-5 | 6+ | wrong period | hits |
+|---|---|---|---|---|---|---|---|---|---|---|
+| rules (v6count) | 0.05 | 0.33 | 0.35 | 0.558 | 3/18 | 2/14 | 4/22 | 36/73 | 2 | 39 |
+| base (v7base) | 0.40 | 0.39 | 0.43 | 0.476 | 5/18 | 3/14 | 7/22 | 40/73 | 21 | 44 |
+
+Outcomes with the base prompt: 44 hits, 6 aliases, 21 wrong periods, 5 event hits, 3
+wrong events, 48 misses, 44 true nulls, 29 false alarms. The model used every tool
+without being told the order (bls_peaks 231 calls, search_signals 148, fit_transit
+222, secondary_eclipse 150).
+
+Reading. The gap between the two prompts is precision. Without the rules the model
+finds more, in every transit-count bin, and submits seven times as many false
+alarms and ten times as many wrong periods, so the mean score falls from 0.558 to
+0.476. The rules block is worth 0.08 of mean score on this model and this set, and
+all of it is restraint: when to say "none". That is the policy the
+reinforcement-learning phase has to learn from the reward, and the base row is its
+starting point. The base prompt is the default from here; the rules prompt stays as
+the comparison row.
+
+**Catalogue context and two vetting tools.** `stargazer/context.py` holds
+`EpisodeContext`: the star's TIC, position, TESS magnitude, the episode's time
+offset, its TOI entries (ExoFOP CSV), its TESS eclipsing-binary entries (Prša et al.
+2022, Vizier J/ApJS/258/16), its Gaia DR3 variability classes (I/358/vclassre) and
+the Gaia sources within 63 arcseconds with their G magnitude difference (I/355),
+with the download time and the TOI file's hash. `stargazer context --episodes DIR
+--targets FILE` fetches one context for each host and writes `context.json` beside
+the episodes, then rewrites the manifest. The context carries nothing about the
+injection; the writer reads the truth file only for the TIC, the sector and the time
+offset. A detector that declares a `context` keyword on `detect` receives it; the
+baseline does not and is unchanged. Tools that need it are marked and return an
+error on a set without `context.json`.
+
+Two tools read it. `ephemeris_match(period, t0)` compares the candidate with the
+TOI and binary periods at the ratios 1, 2, 1/2, 3 and 1/3 within 1 percent, reports
+the epoch offset against the catalogue epoch, and gives the verdict known_toi,
+known_eclipsing_binary, gaia_variable or no_match. `nearby_stars()` lists the Gaia
+sources within two pixels with their flux fraction and the largest depth their total
+eclipse could make on the target, verdict possible_blend or isolated. Both are in
+the tool registry; the prompts do not mention them, so the model finds them from
+their descriptions. Tests are offline with fixed contexts.
+
+`data/episodes/s98_v2` now has `context.json` for its 200 episodes. The episode
+files are identical; the manifest hash moved from
+`d03935c59b8706b8715c3363c917eef30d09c65ebdba46c654079a86b453d731` to
+`f73a513c1687c338c3e1b8d60ed9e32883ff68694f7946ec2fb39d0ecb85a490` because the
+manifest lists the new file. Results files before this point record the old hash.

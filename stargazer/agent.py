@@ -251,8 +251,15 @@ class ToolAgentDetector:
             "tools": [tool["function"]["name"] for tool in tool_definitions()],
         }
 
-    def detect(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> Prediction:
-        """Run the agent loop on one light curve."""
+    def detect(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray, context=None) -> Prediction:
+        """Run the agent loop on one light curve.
+
+        Parameters
+        ----------
+        time, flux, flux_err : ndarray
+        context : EpisodeContext, optional
+            The star's catalogue context, passed to the tools that read it.
+        """
         messages: list[dict] = [
             {"role": "system", "content": self._system_prompt},
             {"role": "user", "content": "Analyse this light curve and submit a prediction."},
@@ -281,7 +288,7 @@ class ToolAgentDetector:
                 continue
             for call in turn.tool_calls:
                 n_calls += 1
-                result = call_tool(call.name, call.arguments, time, flux)
+                result = call_tool(call.name, call.arguments, time, flux, context)
                 result["calls_remaining"] = self._max_tool_calls - n_calls
                 transcript.append({"tool": call.name, "arguments": call.arguments, "result": result})
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})

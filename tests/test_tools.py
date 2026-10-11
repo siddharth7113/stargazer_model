@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from stargazer import tools
+from stargazer.context import BTJD_OFFSET, EpisodeContext
 from stargazer.inject import G_SI, inject, make_truth
 from stargazer.tools import TOOLS, TOOLS_BY_NAME, ToolSpec, call_tool, tool_definitions
 
@@ -188,6 +189,7 @@ def test_registry_periods_durations_and_depth_are_positive():
         ("fit_transit", "detrend_window_days"),
         ("odd_even", "period"),
         ("odd_even", "duration"),
+        ("ephemeris_match", "period"),
         ("secondary_eclipse", "period"),
         ("secondary_eclipse", "duration"),
         ("secondary_eclipse", "detrend_window_days"),
@@ -398,6 +400,52 @@ def test_secondary_eclipse_reports_a_dip_at_another_phase(lc, star):
     both = inject(relative, inject(relative, flux, primary), other)
     result = tools.secondary_eclipse(relative, both, period=3.0, t0=1.0, duration=primary.duration)
     assert result["verdict"] == "dip_at_other_phase" and abs(result["strongest_other_phase"] - 0.3) < 0.02
+
+
+def _context(**fields):
+    base = {"tic": 1, "sector": 98, "ra": 0.0, "dec": 0.0, "tmag": 10.0, "t_offset": 3800.0}
+    return EpisodeContext(**{**base, **fields})
+
+
+def test_ephemeris_match_finds_a_toi_at_an_alias_with_the_epoch_offset():
+    """A candidate at twice a TOI's period matches with ratio 2 and reports the epoch offset in hours."""
+    toi = {"toi": "1.01", "period": 3.0, "epoch_bjd": BTJD_OFFSET + 3800.0 + 1.0}
+    result = tools.ephemeris_match(_context(tois=[toi]), period=6.0, t0=1.0 + 6.0 * 2 + 0.05)
+    assert result["verdict"] == "known_toi" and result["matches"][0]["ratio"] == 2.0
+    assert abs(result["matches"][0]["epoch_offset_hours"] - 1.2) < 0.01
+
+
+def test_ephemeris_match_prefers_toi_over_binary_and_falls_back_to_gaia():
+    """The verdict order is TOI, then binary, then a Gaia class with no period, then no match."""
+    binary = {"period": 2.0, "epoch_bjd": None}
+    assert (
+        tools.ephemeris_match(_context(eclipsing_binaries=[binary]), 2.0, 0.0)["verdict"]
+        == "known_eclipsing_binary"
+    )
+    assert tools.ephemeris_match(_context(gaia_classes=["ECL"]), 2.0, 0.0)["verdict"] == "gaia_variable"
+    assert tools.ephemeris_match(_context(eclipsing_binaries=[binary]), 2.7, 0.0)["verdict"] == "no_match"
+
+
+def test_nearby_stars_computes_the_depth_a_neighbour_can_make():
+    """A neighbour 2.5 magnitudes fainter holds 9 percent of the light, the depth of its total eclipse."""
+    neighbours = [
+        {"separation_arcsec": 30.0, "gmag": 12.5, "delta_gmag": 2.5},
+        {"separation_arcsec": 50.0, "gmag": 11.0, "delta_gmag": 1.0},
+        {"separation_arcsec": 20.0, "gmag": 20.0, "delta_gmag": 10.0},
+    ]
+    result = tools.nearby_stars(_context(neighbours=neighbours))
+    assert result["n_within_radius"] == 2 and result["verdict"] == "possible_blend"
+    close = result["neighbours"][0]
+    assert close["delta_gmag"] == 2.5 and abs(close["max_depth_from_this_star_ppm"] / 91_000 - 1) < 0.01
+    assert tools.nearby_stars(_context(neighbours=neighbours[2:]))["verdict"] == "isolated"
+
+
+def test_call_tool_without_a_context_returns_an_error_for_a_catalogue_tool(lc):
+    """An episode set without context.json cannot answer a catalogue tool; the model is told so."""
+    time, flux, _ = lc
+    result = call_tool("nearby_stars", {}, time, flux)
+    assert "no" in result["error"] and "context" in result["error"]
+    assert call_tool("nearby_stars", {}, time, flux, _context())["verdict"] == "isolated"
 
 
 def test_single_events_finds_a_lone_transit(lc, star):

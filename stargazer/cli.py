@@ -90,6 +90,21 @@ def cmd_baseline(args: argparse.Namespace) -> None:
     print(f"results -> {out}")
 
 
+def cmd_context(args: argparse.Namespace) -> None:
+    """Fetch the catalogue context of each host and write context.json into an episode set."""
+    from stargazer.context import CatalogueFetcher, ContextWriter
+    from stargazer.provenance import Manifest
+    from stargazer.targets import load_targets
+
+    episode_dir = Path(args.episodes)
+    path = ContextWriter(CatalogueFetcher()).write(episode_dir, load_targets(args.targets))
+    Manifest.of_directory(episode_dir).write(episode_dir)
+    n_contexts = len(json.loads(path.read_text()))
+    print(
+        f"wrote {path} for {n_contexts} episodes; new episode set hash {Manifest.digest_of(episode_dir).hex}"
+    )
+
+
 def cmd_score(args: argparse.Namespace) -> None:
     """Score an external predictions JSON against an episode set."""
     from stargazer.episodes import EpisodeSet
@@ -279,6 +294,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-depth", type=float, default=1e-4)
     parser.add_argument("--max-depth", type=float, default=1e-2)
     parser.set_defaults(func=cmd_build)
+
+    parser = sub.add_parser("context", help="fetch catalogue rows for the hosts of an episode set")
+    parser.add_argument("--episodes", required=True)
+    parser.add_argument("--targets", required=True)
+    parser.set_defaults(func=cmd_context)
 
     parser = sub.add_parser("baseline", help="run the BLS baseline on an episode set and score it")
     parser.add_argument("--episodes", required=True)

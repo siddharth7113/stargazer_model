@@ -84,6 +84,11 @@ class Detector(Protocol):
     results file reproduce a run. The ``config`` must hold each value that changes
     the output, for example thresholds, window sizes, model names and prompts.
 
+    A detector that also reads the star's catalogue rows declares a keyword
+    parameter ``context`` on ``detect``; the benchmark then passes the episode's
+    :class:`stargazer.context.EpisodeContext`, or None for a set without one. A
+    detector without that parameter receives the three arrays only.
+
     Examples
     --------
     >>> class AlwaysNone:

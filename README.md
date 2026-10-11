@@ -182,12 +182,14 @@ cost and the reading of each run.
 | search_signals, single-event rules | 11% | 32% | 35% | 0.538 | 2 of 18 |
 | fit_transit, secondary_eclipse | 3% | 35% | 37% | 0.583 | 1 of 18 |
 | event count by points in transit | 5% | 33% | 35% | 0.558 | 3 of 18 |
+| the same tools, base prompt (no procedure, no rules) | 40% | 39% | 43% | 0.476 | 5 of 18 |
 
 The two vetting tools cut the false-alarm rate to 3 percent and the wrong periods
 from 10 to 4. The event count by points in transit returned the lone transits to the
-single-event form, at the cost of five short-transit planets that the shape verdict
-called v-shaped; the verdict now has a middle word for that case, and the run with
-it is in LOGBOOK.md.
+single-event form. The last row uses a system prompt that states the task, the
+scoring and the units and nothing else: the model finds more and submits seven
+times as many false alarms. The difference between the two prompts is the policy
+that the reinforcement-learning phase has to learn.
 
 ## Toolbox
 

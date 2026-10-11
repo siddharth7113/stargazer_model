@@ -141,3 +141,19 @@ def test_evaluate_with_workers_records_errors(episodes):
             raise RuntimeError("boom")
 
     assert evaluate(Broken(), episodes, workers=3).config["errors"] == episodes.ids
+
+
+def test_evaluate_passes_the_context_only_to_a_detector_that_takes_it(episodes):
+    """A detector with a ``context`` keyword receives the episode's context, or None for a set without one."""
+    seen = []
+
+    class Reads:
+        name = "reads"
+        config = {}
+
+        def detect(self, time, flux, flux_err, context=None):
+            seen.append(context)
+            return Prediction(detected=False)
+
+    evaluate(Reads(), episodes)
+    assert len(seen) == len(episodes) and all(context is None for context in seen)

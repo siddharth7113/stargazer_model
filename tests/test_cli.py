@@ -130,3 +130,9 @@ def test_targets_command_forwards_arguments(monkeypatch):
     with pytest.raises(StopHereError):
         cli_module.cmd_targets(args)
     assert captured == {"sector": 98, "n_targets": 12, "seed": 4, "tmag_max": 12.0}
+
+
+def test_context_command_takes_an_episode_set_and_a_targets_file():
+    """The context command names the set to annotate and the targets file that holds the positions."""
+    args = build_parser().parse_args(["context", "--episodes", "x", "--targets", "t.json"])
+    assert args.episodes == "x" and args.targets == "t.json"

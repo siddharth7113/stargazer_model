@@ -29,7 +29,7 @@ def fake_tools(monkeypatch):
     """Replace the real tool dispatcher with a recorder so only the loop is under test."""
     calls = []
 
-    def fake_call_tool(name, arguments, time, flux):
+    def fake_call_tool(name, arguments, time, flux, context=None):
         calls.append((name, arguments))
         return {"error": "bad"} if name == "fail" else {"ok": name}
 

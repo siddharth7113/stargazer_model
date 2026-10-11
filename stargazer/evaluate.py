@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import time as _time
 from collections.abc import Callable
@@ -139,11 +140,16 @@ def evaluate(
     errors: list[str] = []
     t_start = _time.time()
 
+    takes_context = "context" in inspect.signature(detector.detect).parameters
+
     def run_one(episode_id: str) -> Prediction:
         time, flux, flux_err = episodes.load(episode_id)
         t_one = _time.time()
         try:
-            prediction = detector.detect(time, flux, flux_err)
+            if takes_context:
+                prediction = detector.detect(time, flux, flux_err, context=episodes.context(episode_id))
+            else:
+                prediction = detector.detect(time, flux, flux_err)
         except Exception as error:  # a detector failure is a recorded miss, not a lost run
             if not record_errors:
                 raise

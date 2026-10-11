@@ -816,6 +816,160 @@ def secondary_eclipse(
     }
 
 
+EPHEMERIS_RATIOS: tuple[float, ...] = (1.0, 2.0, 0.5, 3.0, 1.0 / 3.0)
+"""Ratios of the candidate period to a catalogue period that count as a match."""
+
+BLEND_DELTA_GMAG = 6.0
+"""A neighbour fainter than the target by more than this many G magnitudes contributes
+under 0.4 percent of the flux and is left out of the blend verdict."""
+
+
+def ephemeris_match(context, period: float, t0: float, period_rtol: float = 0.01) -> dict:
+    r"""Compare a candidate period and epoch with the star's catalogue entries.
+
+    Parameters
+    ----------
+    context : EpisodeContext
+        The star's catalogue rows.
+    period : float
+        Candidate period, days.
+    t0 : float
+        Candidate epoch, days from the start of the episode.
+    period_rtol : float
+        Relative tolerance of a period match.
+
+    Returns
+    -------
+    dict
+        ``matches``: each catalogue entry whose period matches at one of
+        :data:`EPHEMERIS_RATIOS`, with ``source`` (``toi`` or ``eclipsing_binary``),
+        the entry, ``ratio`` and ``epoch_offset_hours`` (the candidate epoch against
+        the catalogue epoch folded on the candidate period, or None without an
+        epoch); ``gaia_classes``; ``n_tois``; ``n_eclipsing_binaries``; ``verdict``:
+        ``known_toi``, ``known_eclipsing_binary``, ``gaia_variable`` or ``no_match``.
+
+    Notes
+    -----
+    A candidate that repeats a catalogue period is not a new signal. The TESS
+    vetting reports run this check as the ephemeris match [1]_. A period matches if
+
+    ``|P / (P_cat * ratio) - 1| < period_rtol``
+
+    for a ratio in :data:`EPHEMERIS_RATIOS`, which cover the common aliases. The
+    epoch offset converts the catalogue epoch from BJD to the episode's time base
+    and folds the difference on the candidate period into ``[-P/2, P/2)``. An
+    injected transit has no catalogue entry, so a match reports the star's own
+    signal. The verdict is ``known_toi`` for a TOI match, else
+    ``known_eclipsing_binary`` for a binary match, else ``gaia_variable`` if Gaia
+    classifies the target as variable with no period to compare, else
+    ``no_match``.
+
+    References
+    ----------
+    .. [1] Twicken, J. D., et al. (2018). Kepler data validation I: architecture,
+       diagnostic tests, and data products for vetting transiting planet candidates.
+       Publications of the Astronomical Society of the Pacific, 130, 064502.
+       https://doi.org/10.1088/1538-3873/aab694
+    """
+    matches = []
+    for source, entries in (("toi", context.tois), ("eclipsing_binary", context.eclipsing_binaries)):
+        for entry in entries:
+            catalogue_period = entry.get("period")
+            if not catalogue_period:
+                continue
+            ratio = next(
+                (
+                    ratio
+                    for ratio in EPHEMERIS_RATIOS
+                    if abs(period / (catalogue_period * ratio) - 1.0) < period_rtol
+                ),
+                None,
+            )
+            if ratio is None:
+                continue
+            offset = None
+            if entry.get("epoch_bjd"):
+                catalogue_t0 = context.bjd_to_episode_time(entry["epoch_bjd"])
+                phase = ((t0 - catalogue_t0 + 0.5 * period) % period) - 0.5 * period
+                offset = round(float(phase) * 24.0, 2)
+            matches.append({"source": source, "entry": entry, "ratio": ratio, "epoch_offset_hours": offset})
+    if any(match["source"] == "toi" for match in matches):
+        verdict = "known_toi"
+    elif matches:
+        verdict = "known_eclipsing_binary"
+    elif context.gaia_classes:
+        verdict = "gaia_variable"
+    else:
+        verdict = "no_match"
+    return {
+        "matches": matches,
+        "gaia_classes": list(context.gaia_classes),
+        "n_tois": len(context.tois),
+        "n_eclipsing_binaries": len(context.eclipsing_binaries),
+        "verdict": verdict,
+    }
+
+
+def nearby_stars(context, radius_arcsec: float = 42.0) -> dict:
+    r"""List the Gaia sources around the target and the dilution they imply.
+
+    Parameters
+    ----------
+    context : EpisodeContext
+    radius_arcsec : float
+        Radius of the list, arcseconds; two TESS pixels by default.
+
+    Returns
+    -------
+    dict
+        ``neighbours``: each source within the radius with ``separation_arcsec``,
+        ``delta_gmag``, ``flux_fraction`` (its share of the light in the aperture if
+        the aperture held the target and that source) and
+        ``max_depth_from_this_star_ppm`` (the depth its total eclipse would make on
+        the target's light); ``n_within_radius``; ``brightest_delta_gmag``;
+        ``verdict``: ``isolated`` or ``possible_blend``.
+
+    Notes
+    -----
+    A TESS pixel is 21 arcseconds, so a star within two pixels can share the
+    aperture. A neighbour with G magnitude difference :math:`\Delta G` contributes
+    the flux ratio :math:`r = 10^{-0.4 \Delta G}` relative to the target, and a total
+    eclipse of that neighbour dims the sum by :math:`r / (1 + r)`, the largest depth
+    the neighbour can make on the target [1]_. The verdict is ``possible_blend`` if
+    a neighbour within the radius is brighter than :data:`BLEND_DELTA_GMAG`
+    magnitudes below the target, else ``isolated``. The list is a geometric bound;
+    only the pixel data say where a dip comes from.
+
+    References
+    ----------
+    .. [1] Ciardi, D. R., et al. (2015). Understanding the effects of stellar
+       multiplicity on the derived planet radii from transit surveys: implications
+       for Kepler, K2, and TESS. The Astrophysical Journal, 805, 16.
+       https://doi.org/10.1088/0004-637X/805/1/16
+    """
+    rows = []
+    for neighbour in context.neighbours:
+        if neighbour["separation_arcsec"] > radius_arcsec or neighbour.get("delta_gmag") is None:
+            continue
+        ratio = 10.0 ** (-0.4 * neighbour["delta_gmag"])
+        rows.append(
+            {
+                "separation_arcsec": neighbour["separation_arcsec"],
+                "delta_gmag": neighbour["delta_gmag"],
+                "flux_fraction": round(ratio / (1.0 + ratio), 5),
+                "max_depth_from_this_star_ppm": round(ratio / (1.0 + ratio) * 1e6, 1),
+            }
+        )
+    rows.sort(key=lambda row: row["delta_gmag"])
+    brightest = rows[0]["delta_gmag"] if rows else None
+    return {
+        "neighbours": rows,
+        "n_within_radius": len(rows),
+        "brightest_delta_gmag": brightest,
+        "verdict": "possible_blend" if brightest is not None and brightest < BLEND_DELTA_GMAG else "isolated",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Tool registry: one definition of each tool for every backend.
 # ---------------------------------------------------------------------------
@@ -837,13 +991,17 @@ class ToolSpec:
     parameters : dict
         JSON Schema object with ``properties`` and ``required``.
     function : callable
-        ``function(time, flux, **arguments) -> dict``.
+        ``function(time, flux, **arguments) -> dict``, or
+        ``function(time, flux, context, **arguments) -> dict`` if ``needs_context``.
+    needs_context : bool
+        True for a tool that reads the episode's catalogue context.
     """
 
     name: str
     description: str
     parameters: dict
     function: Callable[..., dict]
+    needs_context: bool = False
 
     def definition(self) -> dict:
         """Return the OpenAI function-calling definition."""
@@ -1188,6 +1346,39 @@ TOOLS: tuple[ToolSpec, ...] = (
         ),
     ),
     ToolSpec(
+        name="ephemeris_match",
+        description=(
+            "Compare a candidate period and epoch with the star's catalogue entries: the TESS Objects "
+            "of Interest list, the TESS eclipsing-binary catalogue and the Gaia variability class. "
+            "Read the verdict: known_toi or known_eclipsing_binary means the signal is already "
+            "catalogued at this period or an alias of it; gaia_variable means the star is a known "
+            "variable; no_match means the catalogues hold nothing at this period."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "period": _number("Candidate period, days.", positive=True),
+                "t0": _number("Candidate epoch, days from the start."),
+            },
+            "required": ["period", "t0"],
+        },
+        function=lambda time, flux, context, period, t0: ephemeris_match(context, period=period, t0=t0),
+        needs_context=True,
+    ),
+    ToolSpec(
+        name="nearby_stars",
+        description=(
+            "List the Gaia sources within two TESS pixels of the target with their flux fraction and "
+            "the largest depth each could make on the target's light if it were eclipsed. Read the "
+            "verdict: possible_blend means a neighbour could produce the dip; isolated means none "
+            "can. A candidate depth above max_depth_from_this_star_ppm for every neighbour is on the "
+            "target."
+        ),
+        parameters={"type": "object", "properties": {}, "required": []},
+        function=lambda time, flux, context: nearby_stars(context),
+        needs_context=True,
+    ),
+    ToolSpec(
         name="submit_prediction",
         description=(
             "Call exactly once, as the last action, before calls_remaining reaches 0. Two forms. "
@@ -1234,8 +1425,17 @@ def tool_definitions() -> list[dict]:
     return [tool.definition() for tool in TOOLS]
 
 
-def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray) -> dict:
+def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray, context=None) -> dict:
     """Validate and run one tool. An invalid call returns ``{"error": ...}`` instead of raising.
+
+    Parameters
+    ----------
+    name : str
+    arguments : dict
+    time, flux : ndarray
+    context : EpisodeContext, optional
+        The episode's catalogue context. A tool that needs it and gets None returns
+        an error that says the episode set has no context.
 
     Notes
     -----
@@ -1255,7 +1455,11 @@ def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray) ->
             },
             "required": spec.parameters.get("required", []),
         }
+    if spec.needs_context and context is None:
+        return {"error": f"{name} needs the star's catalogue context and this episode set has none"}
     try:
+        if spec.needs_context:
+            return spec.function(time, flux, context, **arguments)
         return spec.function(time, flux, **arguments)
     except Exception as error:  # a tool failure is reported to the model, not raised
         return {"error": f"{type(error).__name__}: {error}"[:300]}

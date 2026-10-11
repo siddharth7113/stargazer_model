@@ -105,6 +105,23 @@ class EpisodeSet:
         with np.load(self.root / "episodes" / f"{ep_id}.npz") as archive:
             return archive["time"], archive["flux"], archive["flux_err"]
 
+    @property
+    def contexts(self) -> dict[str, dict]:
+        """The ``context.json`` records by episode id, or an empty dict if the set has none."""
+        path = self.root / "context.json"
+        return json.loads(path.read_text()) if path.exists() else {}
+
+    def context(self, ep_id: str):
+        """Return the :class:`stargazer.context.EpisodeContext` of one episode, or None.
+
+        The context holds the star's catalogue rows and nothing about the injection.
+        A set built before ``stargazer context`` was run has none.
+        """
+        from stargazer.context import EpisodeContext
+
+        record = self.contexts.get(ep_id)
+        return EpisodeContext.from_dict(record) if record else None
+
     def __iter__(self) -> Iterator[str]:
         return iter(self.ids)
 
