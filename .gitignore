@@ -7,3 +7,5 @@ data/cache/
 .ruff_cache/
 uv.lock
 results/*.log
+docs/_build/
+docs/generated/

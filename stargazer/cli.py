@@ -15,7 +15,7 @@ from pathlib import Path
 
 def cmd_targets(a: argparse.Namespace) -> None:
     """Select host stars for a sector and save the targets file."""
-    from .targets import save_targets, select_targets
+    from stargazer.targets import save_targets, select_targets
 
     d = select_targets(a.sector, a.n, a.seed, tmag_max=a.tmag_max)
     save_targets(d, a.out)
@@ -26,9 +26,9 @@ def cmd_targets(a: argparse.Namespace) -> None:
 
 def cmd_fetch(a: argparse.Namespace) -> None:
     """Download light curves for each target. Record failures."""
-    from .data import LightCurveCache
-    from .provenance import write_manifest
-    from .targets import load_targets
+    from stargazer.data import LightCurveCache
+    from stargazer.provenance import write_manifest
+    from stargazer.targets import load_targets
 
     cache = LightCurveCache(a.cache)
     ok, failed = 0, []
@@ -48,9 +48,9 @@ def cmd_fetch(a: argparse.Namespace) -> None:
 
 def cmd_build(a: argparse.Namespace) -> None:
     """Build an episode set."""
-    from .data import LightCurveCache
-    from .episodes import BuildConfig, EpisodeSet
-    from .targets import load_targets
+    from stargazer.data import LightCurveCache
+    from stargazer.episodes import BuildConfig, EpisodeSet
+    from stargazer.targets import load_targets
 
     cfg = BuildConfig(
         n=a.n,
@@ -75,9 +75,9 @@ def _progress(k, p, tr):
 
 def cmd_baseline(a: argparse.Namespace) -> None:
     """Run the BLS baseline on an episode set and write results."""
-    from .baseline import BLSDetector
-    from .episodes import EpisodeSet
-    from .evaluate import evaluate
+    from stargazer.baseline import BLSDetector
+    from stargazer.episodes import EpisodeSet
+    from stargazer.evaluate import evaluate
 
     es = EpisodeSet(a.episodes)
     det = BLSDetector(**(json.loads(a.config) if a.config else {}))
@@ -91,9 +91,9 @@ def cmd_baseline(a: argparse.Namespace) -> None:
 
 def cmd_score(a: argparse.Namespace) -> None:
     """Score an external predictions JSON against an episode set."""
-    from .episodes import EpisodeSet
-    from .evaluate import Results
-    from .score import score_set
+    from stargazer.episodes import EpisodeSet
+    from stargazer.evaluate import Results
+    from stargazer.score import score_set
 
     es = EpisodeSet(a.episodes)
     preds = json.loads(Path(a.preds).read_text())
@@ -107,7 +107,7 @@ def cmd_score(a: argparse.Namespace) -> None:
 
 def cmd_verify(a: argparse.Namespace) -> None:
     """Recompute manifests. Exit with code 1 if a mismatch exists."""
-    from .provenance import verify_manifest
+    from stargazer.provenance import verify_manifest
 
     problems = []
     for d in a.dirs:

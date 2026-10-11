@@ -5,9 +5,11 @@ from stargazer.inject import (
     expected_snr,
     in_transit_mask,
     inject,
+    limb_darkening_for_teff,
     make_truth,
     sample_truth,
     transit_count,
+    transit_duration,
     transit_model,
 )
 
@@ -69,3 +71,27 @@ def test_single_transit_counted_once(lc, star):
     time, _, _ = lc
     truth = make_truth(period=40.0, t0=time.min() + 20.0, depth=0.01, b=0.0, star=star)
     assert transit_count(time, truth) == 1
+
+
+def test_duration_earth_sun_is_thirteen_hours():
+    # Seager and Mallen-Ornelas 2003: a central Earth transit lasts about 13 hours.
+    t14 = transit_duration(period=365.25, a_rs=215.03, inc_deg=90.0, rp_rs=0.0092, b=0.0)
+    assert abs(t14 * 24 - 13.1) < 0.2, t14 * 24
+
+
+def test_point_scatter_recovers_gaussian_sigma():
+    rng = np.random.default_rng(0)
+    flux = 1.0 + rng.normal(0, 2e-3, 50_000)
+    from stargazer.inject import point_scatter
+
+    assert abs(point_scatter(flux) / 2e-3 - 1) < 0.03
+
+
+def test_limb_darkening_table_lookup():
+    assert limb_darkening_for_teff(None) == (0.40, 0.25)
+    assert limb_darkening_for_teff(3500.0) == (0.30, 0.35)
+    assert limb_darkening_for_teff(4000.0) == (0.45, 0.20)  # bound is exclusive on the low side
+    assert limb_darkening_for_teff(5999.9) == (0.40, 0.25)
+    assert limb_darkening_for_teff(9000.0) == (0.33, 0.28)
+    custom = ((5000.0, 0.1, 0.1), (np.inf, 0.2, 0.2))
+    assert limb_darkening_for_teff(7000.0, table=custom) == (0.2, 0.2)

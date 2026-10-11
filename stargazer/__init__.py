@@ -20,14 +20,14 @@ score_episode, score_set
 
 __version__ = "0.1.0"
 
-from .baseline import BLSDetector
-from .data import LightCurve, LightCurveCache
-from .episodes import BuildConfig, EpisodeSet
-from .evaluate import Results, evaluate
-from .inject import TransitTruth, inject, make_truth, sample_truth
-from .score import score_episode, score_set
-from .targets import load_targets, save_targets, select_targets
-from .types import Detector, Prediction
+from stargazer.baseline import BLSDetector
+from stargazer.data import LightCurve, LightCurveCache
+from stargazer.episodes import BuildConfig, EpisodeSet
+from stargazer.evaluate import Results, evaluate
+from stargazer.inject import TransitTruth, inject, make_truth, sample_truth
+from stargazer.score import score_episode, score_set
+from stargazer.targets import load_targets, save_targets, select_targets
+from stargazer.types import Detector, Prediction
 
 __all__ = [
     "BLSDetector",

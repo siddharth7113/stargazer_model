@@ -32,6 +32,21 @@ Technical English, adapted for code. Apply these rules.
 - Say "identical" or "the same". Do not say "byte-identical", "bit-identical" or
   "golden output".
 
+## Code
+
+- Use maintained, standard scientific packages: numpy, scipy, astropy, lightkurve,
+  batman. Do not add a package that has no release in the last two years unless no
+  standard package does the job. Say why in the pull request.
+- Use absolute imports: `from stargazer.evaluate import Results`. Do not use relative
+  imports. ruff rule TID252 enforces this.
+- Put each equation in a numpydoc `Notes` section. Give each symbol, its unit and the
+  source of the equation.
+- Define a physical constant once, as a named module constant. State its value and
+  source in the module docstring.
+- Replace a chain of `if` statements on a value with a lookup table and a search.
+- Make a table of parameters a module constant with a docstring, so a caller can
+  replace it.
+
 ## Docstrings
 
 - Use the numpydoc layout: a summary line, then `Parameters`, `Returns`, `Raises`.

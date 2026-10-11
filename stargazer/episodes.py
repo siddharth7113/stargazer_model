@@ -15,10 +15,10 @@ from pathlib import Path
 
 import numpy as np
 
-from . import __version__
-from .data import LightCurveCache
-from .inject import expected_snr, inject, point_scatter, sample_truth, transit_count
-from .provenance import git_commit, sha256_file, utc_now, verify_manifest, write_manifest
+from stargazer import __version__
+from stargazer.data import LightCurveCache
+from stargazer.inject import expected_snr, inject, point_scatter, sample_truth, transit_count
+from stargazer.provenance import git_commit, sha256_file, utc_now, verify_manifest, write_manifest
 
 
 @dataclass(frozen=True)

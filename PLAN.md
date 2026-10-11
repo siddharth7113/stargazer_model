@@ -46,7 +46,7 @@ Acceptance: `tests/test_inject.py` and `tests/test_episodes.py` pass.
 Acceptance: `tests/test_score.py` has one case for each rule and passes.
 
 ### 1d Baseline
-- [x] wotan biweight detrend with a recorded window
+- [x] Savitzky-Golay detrend with a recorded window
 - [x] astropy BLS over a recorded period grid
 - [x] Test: the baseline recovers a 1 percent, 3-day injection on synthetic white noise
 - [ ] SDE threshold chosen on null episodes. The false-alarm rate is below 5 percent

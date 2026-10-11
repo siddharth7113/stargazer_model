@@ -1,6 +1,6 @@
 """Baseline detector.
 
-Steps: wotan biweight detrend, bin, astropy Box Least Squares (BLS), then a signal
+Steps: Savitzky-Golay detrend, bin, astropy Box Least Squares (BLS), then a signal
 detection efficiency (SDE) threshold. The baseline is simple by design. It is the floor
 that each other system must beat. It also shows where a classical search fails, for
 example on single transits and on shallow signals on active stars.
@@ -12,7 +12,7 @@ from typing import Any
 
 import numpy as np
 
-from .types import Prediction
+from stargazer.types import Prediction
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "detrend_window_days": 0.75,
@@ -25,13 +25,50 @@ DEFAULT_CONFIG: dict[str, Any] = {
 }
 
 
-def detrend(time: np.ndarray, flux: np.ndarray, window_days: float) -> tuple[np.ndarray, np.ndarray]:
-    """Detrend with a biweight filter. Drop non-finite points."""
-    from wotan import flatten
+def detrend(
+    time: np.ndarray, flux: np.ndarray, window_days: float, polyorder: int = 2, sigma: float = 3.0
+) -> tuple[np.ndarray, np.ndarray]:
+    """Detrend with a Savitzky-Golay filter. Drop non-finite points.
 
-    flat = flatten(time, flux, method="biweight", window_length=window_days, return_trend=False)
-    ok = np.isfinite(flat)
-    return time[ok], flat[ok]
+    Parameters
+    ----------
+    time : ndarray
+        Days.
+    flux : ndarray
+        Normalised flux.
+    window_days : float
+        Width of the sliding window, days.
+    polyorder : int
+        Polynomial order of the filter.
+    sigma : float
+        Sigma-clipping threshold for outliers during the trend fit.
+
+    Notes
+    -----
+    The function uses ``lightkurve.LightCurve.flatten``, which wraps
+    ``scipy.signal.savgol_filter``. The filter fits a polynomial of order
+    ``polyorder`` in a sliding window and divides the flux by the fit. It:
+
+    - converts ``window_days`` to an odd number of cadences from the median time step,
+    - splits the light curve at gaps longer than five cadences, so a gap does not
+      distort the fit on either side,
+    - clips points more than ``sigma`` from the trend and refits, so deep transits do
+      not pull the trend down.
+
+    The window must be about three times the longest transit duration to keep the
+    transit. The default 0.75 days keeps transits up to about 6 hours. A longer
+    transit loses depth. This is one reason the baseline misses long-period signals.
+    """
+    import lightkurve as lk
+
+    cadence = float(np.median(np.diff(time)))
+    window_length = round(window_days / cadence)
+    window_length = max(window_length + (1 - window_length % 2), polyorder + 2)  # odd and valid
+    lc = lk.LightCurve(time=time, flux=flux)
+    flat = lc.flatten(window_length=window_length, polyorder=polyorder, sigma=sigma, break_tolerance=5)
+    f = np.asarray(flat.flux.value, dtype=np.float64)
+    ok = np.isfinite(f)
+    return time[ok], f[ok]
 
 
 def bin_lc(
@@ -39,9 +76,27 @@ def bin_lc(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Bin to a fixed cadence. The error of a bin is the global scatter divided by sqrt(n).
 
+    Parameters
+    ----------
+    time : ndarray
+        Days.
+    flux : ndarray
+    bin_minutes : float
+        Bin width. Zero or negative returns the input unbinned.
+
     Returns
     -------
     time, flux, err : ndarray
+
+    Notes
+    -----
+    Each point gets a bin index ``floor((t - t_min) / w)`` with ``w`` the width in
+    days. The binned time and flux are the means in the bin. The error is
+    ``std(flux) / sqrt(n)`` with ``n`` the number of points in the bin and
+    ``std(flux)`` the standard deviation of the whole detrended light curve. This
+    assumes white noise. Binning from 2 minutes to 10 minutes reduces the number of
+    points by five and the BLS run time by about the same factor. It does not reduce
+    sensitivity to transits longer than about one hour.
     """
     if bin_minutes <= 0:
         return time, flux, np.full_like(flux, np.std(flux))
@@ -76,7 +131,34 @@ class BLSDetector:
         return dict(self._config)
 
     def detect(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> Prediction:
-        """Run detrend, bin and BLS. Report a detection if the SDE is at or above the threshold."""
+        """Run detrend, bin and BLS. Report a detection if the SDE is at or above the threshold.
+
+        Notes
+        -----
+        The steps are:
+
+        1. :func:`detrend` with ``detrend_window_days``.
+        2. :func:`bin_lc` with ``bin_minutes``.
+        3. Build the period grid with ``BoxLeastSquares.autoperiod``. The grid is uniform
+           in frequency with a step set by the shortest duration, the baseline and
+           ``frequency_factor``. A larger factor gives a coarser grid and a faster run.
+           The longest period is ``max_period_frac_of_span`` times the baseline, so that
+           at least two transits fit in the data.
+        4. ``BoxLeastSquares.power`` with the log-likelihood objective. For each period
+           and duration it finds the best epoch and reports the power.
+        5. The signal detection efficiency (Kovacs et al. 2002) is
+
+           ``SDE = (max(power) - mean(power)) / std(power)``
+
+           over the whole period grid. It measures how far the best peak stands above
+           the typical peak. Pure noise gives an SDE of about 5 to 7 on a grid of this
+           size. The threshold is chosen from null episodes, see
+           :mod:`stargazer.calibrate`.
+
+        The prediction carries the period, epoch, duration and depth of the best peak,
+        whether or not it passes the threshold, so a results file can be re-scored at
+        another threshold.
+        """
         from astropy.timeseries import BoxLeastSquares
 
         cfg = self._config

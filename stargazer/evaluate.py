@@ -10,10 +10,10 @@ from pathlib import Path
 
 import numpy as np
 
-from .episodes import EpisodeSet
-from .provenance import git_commit, utc_now
-from .score import score_set
-from .types import Detector, Prediction
+from stargazer.episodes import EpisodeSet
+from stargazer.provenance import git_commit, utc_now
+from stargazer.score import score_set
+from stargazer.types import Detector, Prediction
 
 
 @dataclass

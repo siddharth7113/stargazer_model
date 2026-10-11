@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .types import Prediction
+from stargazer.types import Prediction
 
 ALIASES = [(1.0, 1.0), (0.5, 0.5), (2.0, 0.5), (1.0 / 3.0, 0.25), (3.0, 0.25)]
 SNR_BINS = [(0, 5), (5, 7), (7, 10), (10, 20), (20, 50), (50, np.inf)]
@@ -43,6 +43,25 @@ def score_episode(
     dict
         ``kind, detected, period_credit, alias, epoch_ok, depth_ok, score, outcome``.
         ``outcome`` is one of ``true_null, false_alarm, miss, hit, alias, wrong_period``.
+
+    Notes
+    -----
+    Period credit: for each ``(ratio, credit)`` in :data:`ALIASES`, in order, the
+    predicted period matches if ``|P_pred / (P_true * ratio) - 1| < period_rtol``.
+    The first match wins. The ratios 1/2 and 2 cover the common BLS aliases where
+    every second transit is missed or two unrelated dips are paired. The ratios 1/3
+    and 3 cover the next harmonic.
+
+    Epoch check: the predicted epoch is folded on the true period,
+
+    ``phase = ((t0_pred - t0_true + P/2) mod P) - P/2``
+
+    which lies in ``[-P/2, P/2)``. The check passes if ``|phase| < epoch_frac * T14``.
+    The fold uses the true period even for an alias, because an aliased detector
+    must still point at a real transit.
+
+    Score: ``period_credit * (0.7 + 0.3 * epoch_ok)``. The weights make a correct
+    period with a wrong epoch worth more than an alias with a correct epoch.
     """
     if isinstance(pred, dict):
         pred = Prediction.from_dict(pred)

@@ -22,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .provenance import sha256_bytes, utc_now
+from stargazer.provenance import sha256_bytes, utc_now
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
 TIC_COLUMNS = [
