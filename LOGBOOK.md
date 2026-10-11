@@ -727,3 +727,14 @@ injection otherwise. Written: 01 the episode and summarize, 02 injection with th
 shape against the impact parameter, 03 the period search with detrending,
 bls_peaks, search_signals and the fold. New optional dependency group `notebooks`
 (matplotlib, jupyter, nbformat, nbclient, ipykernel).
+
+**Course notebooks 04 and 05.** 04 vets the strongest signal of ep_0001 with fold,
+fit_transit (with the fitted model drawn over the binned fold), odd_even and
+secondary_eclipse (with the trial depths across the orbit). 05 injects one 3000 ppm
+transit at day 25 into the same episode and shows the single-event statistic and
+the event in the detrended flux. Two findings from writing them: the fit's depth
+error on ep_0001 is 2066 ppm for a 1284 ppm depth, because the covariance of a
+near-degenerate b and k pair is wide, so the error is honest and not useful as a
+detection statistic; and on a host with a strong periodic signal the noise at the
+6-hour box timescale is 420 ppm, so the 6-hour injected event is found by the
+1-hour box at snr 9 and not by its own width.

@@ -413,6 +413,272 @@ plt.show()
             ),
         ],
     ),
+    Notebook(
+        "04_vetting_a_candidate",
+        [
+            (
+                "markdown",
+                """
+# 4. Vetting a candidate
+
+A peak from the period search is a hypothesis. Four tools test it: `fold` shows the
+shape, `fit_transit` fits a physical model and reports the geometry, `odd_even`
+compares alternate transits, and `secondary_eclipse` looks for a second dip half an
+orbit later. Each tool returns a verdict word with the numbers behind it. This
+notebook runs the four on the strongest signal of the loaded episode.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.tools import search_signals
+
+candidate = search_signals(time, flux)["signals"][0]
+print({key: candidate[key] for key in ("period", "t0", "duration", "depth_ppm", "sde")})
+""",
+            ),
+            (
+                "markdown",
+                """
+## `fold`
+
+The tool folds the detrended flux at the period and epoch and returns 40 bins. At
+`phase_half_width` 0.5 the whole orbit is visible: a second dip at phase 0.5 means
+the true period is half the trial one. At 0.05 the transit shape is visible.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.tools import fold
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 3.5))
+for axis, width in zip(axes, (0.5, 0.05), strict=True):
+    curve = fold(time, flux, period=candidate["period"], t0=candidate["t0"], phase_half_width=width)
+    phases = np.array(curve["phase"], dtype=float)
+    values = np.array([np.nan if value is None else value for value in curve["flux_ppm"]], dtype=float)
+    axis.step(phases * 24, values, where="mid", color="tab:red")
+    axis.set_xlabel("hours from the epoch")
+    axis.set_ylabel("flux change (ppm)")
+    axis.set_title(f"phase_half_width {width}: depth {curve['depth_ppm']:.0f} ppm")
+plt.show()
+""",
+            ),
+            (
+                "markdown",
+                """
+## `fit_transit`
+
+The fit uses the batman model with the epoch offset, the radius ratio, the scaled
+semi-major axis and the impact parameter free. The host density follows from the
+period and the scaled semi-major axis:
+
+$$\\rho_\\star = \\frac{3 \\pi}{G P^2} \\left( \\frac{a}{R_\\star} \\right)^3$$
+
+A main-sequence host has 0.1 to 20 g/cm³. A dip whose fit needs a density outside
+that range is not a planet at this period. The shape is `flat_bottom` when the
+planet disc lies well inside the stellar disc, and `v_shaped` when it grazes, as an
+eclipsing binary often does. The plot shows the binned fold with the fitted model.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.baseline import bin_lc, detrend
+from stargazer.inject import TransitTruth, limb_darkening_for_teff, transit_model
+from stargazer.tools import FIT_LIMB_DARKENING_TEFF, fit_transit
+
+fit = fit_transit(time, flux, period=candidate["period"], t0=candidate["t0"], duration=candidate["duration"])
+for key, value in fit.items():
+    print(f"{key:22s} {value}")
+
+flat_time, flat_flux = detrend(time, flux, 0.75)
+period = candidate["period"]
+phase = ((flat_time - fit["t0"] + 0.5 * period) % period) - 0.5 * period
+window = np.abs(phase) < 2.5 * candidate["duration"]
+bin_phase, bin_flux, _ = bin_lc(phase[window] + 2.5 * candidate["duration"], flat_flux[window], 5.0)
+bin_phase = bin_phase - 2.5 * candidate["duration"]
+u1, u2 = limb_darkening_for_teff(FIT_LIMB_DARKENING_TEFF)
+inclination = float(np.degrees(np.arccos(min(fit["impact_parameter"], 0.999 * fit["a_rs"]) / fit["a_rs"])))
+geometry = (fit["rp_rs"], fit["a_rs"], inclination, fit["impact_parameter"])
+model = TransitTruth(period, 0.0, *geometry, u1, u2, 0.0, fit["rp_rs"] ** 2)
+grid = np.linspace(bin_phase.min(), bin_phase.max(), 500)
+fig, axis = plt.subplots()
+axis.plot(bin_phase * 24, bin_flux, ".", color="0.3", label="5-minute bins")
+axis.plot(grid * 24, transit_model(grid, model), color="tab:red", label="fitted model")
+axis.set_xlabel("hours from the fitted epoch")
+axis.set_ylabel("detrended flux")
+axis.set_title(f"{fit['shape']}, density {fit['density_verdict']}, {fit['significance_sigma']} sigma")
+axis.legend()
+plt.show()
+""",
+            ),
+            (
+                "markdown",
+                """
+## `odd_even`
+
+An eclipsing binary at twice the trial period shows two eclipses of different
+depth, which a search mistakes for one planet at half the period. The tool measures
+the depth of each event, averages the odd-numbered and the even-numbered ones, and
+compares them in units of the scatter between events. The verdict is `consistent`
+below 3 sigma.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.tools import odd_even
+
+parity = odd_even(time, flux, period=candidate["period"], t0=candidate["t0"], duration=candidate["duration"])
+for key, value in parity.items():
+    print(f"{key:18s} {value}")
+""",
+            ),
+            (
+                "markdown",
+                """
+## `secondary_eclipse`
+
+A self-luminous companion is eclipsed in turn, half an orbit after the primary. The
+tool measures the box depth at phase 0.5 and at 200 trial phases, with the noise
+taken from the spread of the trial depths. The plot shows the trial depths across
+the orbit; the primary window is left out of the noise.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.tools import secondary_eclipse
+
+second = secondary_eclipse(
+    time, flux, period=candidate["period"], t0=candidate["t0"], duration=candidate["duration"]
+)
+for key, value in second.items():
+    print(f"{key:26s} {value}")
+
+phase_orbit = ((flat_time - candidate["t0"]) / period) % 1.0
+half_width = 0.5 * candidate["duration"] / period
+trials = np.arange(200) / 200
+depths = []
+for trial in trials:
+    offset = np.abs(((phase_orbit - trial + 0.5) % 1.0) - 0.5)
+    points = flat_flux[offset < half_width]
+    depths.append((1.0 - points.mean()) * 1e6 if len(points) >= 3 else np.nan)
+fig, axis = plt.subplots()
+axis.plot(trials, depths, color="0.3")
+axis.axvline(0.5, color="tab:red", alpha=0.5, label="phase 0.5")
+axis.set_xlabel("orbital phase")
+axis.set_ylabel("box depth (ppm)")
+axis.set_title(f"verdict {second['verdict']}")
+axis.legend()
+plt.show()
+""",
+            ),
+        ],
+    ),
+    Notebook(
+        "05_single_events",
+        [
+            (
+                "markdown",
+                """
+# 5. Single events
+
+A planet with a period longer than half the data makes one transit, or none. A
+period search cannot find it. The tool `single_events` scores a box of each width
+at each time and returns the strongest dips that do not repeat. This notebook
+injects one transit into the loaded episode and shows the statistic.
+""",
+            ),
+            (
+                "markdown",
+                """
+## One injected transit
+
+The injection has a 45-day period and an epoch at day 25, so one transit lies in
+the data, away from the gaps. The plot marks it. The host already has the
+periodic signal of the episode, so the single transit must stand out beside it.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.inject import inject, make_truth
+
+star = {"teff": 5500.0, "logg": 4.45, "radius_rsun": 0.95, "tmag": 10.0, "mass_msun": 0.95}
+lone = make_truth(period=45.0, t0=25.0, depth=0.003, b=0.2, star=star)
+with_event = inject(time, flux, lone)
+fig, axis = plt.subplots()
+axis.plot(time, with_event, ",", color="0.3")
+axis.axvline(25.0, color="tab:red", alpha=0.5)
+axis.set_xlabel("time (days)")
+axis.set_ylabel("relative flux")
+axis.set_title(f"One {lone.depth * 1e6:.0f} ppm transit of {lone.duration * 24:.1f} hours at day 25")
+plt.show()
+""",
+            ),
+            (
+                "markdown",
+                """
+## The single-event statistic
+
+For a box of width $d$ the statistic is
+
+$$\\mathrm{snr} = \\frac{\\bar{f}_\\mathrm{median} - \\bar{f}_\\mathrm{box}}{\\sigma_d}$$
+
+where $\\bar{f}_\\mathrm{box}$ is the mean flux in the box and $\\sigma_d$ is the noise
+at the box timescale, 1.4826 times the median absolute deviation of the box means
+over the whole light curve. On white noise it equals the point scatter over the
+square root of the points in the box. On an active star it is larger, so slow
+variability does not produce an event with a high statistic. Each box width is
+detrended with a window of at least six widths, so a short window cannot erase a
+long event. A box near the start or the end of a data segment is skipped, because
+the detrending filter leaves a dip-shaped residual there.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.tools import single_events
+
+events = single_events(time, with_event)
+for event in events["events"]:
+    print(event)
+""",
+            ),
+            (
+                "markdown",
+                """
+## The strongest event
+
+The plot zooms on the strongest event in the detrended flux, with the window the
+tool used for that box width. A transit-like event has a duration of hours, a flat
+curve on each side, and no partner of the same depth elsewhere. A lone event that
+passes those checks is submitted as a single event: a time, a duration and a depth,
+and no period.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.baseline import detrend
+
+top = events["events"][0]
+flat_time, flat_flux = detrend(time, with_event, max(0.75, 6.0 * top["duration"]))
+near = np.abs(flat_time - top["time"]) < 0.5
+fig, axis = plt.subplots()
+axis.plot((flat_time[near] - top["time"]) * 24, flat_flux[near], ".", ms=3, color="0.3")
+axis.axvspan(-top["duration"] * 12, top["duration"] * 12, color="tab:red", alpha=0.15, label="box")
+axis.set_xlabel(f"hours from day {top['time']:.2f}")
+axis.set_ylabel("detrended flux")
+axis.set_title(f"snr {top['snr']}, depth {top['depth_ppm']:.0f} ppm, noise {top['noise_ppm']:.0f} ppm")
+axis.legend()
+plt.show()
+""",
+            ),
+        ],
+    ),
 ]
 
 
