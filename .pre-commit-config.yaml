@@ -17,6 +17,11 @@ repos:
       - id: ruff-format
   - repo: local
     hooks:
+      - id: check-names
+        name: no single-letter names
+        entry: .venv/bin/python scripts/check_names.py
+        language: system
+        files: ^stargazer/.*\.py$
       - id: pytest
         name: pytest (offline)
         entry: .venv/bin/python -m pytest -q -W ignore

@@ -27,8 +27,9 @@ TESS teams use the same method to measure their own pipelines.
    file holds those. Only the scorer reads the truth file.
 4. **Provenance in results.** Each results file records the git commit, the episode set
    hash, the full configuration and the score of each episode.
-5. **Offline tests.** `pytest` checks the scorer, the injector and the baseline on
-   synthetic data. The tests do not use the network.
+5. **Offline tests.** `pytest` checks each module on synthetic data, one behaviour for
+   each test, with cross-module checks under `tests/integration/`. The tests do not use
+   the network.
 6. **Logbook.** Each run that gives a number in a document has a LOGBOOK entry. The entry
    gives the exact command and the results file.
 
@@ -80,7 +81,8 @@ stargazer/
   calibrate.py   threshold choice from recorded statistics
   provenance.py  hashes, manifests, git commit, timestamps
   cli.py         command line
-tests/           offline tests
+tests/           one unit-test file for each module; tests/integration/ for cross-module checks
+scripts/         pre-commit lint hooks
 data/            targets files and episode sets
 results/         results files, one for each run
 ```

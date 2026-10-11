@@ -45,9 +45,15 @@ dictionaries. `tests/test_episodes.py` checks that an episode file holds only `t
 ## Offline tests
 
 `pytest` runs without the network. The tests use synthetic white-noise light curves
-with the same cadence and gap structure as TESS. They cover the scorer, the injector,
-the baseline, the episode builder and the calibration. The pre-commit hook runs them
-before each commit.
+with the same cadence and gap structure as TESS, so each test knows the exact noise
+level and gap position.
+
+The suite follows one rule: one test checks one behaviour of one function, and its
+docstring states the behaviour and why it matters. There is one test file for each
+module in `tests/`. Tests that cross module boundaries live in `tests/integration/`
+with the `integration` marker; they check that the parts fit, and a unit test must fail
+first on a unit-level bug. Style rules such as "no single-letter names" are pre-commit
+hooks in `scripts/`, not tests. The pre-commit hook runs the suite before each commit.
 
 ## Logbook
 

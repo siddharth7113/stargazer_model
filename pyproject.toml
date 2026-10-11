@@ -32,6 +32,7 @@ packages = ["stargazer"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["integration: tests that cross module boundaries; a unit test must fail first"]
 
 [tool.ruff]
 line-length = 110
@@ -53,8 +54,9 @@ ban-relative-imports = "all"
 convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]
-"tests/conftest.py" = ["D"]
+# tests: require a module docstring (D100) and a function docstring (D103); skip class-level rules
+"tests/**/*" = ["D101", "D102", "D104", "D105", "D106", "D107"]
+"scripts/*" = ["D"]
 
 [tool.ruff.format]
 docstring-code-format = true

@@ -1,138 +1,147 @@
-"""Offline tests for the tool registry, the agent loop and the backend message rendering."""
+"""Unit tests for stargazer.agent: the tool-calling loop, with the tools replaced by a fake dispatcher."""
 
+import hashlib
 import json
 
-from stargazer.agent import AssistantTurn, ToolAgentDetector, ToolCall
-from stargazer.backends import TinkerBackend
-from stargazer.inject import inject, make_truth
-from stargazer.score import score_episode
-from stargazer.tools import TOOLS, TOOLS_BY_NAME, call_tool, tool_definitions
+import pytest
+
+from stargazer import agent as agent_module
+from stargazer.agent import SYSTEM_PROMPT, AssistantTurn, ToolAgentDetector, ToolCall
 
 
-class ScriptedBackend:
-    """Replays a fixed list of turns. The last turn reads the bls result from the transcript."""
+class FixedBackend:
+    """Returns the given turns in order, then an empty text turn. Records every request it receives."""
 
-    name = "scripted"
-    config = {"script": "bls_then_submit"}
+    name = "fixed"
+    config = {"model": "fixed"}
 
-    def __init__(self, submit_from_bls: bool = True, stop_without_submit: bool = False):
-        self.submit_from_bls = submit_from_bls
-        self.stop_without_submit = stop_without_submit
-        self.seen: list[list[dict]] = []
+    def __init__(self, turns):
+        self.turns = list(turns)
+        self.seen = []
 
     def complete(self, messages, tools):
-        self.seen.append([dict(m) for m in messages])
-        n_assistant = sum(m["role"] == "assistant" for m in messages)
-        usage = {"input_tokens": 100, "output_tokens": 10, "usd": 0.001}
-        if n_assistant == 0:
-            return AssistantTurn(tool_calls=[ToolCall("c1", "bls_peaks", {})], usage=usage)
-        if self.stop_without_submit:
-            return AssistantTurn(content="I give up.", usage=usage)
-        last_tool = next(m for m in reversed(messages) if m["role"] == "tool")
-        peak = json.loads(last_tool["content"])["peaks"][0]
-        args = {
-            "detected": True,
-            "period": peak["period"],
-            "t0": peak["t0"],
-            "duration": peak["duration"],
-            "depth": peak["depth_ppm"] / 1e6,
-            "reasoning": "top BLS peak",
-        }
-        return AssistantTurn(tool_calls=[ToolCall("c2", "submit_prediction", args)], usage=usage)
+        self.seen.append([dict(message) for message in messages])
+        return self.turns.pop(0) if self.turns else AssistantTurn(content="done")
 
 
-def test_every_tool_has_valid_schema_and_callable():
-    for spec in TOOLS:
-        d = spec.definition()
-        assert d["type"] == "function" and d["function"]["name"] == spec.name
-        assert spec.parameters["type"] == "object" and "properties" in spec.parameters
-        for req in spec.parameters.get("required", []):
-            assert req in spec.parameters["properties"]
-    assert [t["function"]["name"] for t in tool_definitions()] == [t.name for t in TOOLS]
+@pytest.fixture
+def fake_tools(monkeypatch):
+    """Replace the real tool dispatcher with a recorder so only the loop is under test."""
+    calls = []
+
+    def fake_call_tool(name, arguments, time, flux):
+        calls.append((name, arguments))
+        return {"error": "bad"} if name == "fail" else {"ok": name}
+
+    monkeypatch.setattr(agent_module, "call_tool", fake_call_tool)
+    return calls
 
 
-def test_validation_catches_model_mistakes():
-    fold = TOOLS_BY_NAME["fold"]
-    assert fold.validate({"period": 3.0, "t0": 1.0}) == []
-    assert fold.validate({"period": 3, "t0": 1}) == []  # integers are numbers
-    assert "missing required argument: t0" in fold.validate({"period": 3.0})
-    assert any("unknown argument" in p for p in fold.validate({"period": 3.0, "t0": 1.0, "bins": 10}))
-    assert any("must be number" in p for p in fold.validate({"period": "3.0", "t0": 1.0}))
-    bls = TOOLS_BY_NAME["bls_peaks"]
-    assert bls.validate({"max_period": None}) == []
-    sub = TOOLS_BY_NAME["submit_prediction"]
-    assert any("must be boolean" in p for p in sub.validate({"detected": "yes"}))
+def _submit(**arguments):
+    return AssistantTurn(tool_calls=[ToolCall("1", "submit_prediction", arguments)])
 
 
-def test_call_tool_returns_errors_instead_of_raising(lc):
-    time, flux, _ = lc
-    assert "unknown tool" in call_tool("nope", {}, time, flux)["error"]
-    assert "missing required" in call_tool("fold", {"period": 3.0}, time, flux)["error"]
-    assert "greater than 0" in call_tool("fold", {"period": 0.0, "t0": 0.0}, time, flux)["error"]
-    assert "greater than 0" in call_tool("bls_peaks", {"min_period": -1}, time, flux)["error"]
-    assert "error" not in call_tool("bls_peaks", {"max_period": None}, time, flux)
+def test_submission_becomes_prediction(lc, fake_tools):
+    """The arguments of ``submit_prediction`` become the Prediction; ``reasoning`` goes to ``extra``."""
+    time, flux, flux_err = lc
+    turns = [_submit(detected=True, period=3.0, t0=1.0, reasoning="r")]
+    pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
+    assert pred.detected and pred.period == 3.0 and pred.t0 == 1.0
+    assert pred.extra["stop"] == "submitted" and pred.extra["reasoning"] == "r"
 
 
-def test_agent_finds_injection_through_tools(lc, star):
-    time, flux, fe = lc
-    t = time - time.min()
-    truth = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.2, star=star)
-    f = inject(t, flux, truth)
-    backend = ScriptedBackend()
-    det = ToolAgentDetector(backend)
-    pred = det.detect(t, f, fe)
-    assert pred.detected and pred.extra["stop"] == "submitted" and pred.extra["n_tool_calls"] == 2
-    row = score_episode(pred, {"kind": "transit", "transit": truth.to_dict()})
-    assert row["outcome"] == "hit", (pred, row)
-    assert pred.extra["usage"]["usd"] > 0 and pred.extra["transcript"][0]["tool"] == "bls_peaks"
-    # the conversation the backend saw follows the OpenAI format
-    last = backend.seen[-1]
-    assert last[0]["role"] == "system" and last[-1]["role"] == "tool" and "tool_calls" in last[-2]
-    assert "max_tool_calls" in det.config and det.config["backend"] == "scripted"
+def test_loop_ends_after_submission(lc, fake_tools):
+    """Once the model submits, the loop must not ask the backend again."""
+    time, flux, flux_err = lc
+    backend = FixedBackend([_submit(detected=False), AssistantTurn(content="never asked")])
+    ToolAgentDetector(backend).detect(time, flux, flux_err)
+    assert len(backend.seen) == 1
 
 
-def test_agent_without_submission_is_none(lc):
-    time, flux, fe = lc
-    pred = ToolAgentDetector(ScriptedBackend(stop_without_submit=True)).detect(time - time.min(), flux, fe)
+def test_tool_results_are_appended_in_openai_format(lc, fake_tools):
+    """The second request carries the assistant turn with tool_calls and a tool message with the same id."""
+    time, flux, flux_err = lc
+    backend = FixedBackend(
+        [AssistantTurn(tool_calls=[ToolCall("abc", "summarize", {})]), AssistantTurn(content="x")]
+    )
+    ToolAgentDetector(backend).detect(time, flux, flux_err)
+    second_request = backend.seen[1]
+    assert second_request[0]["role"] == "system" and second_request[1]["role"] == "user"
+    assert second_request[2]["role"] == "assistant" and second_request[2]["tool_calls"][0]["id"] == "abc"
+    assert second_request[3] == {
+        "role": "tool",
+        "tool_call_id": "abc",
+        "content": json.dumps({"ok": "summarize"}),
+    }
+
+
+def test_tools_are_called_with_the_episode_arrays(lc, fake_tools):
+    """The loop forwards the model's arguments to the dispatcher unchanged."""
+    time, flux, flux_err = lc
+    backend = FixedBackend([AssistantTurn(tool_calls=[ToolCall("1", "fold", {"period": 2.5, "t0": 0.1})])])
+    ToolAgentDetector(backend).detect(time, flux, flux_err)
+    assert fake_tools == [("fold", {"period": 2.5, "t0": 0.1})]
+
+
+def test_model_stopping_without_submission_is_none(lc, fake_tools):
+    """A model that answers in prose and never submits scores as "none" with stop ``model_stopped``."""
+    time, flux, flux_err = lc
+    pred = ToolAgentDetector(FixedBackend([AssistantTurn(content="I give up")])).detect(time, flux, flux_err)
     assert not pred.detected and pred.extra["stop"] == "model_stopped"
 
 
-def test_agent_caps_tool_calls(lc):
-    class Looper:
-        name = "looper"
-        config = {}
-
-        def complete(self, messages, tools):
-            return AssistantTurn(tool_calls=[ToolCall("x", "summarize", {})], usage={})
-
-    time, flux, fe = lc
-    pred = ToolAgentDetector(Looper(), max_tool_calls=3).detect(time - time.min(), flux, fe)
-    assert pred.extra["stop"] == "max_tool_calls" and pred.extra["n_tool_calls"] == 3
+def test_max_tool_calls_cap(lc, fake_tools):
+    """A model that loops on a tool is cut off at the cap and the episode is marked ``max_tool_calls``."""
+    time, flux, flux_err = lc
+    looping = FixedBackend([AssistantTurn(tool_calls=[ToolCall("x", "summarize", {})])] * 10)
+    pred = ToolAgentDetector(looping, max_tool_calls=3).detect(time, flux, flux_err)
+    assert pred.extra["stop"] == "max_tool_calls" and pred.extra["n_tool_calls"] == 3 and len(fake_tools) == 3
 
 
-def test_tinker_rendering_round_trip():
-    messages = [
-        {"role": "system", "content": "SYS"},
-        {"role": "user", "content": "go"},
-        {
-            "role": "assistant",
-            "content": "",
-            "tool_calls": [
-                {
-                    "id": "a",
-                    "type": "function",
-                    "function": {"name": "fold", "arguments": json.dumps({"period": 3.0, "t0": 1.0})},
-                }
-            ],
-        },
-        {"role": "tool", "tool_call_id": "a", "content": '{"depth_ppm": 9000}'},
-    ]
-    out = TinkerBackend.render_messages(messages, tool_definitions())
-    assert [m["role"] for m in out] == ["system", "user", "assistant", "user"]
-    assert "# Tools" in out[0]["content"] and '"name": "fold"' in out[0]["content"]
-    assert "<tool_call>" in out[2]["content"] and "<tool_response>" in out[3]["content"]
-    calls = TinkerBackend.parse_tool_calls(
-        'thinking...\n<tool_call>\n{"name": "fold", "arguments": {"period": 3.0, "t0": 1.0}}\n</tool_call>\n'
-        "<tool_call>\nnot json\n</tool_call>"
+def test_max_turns_cap(lc, fake_tools):
+    """The turn cap is independent of the tool-call cap."""
+    time, flux, flux_err = lc
+    looping = FixedBackend([AssistantTurn(tool_calls=[ToolCall("x", "summarize", {})])] * 10)
+    pred = ToolAgentDetector(looping, max_turns=2, max_tool_calls=100).detect(time, flux, flux_err)
+    assert pred.extra["stop"] == "max_turns" and pred.extra["n_turns"] == 2
+
+
+def test_token_cap(lc, fake_tools):
+    """Input plus output tokens from the backend's usage stop the loop once they reach the cap."""
+    time, flux, flux_err = lc
+    turn = AssistantTurn(
+        tool_calls=[ToolCall("x", "summarize", {})], usage={"input_tokens": 600, "output_tokens": 0}
     )
-    assert len(calls) == 1 and calls[0].name == "fold" and calls[0].arguments == {"period": 3.0, "t0": 1.0}
+    pred = ToolAgentDetector(FixedBackend([turn] * 5), max_tokens_per_episode=1000).detect(
+        time, flux, flux_err
+    )
+    assert pred.extra["stop"] == "max_tokens" and pred.extra["usage"]["input_tokens"] == 1200
+
+
+def test_invalid_submission_does_not_end_episode(lc, fake_tools):
+    """A tool error on ``fail`` is recorded in the transcript and the loop continues to the next turn."""
+    time, flux, flux_err = lc
+    turns = [AssistantTurn(tool_calls=[ToolCall("1", "fail", {})]), AssistantTurn(content="stop")]
+    pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
+    assert pred.extra["stop"] == "model_stopped"
+    assert pred.extra["transcript"] == [{"tool": "fail", "arguments": {}, "result": {"error": "bad"}}]
+
+
+def test_usage_is_summed_across_turns(lc, fake_tools):
+    """Cost and tokens are accumulated over every backend call in the episode."""
+    time, flux, flux_err = lc
+    turns = [
+        AssistantTurn(tool_calls=[ToolCall("1", "summarize", {})], usage={"usd": 0.01}),
+        AssistantTurn(content="x", usage={"usd": 0.02}),
+    ]
+    pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
+    assert pred.extra["usage"]["usd"] == pytest.approx(0.03)
+
+
+def test_config_records_backend_caps_and_prompt_hash():
+    """The config must identify the backend, the caps and the exact prompt, so a run is reproducible."""
+    config = ToolAgentDetector(FixedBackend([]), max_tool_calls=5).config
+    assert config["backend"] == "fixed" and config["backend_model"] == "fixed"
+    assert config["max_tool_calls"] == 5
+    assert config["system_prompt_sha256"] == hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()
+    assert "submit_prediction" in config["tools"]

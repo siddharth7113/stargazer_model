@@ -48,8 +48,8 @@ Technical English, adapted for code. Apply these rules.
 - Replace a chain of `if` statements on a value with a lookup table and a search.
 - Do not use a single-letter variable name. Write `episode_id`, not `k`; `prediction`,
   not `p`. The exceptions are `_` for an unused value and the physics symbols `b`, `t0`,
-  `u1`, `u2`, `rp_rs`, `a_rs`, which the docstrings define. `tests/test_style.py`
-  enforces this.
+  `u1`, `u2`, `rp_rs`, `a_rs`, which the docstrings define. `scripts/check_names.py`
+  enforces this in pre-commit.
 - Make a table of parameters a module constant with a docstring, so a caller can
   replace it.
 
@@ -72,3 +72,15 @@ Compliant:
 
 > Write a manifest to the directory. The manifest holds the SHA-256 of each file.
 > Any person with the repository can verify the files against the manifest.
+
+## Tests
+
+- One test file for each module: `tests/test_<module>.py`.
+- One test checks one behaviour of one function or method. The name says which:
+  `test_bin_lc_error_is_scatter_over_sqrt_n`.
+- A unit test uses the smallest input that shows the behaviour. It does not use the
+  network or the file cache; `tmp_path` and synthetic arrays are enough.
+- A test that crosses module boundaries goes in `tests/integration/` with the
+  `integration` marker. It checks that the parts fit together. It must not be the first
+  test to fail on a unit-level bug.
+- Style rules are lint hooks in pre-commit, not tests.
