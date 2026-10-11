@@ -437,3 +437,63 @@ them as such), so the scorer needs a second submission form: `detected=true` wit
 event time, duration and depth and no period, credited when the event time falls on an
 injected transit. Without it, every system scores zero on the regime the project cares
 most about. This is the first item for the next session, ahead of more tools.
+
+**Single-event submission form** (scorer, submit tool, prompt). A prediction with
+`detected=true` and no period now claims one event at `t0`. The scorer folds `t0` on the
+true period with the same epoch check as the periodic form and sets `event_ok`. A
+credited event scores 1.0 if the episode has one transit in the data and
+`single_event_credit` (default 0.5, the alias credit) if it has two or more, because
+then a period was there to find. An event off every transit is `wrong_event`, score 0;
+on a null episode the form is a false alarm. `completeness_with_aliases` and the SNR and
+transit-count bins now count every episode with a score above zero, so a credited event
+counts as found; `completeness_exact` adds an event hit with score 1.0 to the period
+hits. No earlier results file changes under the new definitions, because no earlier
+submission used the form. `evaluate` records `single_event_credit` in the results
+config.
+
+The submit tool checks the form: a periodic detection needs `t0`; a single-event
+detection needs `t0`, `duration` and `depth`; an incomplete submission returns an error
+and the episode continues. The `single_events` description and the prompt (scoring
+line, step 6, decision rules) now tell the model to submit a lone event with snr above
+about 10 and no partner, where before they told it to stay at `detected=false`. This
+is a prompt and tool change: agent runs from here are not comparable with
+`results/full/` and `results/full_v2tools/`; the next Inkling-Small run on s98_v2 goes
+to `results/full_v3form/` and is the baseline of the new form. Tests: six scorer tests,
+three submit-tool tests, one viewer test, one evaluate test; 248 tests pass offline.
+
+**Three-episode checks of the single-event form, Inkling-Small on s98_v2** (renderer
+`tml_v0`, model-card sampling, seed 0).
+
+```
+stargazer agent --episodes data/episodes/s98_v2 --backend tinker --model thinkingmachines/Inkling-Small \
+    --renderer tml_v0 --limit 3 --out results/smoke/agent_inkling_small_s98_v2_form3.json
+```
+A first attempt without `--renderer` failed on every episode with `Expected single
+token for <|im_end|>` because the default renderer is the Qwen3 one; the flag is part
+of the command for this model. With the flag: ep_0001 hit (P 0.7764 d, 9 calls), ep_0000
+and ep_0002 true null, no errors, $0.13. None of the three has a single transit, so a
+second run took the first three one-transit episodes through `evaluate` with
+`ids=["ep_0004", "ep_0007", "ep_0012"]`, same backend and settings
+(`results/smoke/agent_inkling_small_s98_v2_form3_single.json`, $0.14, log beside it).
+
+| episode | snr | depth ppm | duration h | single_events (model's window) | submission | outcome |
+|---|---|---|---|---|---|---|
+| ep_0004 | 15.6 | 2323 | 5.7 | top event t 0.16 d snr 9.8, true event absent (window 0.3) | detected=false | miss |
+| ep_0007 | 25.5 | 4994 | 3.3 | t 57.08 d snr 17.9 (window 0.75) | single event t0 57.083 d | event_hit, 1.0 |
+| ep_0012 | 35.3 | 4681 | 5.8 | top event t 32.44 d snr 8.1, true event snr 5.1 (window 0.3) | detected=false | miss |
+
+The form works end to end: the model called single_events, found the one event on
+ep_0007, submitted it with t0, duration and depth and no period, the tool accepted the
+form, the scorer credited it and the viewer shows `single event t0=57.083 d`. This is
+the first scored single-transit detection in the project.
+
+**Finding: the detrending window erases long single events.** On ep_0004 and ep_0012
+the model chose `detrend_window_days` 0.3 for an active star, as the bls_peaks
+description suggests. A 0.3-day (7.2-hour) running window removes most of a 5.7-hour
+dip. Offline, `single_events` on ep_0012 gives the true event snr 5.1 at window 0.3,
+13.7 at 0.75 and 53 at 1.5 (where stellar variability also enters); on ep_0004 the
+true event is absent at 0.3, snr 5.4 at 0.75 and 10.0 at 1.5. The single-event search
+therefore needs a detrending that does not see the box it tests: a window tied to each
+box width (three times the width or more) or a fit that masks the box. This is a tool
+change for the next session, before the full s98_v2 run, since 9 of the 18 one-transit
+injections in s98_v2 are longer than 4 hours.

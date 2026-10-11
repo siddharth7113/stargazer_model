@@ -20,19 +20,21 @@ class Prediction:
 
     A detection system looks at one light curve, called an episode, and reports
     whether it found a transit signal. If it did, it reports the signal's period,
-    epoch, duration and depth. The benchmark compares this answer with the hidden
-    truth of the episode. A prediction is the only output the benchmark needs from
-    a system, so a system in any language can take part by writing predictions as
-    JSON.
+    epoch, duration and depth. A signal with one transit in the data has no period;
+    the system then reports the event time as ``t0`` and leaves ``period`` None.
+    The benchmark compares this answer with the hidden truth of the episode. A
+    prediction is the only output the benchmark needs from a system, so a system in
+    any language can take part by writing predictions as JSON.
 
     Parameters
     ----------
     detected : bool
         True if the detector claims a transit signal is present.
     period : float or None
-        Claimed period in days. Required when ``detected`` is True.
+        Claimed period in days. None with ``detected`` True is the single-event form.
     t0 : float or None
         Claimed epoch of a transit centre, in the episode's relative time base (days).
+        Required when ``detected`` is True.
     duration : float or None
         Claimed transit duration in days. Informational.
     depth : float or None

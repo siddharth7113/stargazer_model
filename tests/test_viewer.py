@@ -271,6 +271,13 @@ def test_summary_line_of_submit_prediction_reads_the_arguments():
     assert summary_line(call) == "detected=True P=0.8509 d t0=0.361 d"
 
 
+def test_summary_line_of_a_single_event_submission_names_the_form():
+    """A submission without a period is the single-event form; the line says so and shows the event time."""
+    arguments = {"detected": True, "t0": 20.5, "duration": 0.12, "depth": 0.01}
+    call = _result("submit_prediction", {"ok": True, "form": "single_event"}, arguments)
+    assert summary_line(call) == "detected=True single event t0=20.500 d"
+
+
 def test_summary_line_of_a_failed_call_is_the_error_text():
     """A rejected call shows why it failed, and :func:`result_error` marks it for the red style."""
     call = _result("submit_prediction", {"error": "argument detected must be boolean, got str"})

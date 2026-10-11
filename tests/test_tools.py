@@ -188,6 +188,28 @@ def test_registry_periods_durations_and_depth_are_positive():
     }
 
 
+def test_submit_periodic_detection_needs_t0(lc):
+    """A detection with a period but no epoch returns an error, so the episode does not end half answered."""
+    time, flux, _ = lc
+    result = call_tool("submit_prediction", {"detected": True, "period": 3.0}, time, flux)
+    assert result == {"error": "a periodic detection needs t0", "form": "periodic"}
+
+
+def test_submit_single_event_needs_t0_duration_and_depth(lc):
+    """A detection without a period is a single event and must name the dip by time, duration and depth."""
+    time, flux, _ = lc
+    result = call_tool("submit_prediction", {"detected": True, "t0": 5.0}, time, flux)
+    assert result["error"] == "a single_event detection needs duration, depth"
+    complete = {"detected": True, "t0": 5.0, "duration": 0.1, "depth": 0.001}
+    assert call_tool("submit_prediction", complete, time, flux) == {"ok": True, "form": "single_event"}
+
+
+def test_submit_no_detection_needs_nothing_else(lc):
+    """``detected=false`` is a complete answer on its own."""
+    time, flux, _ = lc
+    assert call_tool("submit_prediction", {"detected": False}, time, flux) == {"ok": True}
+
+
 def test_call_tool_unknown_name(lc):
     """An unknown tool name returns an error plus the list of available tools, so the model can recover."""
     time, flux, _ = lc

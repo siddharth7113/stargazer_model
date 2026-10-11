@@ -63,7 +63,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Nemotron-3.5-Lightning full run on s98_v1 recorded (11 percent; loops to the turn cap)
 - [x] Same models on s98_v1 with the masked search and single_events: precision rose (Inkling 36 percent at 5 percent false alarm, above BLS); faint-regime completeness did not
 - [x] Inkling-Small on s98_v2: 32 percent at 11 percent false alarm; zero single-transit hits because the scorer requires a period
-- [ ] Scorer: a single-event submission form (event time, duration, depth, no period) credited against injected transit times; set-level metrics for it
+- [x] Scorer: a single-event submission form (event time, duration, depth, no period) credited against injected transit times; set-level metrics for it (LOGBOOK 2026-10-11, single-event form)
 - [ ] Prompt rule: a peak near the noise level with no second line of evidence is "none" (wrong periods were noise peaks)
 - [ ] Larger models on the same sets: Kimi K2.6, Nemotron 3 Ultra, Inkling, Qwen3.5-397B-A17B
 
@@ -134,8 +134,21 @@ Read LOGBOOK.md first; it has every number and the command that produced it.
 
 All runs of the day are finished and recorded: `results/full/` (old tools, three models on s98_v1), `results/full_v2tools/` (new tools: Qwen3.8-27B and Inkling-Small on s98_v1, Inkling-Small on s98_v2), baselines and sweeps for both sets. The repository is public at github.com/siddharth7113/stargazer_model; Read the Docs import is pending on the owner's account.
 
+The scorer now has the single-event submission form (LOGBOOK, "Single-event submission
+form"). The prompt and the submit tool changed with it, so every agent run before this
+point is on the old form; the s98_v2 baseline is unchanged because BLS always gives a
+period.
+
+The three-episode checks are done (LOGBOOK, "Three-episode checks of the single-event
+form"): the form scores a real single-transit detection, and the checks found that a
+0.3-day detrending window erases single events longer than about four hours.
+
 First steps for the next session:
-1. Scorer: the single-event submission form, so single-transit episodes can score (LOGBOOK, benchmark finding).
+1. `single_events`: detrend with a window tied to each box width, or a fit that masks
+   the box, with a test on a 6-hour event under a 0.3-day window (LOGBOOK finding).
+   Then Inkling-Small on all of s98_v2 into `results/full_v3form/`, with
+   `--renderer tml_v0`. The number to watch is completeness in the one-transit bin,
+   0 of 18 before.
 2. Phase 3a: iterative multi-signal search and the transit-shape fit, with tests.
 3. Phase 3b: secondary eclipse search and the ephemeris match, the two cheapest vetting tools.
 4. Then the larger models on s98_v1 and s98_v2, three seeds each.

@@ -94,6 +94,44 @@ def test_injected_episode_with_no_transit_in_data_is_scored_as_null():
     assert score_episode({"detected": True, "period": 3.0, "t0": 1.0}, gone)["outcome"] == "false_alarm"
 
 
+def test_single_event_on_the_only_transit_scores_one():
+    """A one-transit episode has no period to find, so an event at the transit is the complete answer."""
+    one = {**TRANSIT, "n_transits": 1}
+    row = score_episode({"detected": True, "t0": 1.02, "duration": 0.1, "depth": 0.001}, one)
+    assert row["outcome"] == "event_hit" and row["score"] == 1.0 and row["event_ok"]
+    assert row["period_credit"] == 0.0 and row["alias"] is None
+
+
+def test_single_event_on_a_multi_transit_episode_scores_the_event_credit():
+    """With four transits in the data the period was measurable, so the event answer earns partial credit."""
+    pred = {"detected": True, "t0": 7.0}
+    assert score_episode(pred, TRANSIT)["score"] == 0.5
+    assert score_episode(pred, TRANSIT, single_event_credit=0.3)["score"] == 0.3
+
+
+def test_single_event_off_every_transit_scores_zero():
+    """An event time more than half a duration from each transit centre is ``wrong_event`` and scores zero."""
+    row = score_episode({"detected": True, "t0": 2.5}, TRANSIT)
+    assert row["outcome"] == "wrong_event" and row["score"] == 0.0 and row["event_ok"] is False
+
+
+def test_single_event_without_a_time_is_not_credited():
+    """A detection with neither period nor t0 names nothing, so it is ``wrong_event`` rather than a crash."""
+    row = score_episode({"detected": True}, TRANSIT)
+    assert row["outcome"] == "wrong_event" and row["score"] == 0.0
+
+
+def test_single_event_on_a_null_episode_is_a_false_alarm():
+    """The event form is a detection, so on a star with no planet it is a false alarm."""
+    row = score_episode({"detected": True, "t0": 3.0, "duration": 0.1, "depth": 0.001}, NULL)
+    assert row["outcome"] == "false_alarm" and row["score"] == 0.0
+
+
+def test_periodic_prediction_has_no_event_flag():
+    """``event_ok`` is None on the periodic form, so a reader can tell the forms apart in a results file."""
+    assert score_episode({"detected": True, "period": 3.0, "t0": 1.0}, TRANSIT)["event_ok"] is None
+
+
 def test_summarize_false_alarm_rate_and_completeness():
     """With one hit, one miss, one true null and one false alarm the rates are 0.5 and 0.5."""
     truth = {"a": TRANSIT, "b": {**TRANSIT, "snr": 3.0, "n_transits": 1}, "c": NULL, "d": NULL}
@@ -120,6 +158,19 @@ def test_summarize_bins_by_snr_and_transit_count():
     assert summary["by_snr"]["0-5"] == {"n": 1, "completeness": 0.0}
     assert summary["by_n_transits"]["1-1"] == {"n": 1, "completeness": 0.0}
     assert sum(bin_["n"] for bin_ in summary["by_snr"].values()) == 2
+
+
+def test_summarize_counts_a_credited_event_as_found():
+    """An event hit on a one-transit episode is exact and found; on a four-transit episode it is found."""
+    one = {**TRANSIT, "n_transits": 1}
+    truth = {"a": one, "b": TRANSIT}
+    rows = {
+        "a": score_episode({"detected": True, "t0": 1.0}, one),
+        "b": score_episode({"detected": True, "t0": 1.0}, TRANSIT),
+    }
+    summary = summarize(rows, truth)
+    assert summary["completeness_exact"] == 0.5 and summary["completeness_with_aliases"] == 1.0
+    assert summary["by_n_transits"]["1-1"] == {"n": 1, "completeness": 1.0}
 
 
 def test_summarize_counts_zero_transit_injection_as_null():

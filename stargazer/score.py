@@ -15,6 +15,9 @@ Rules. Each tolerance is an explicit argument, so a run can change it and record
   modulo the true period.
 * score = ``period_credit * (0.7 + 0.3 * epoch_ok)``, zero when period credit is zero.
 * depth_ok is informational only: predicted depth within a factor of two of the truth.
+* single-event form: ``detected`` with no period and an event time ``t0``. The event is
+  credited when ``t0`` passes the epoch check. It scores 1.0 if the episode has one
+  transit in the data, else ``single_event_credit``.
 """
 
 from __future__ import annotations
@@ -29,7 +32,11 @@ NTR_BINS = [(1, 1), (2, 2), (3, 5), (6, np.inf)]
 
 
 def score_episode(
-    pred: Prediction | dict, truth: dict, period_rtol: float = 0.01, epoch_frac: float = 0.5
+    pred: Prediction | dict,
+    truth: dict,
+    period_rtol: float = 0.01,
+    epoch_frac: float = 0.5,
+    single_event_credit: float = 0.5,
 ) -> dict:
     """Score one prediction against one truth record.
 
@@ -42,12 +49,16 @@ def score_episode(
         Relative period tolerance.
     epoch_frac : float
         Epoch tolerance as a fraction of the transit duration.
+    single_event_credit : float
+        Score of a credited single-event submission on an episode with two or more
+        transits in the data.
 
     Returns
     -------
     dict
-        ``kind, detected, period_credit, alias, epoch_ok, depth_ok, score, outcome``.
-        ``outcome`` is one of ``true_null, false_alarm, miss, hit, alias, wrong_period``.
+        ``kind, detected, period_credit, alias, epoch_ok, event_ok, depth_ok, score,
+        outcome``. ``outcome`` is one of ``true_null, false_alarm, miss, hit, alias,
+        wrong_period, event_hit, wrong_event``.
 
     Notes
     -----
@@ -71,6 +82,16 @@ def score_episode(
     An injected episode whose transits all fall in data gaps, or after the end of
     the data, has ``n_transits == 0``. No detector can find it. The scorer treats it
     as a null episode: "none" scores 1.0 and a detection scores 0.0.
+
+    Single-event form: a prediction with ``detected`` True and no period claims one
+    transit-like event at time ``t0`` without a period. A planet with one transit in
+    the data has no measurable period, so this is the complete answer for it. The
+    event passes the same epoch check as a periodic prediction and sets ``event_ok``.
+    A credited event scores 1.0 if ``n_transits == 1`` and ``single_event_credit``
+    otherwise, because with two or more transits in the data the period was
+    measurable and the event answer is incomplete, like an alias. An event that
+    fails the check has outcome ``wrong_event`` and scores 0.0. On a null episode the
+    form is a false alarm like any detection.
     """
     if isinstance(pred, dict):
         pred = Prediction.from_dict(pred)
@@ -80,6 +101,7 @@ def score_episode(
         "period_credit": 0.0,
         "alias": None,
         "epoch_ok": False,
+        "event_ok": None,
         "depth_ok": None,
         "score": 0.0,
         "outcome": None,
@@ -93,6 +115,16 @@ def score_episode(
         return row
     tr = truth["transit"]
     period, t0, dur = tr["period"], tr["t0"], tr["duration"]
+    if pred.depth is not None:
+        row["depth_ok"] = bool(0.5 <= float(pred.depth) / tr["depth"] <= 2.0)
+    if pred.period is None:
+        row["event_ok"] = pred.t0 is not None and _epoch_ok(float(pred.t0), t0, period, dur, epoch_frac)
+        if row["event_ok"]:
+            row["score"] = 1.0 if truth.get("n_transits", 1) == 1 else single_event_credit
+            row["outcome"] = "event_hit"
+        else:
+            row["outcome"] = "wrong_event"
+        return row
     credit, ratio_hit = 0.0, None
     for ratio, credit_value in ALIASES:
         if abs(float(pred.period) / (period * ratio) - 1.0) < period_rtol:
@@ -100,15 +132,18 @@ def score_episode(
             break
     row["period_credit"], row["alias"] = credit, ratio_hit
     if credit > 0:
-        phase = ((float(pred.t0) - t0 + 0.5 * period) % period) - 0.5 * period
-        row["epoch_ok"] = bool(abs(phase) < epoch_frac * dur)
+        row["epoch_ok"] = _epoch_ok(float(pred.t0), t0, period, dur, epoch_frac)
         row["score"] = credit * (0.7 + 0.3 * row["epoch_ok"])
         row["outcome"] = "hit" if ratio_hit == 1.0 else "alias"
     else:
         row["outcome"] = "wrong_period"
-    if pred.depth is not None:
-        row["depth_ok"] = bool(0.5 <= float(pred.depth) / tr["depth"] <= 2.0)
     return row
+
+
+def _epoch_ok(t0_pred: float, t0_true: float, period: float, duration: float, epoch_frac: float) -> bool:
+    """Return True if ``t0_pred``, folded on the true period, is within the tolerance of a transit centre."""
+    phase = ((t0_pred - t0_true + 0.5 * period) % period) - 0.5 * period
+    return bool(abs(phase) < epoch_frac * duration)
 
 
 def _label(lo, hi) -> str:
@@ -116,7 +151,13 @@ def _label(lo, hi) -> str:
 
 
 def _completeness(rows: dict, keys: list[str]) -> float | None:
-    return float(np.mean([rows[key]["period_credit"] > 0 for key in keys])) if keys else None
+    """Return the fraction of ``keys`` with a score above zero: a hit, an alias or a credited event."""
+    return float(np.mean([rows[key]["score"] > 0 for key in keys])) if keys else None
+
+
+def _is_exact(row: dict) -> bool:
+    """Return True for a hit at the true period, or a credited event on a one-transit episode."""
+    return row["outcome"] == "hit" or (row["outcome"] == "event_hit" and row["score"] == 1.0)
 
 
 def summarize(rows: dict[str, dict], truth: dict) -> dict:
@@ -127,6 +168,9 @@ def summarize(rows: dict[str, dict], truth: dict) -> dict:
     dict
         Mean score, false-alarm rate on nulls, exact and alias-inclusive completeness
         on injections, and completeness binned by expected SNR and by transit count.
+        Exact completeness counts a hit at the true period and a credited single
+        event on a one-transit episode. Alias-inclusive completeness counts every
+        episode with a score above zero.
     """
 
     def _is_null(episode_id: str) -> bool:
@@ -140,9 +184,7 @@ def summarize(rows: dict[str, dict], truth: dict) -> dict:
         "n_transit": len(trans),
         "mean_score": float(np.mean([row["score"] for row in rows.values()])) if rows else None,
         "false_alarm_rate": float(np.mean([row["detected"] for row in nulls])) if nulls else None,
-        "completeness_exact": (
-            float(np.mean([row["outcome"] == "hit" for row in trans.values()])) if trans else None
-        ),
+        "completeness_exact": (float(np.mean([_is_exact(row) for row in trans.values()])) if trans else None),
         "completeness_with_aliases": _completeness(trans, list(trans)),
         "by_snr": {},
         "by_n_transits": {},

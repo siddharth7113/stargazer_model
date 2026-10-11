@@ -67,9 +67,11 @@ SPARK_LEVELS = "▁▂▃▄▅▆▇█"
 
 OUTCOME_TONE = {
     "hit": "success",
+    "event_hit": "success",
     "true_null": "success",
     "alias": "warning",
     "wrong_period": "warning",
+    "wrong_event": "warning",
     "miss": "error",
     "false_alarm": "error",
 }
@@ -513,9 +515,11 @@ def _odd_even_line(arguments: dict, data: dict) -> str:
 
 
 def _submit_line(arguments: dict, data: dict) -> str:
-    """Summarise a ``submit_prediction`` call from its arguments: detection, period, epoch."""
+    """Summarise a ``submit_prediction`` call from its arguments: detection, period or event, epoch."""
     if not arguments.get("detected"):
         return "detected=False"
+    if arguments.get("period") is None:
+        return f"detected=True single event t0={_field(arguments, 't0', '{:.3f}')} d"
     return (
         f"detected=True P={_field(arguments, 'period', '{:.4f}')} d t0={_field(arguments, 't0', '{:.3f}')} d"
     )

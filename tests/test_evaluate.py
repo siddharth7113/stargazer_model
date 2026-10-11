@@ -46,8 +46,9 @@ def test_evaluate_subset_of_ids(episodes):
 
 def test_evaluate_config_merges_detector_and_tolerances(episodes):
     """The results config holds the detector config, the scoring tolerances and the wall time."""
-    config = evaluate(AlwaysNone(), episodes, period_rtol=0.02).config
+    config = evaluate(AlwaysNone(), episodes, period_rtol=0.02, single_event_credit=0.4).config
     assert config["threshold"] == 1 and config["period_rtol"] == 0.02 and config["wall_seconds"] >= 0
+    assert config["single_event_credit"] == 0.4
 
 
 def test_evaluate_records_episode_set_hash(episodes):

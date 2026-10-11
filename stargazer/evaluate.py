@@ -97,6 +97,7 @@ def evaluate(
     ids: list[str] | None = None,
     period_rtol: float = 0.01,
     epoch_frac: float = 0.5,
+    single_event_credit: float = 0.5,
     progress: Callable[[str, Prediction, dict], None] | None = None,
     record_errors: bool = True,
     workers: int = 1,
@@ -109,8 +110,9 @@ def evaluate(
     episodes : EpisodeSet
     ids : list of str, optional
         Subset of episode ids. Default is all episodes.
-    period_rtol, epoch_frac : float
-        Scoring tolerances, recorded in the results config.
+    period_rtol, epoch_frac, single_event_credit : float
+        Scoring tolerances and the credit of a single-event submission on an episode
+        with two or more transits, recorded in the results config.
     progress : callable, optional
         Called with ``(ep_id, prediction, truth_record)`` after each episode.
     record_errors : bool
@@ -169,11 +171,18 @@ def evaluate(
             errors.append(episode_id)
         preds[episode_id] = prediction.to_dict()
     truth_sub = {episode_id: truth[episode_id] for episode_id in ids}
-    rows, summary = score_set(preds, truth_sub, period_rtol=period_rtol, epoch_frac=epoch_frac)
+    rows, summary = score_set(
+        preds,
+        truth_sub,
+        period_rtol=period_rtol,
+        epoch_frac=epoch_frac,
+        single_event_credit=single_event_credit,
+    )
     config = {
         **detector.config,
         "period_rtol": period_rtol,
         "epoch_frac": epoch_frac,
+        "single_event_credit": single_event_credit,
         "wall_seconds": round(_time.time() - t_start, 1),
         "n_requested": len(ids),
         "errors": errors,

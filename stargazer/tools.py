@@ -454,9 +454,32 @@ def _number(desc: str, default: float | None = None, nullable: bool = False, pos
     return schema
 
 
+SUBMISSION_FORMS: dict[str, tuple[str, ...]] = {
+    "periodic": ("period", "t0"),
+    "single_event": ("t0", "duration", "depth"),
+}
+"""The arguments a detection needs, by form. A submission with a period is periodic;
+one without is a single event. The scorer credits each form by its own rule."""
+
+
 def _submit(time: np.ndarray, flux: np.ndarray, **kwargs) -> dict:
-    """The submit tool has no analysis; the agent loop reads its arguments."""
-    return {"ok": True}
+    """Check that a detection has the arguments of its form. The agent loop reads the arguments.
+
+    Notes
+    -----
+    ``detected=false`` needs nothing else. A detection with a period is the periodic
+    form and needs ``t0``. A detection without a period is the single-event form and
+    needs ``t0``, ``duration`` and ``depth``, so the claim names one specific dip. A
+    submission that lacks an argument of its form returns an error and does not end
+    the episode, so the model can complete it.
+    """
+    if not kwargs.get("detected"):
+        return {"ok": True}
+    form = "periodic" if kwargs.get("period") is not None else "single_event"
+    missing = [name for name in SUBMISSION_FORMS[form] if kwargs.get(name) is None]
+    if missing:
+        return {"error": f"a {form} detection needs {', '.join(missing)}", "form": form}
+    return {"ok": True, "form": form}
 
 
 TOOLS: tuple[ToolSpec, ...] = (
@@ -536,7 +559,9 @@ TOOLS: tuple[ToolSpec, ...] = (
             "(long period). Returns up to five events with time (days from start), duration, "
             "depth_ppm, snr and n_points. An event with snr above about 8 is a hypothesis, not a "
             "detection: look for a second event of the same depth and fold at the period between "
-            "them. A submission needs a period, so a lone event with no partner stays detected=false."
+            "them. A lone event with no partner, snr above about 10, a transit-like duration (hours) "
+            "and a flat curve around it can be submitted as a single event: detected=true with t0, "
+            "duration and depth and no period."
         ),
         parameters={
             "type": "object",
@@ -606,23 +631,33 @@ TOOLS: tuple[ToolSpec, ...] = (
     ToolSpec(
         name="submit_prediction",
         description=(
-            "Call exactly once, as the last action, before calls_remaining reaches 0. Submit "
-            "detected=true with period, t0, duration and depth only for a candidate that folds to a "
-            "clean dip and has odd_even verdict consistent. Otherwise submit detected=false. A false "
-            "alarm and a missing submission both score zero; a correct detected=false scores full marks "
-            "on a star with no planet."
+            "Call exactly once, as the last action, before calls_remaining reaches 0. Two forms. "
+            "Periodic: detected=true with period, t0, duration and depth, only for a candidate that "
+            "folds to a clean dip and has odd_even verdict consistent. Single event: detected=true "
+            "with t0, duration and depth and no period, only for one isolated dip from single_events "
+            "that no period explains. Otherwise submit detected=false. A false alarm and a missing "
+            "submission both score zero; a correct detected=false scores full marks on a star with "
+            "no planet."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "detected": {"type": "boolean", "description": "True if a transit signal is present."},
-                "period": _number("Period, days. Required if detected.", nullable=True, positive=True),
+                "period": _number(
+                    "Period, days. Give it for a periodic detection; omit it for a single event.",
+                    nullable=True,
+                    positive=True,
+                ),
                 "t0": _number(
                     "Epoch of a transit centre, days from the start. Required if detected.", nullable=True
                 ),
-                "duration": _number("Transit duration, days.", nullable=True, positive=True),
+                "duration": _number(
+                    "Transit duration, days. Required for a single event.", nullable=True, positive=True
+                ),
                 "depth": _number(
-                    "Fractional depth, for example 0.0005 for 500 ppm.", nullable=True, positive=True
+                    "Fractional depth, for example 0.0005 for 500 ppm. Required for a single event.",
+                    nullable=True,
+                    positive=True,
                 ),
                 "reasoning": {"type": "string", "description": "One or two sentences on the evidence."},
             },
