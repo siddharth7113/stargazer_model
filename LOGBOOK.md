@@ -718,3 +718,12 @@ and 14 percent less cost an episode. Wrong periods are 10 against 6 and 8; with 
 seed that spread is within what a seed moves. The faint regime is unchanged: the 72
 misses are the injections below expected snr 20, where the search statistic does
 not reach the noise ceiling.
+
+**Course notebooks, first three.** `scripts/build_notebooks.py` generates and
+executes the notebooks in `examples/` with nbformat and nbclient, so the text and
+code are reviewed as Python and the built files carry their plots. Each notebook
+loads ep_0001 of s98_v2 if the set is present and a synthetic light curve with one
+injection otherwise. Written: 01 the episode and summarize, 02 injection with the
+shape against the impact parameter, 03 the period search with detrending,
+bls_peaks, search_signals and the fold. New optional dependency group `notebooks`
+(matplotlib, jupyter, nbformat, nbclient, ipykernel).

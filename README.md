@@ -140,6 +140,14 @@ viewer, and `stargazer show` prints one episode.
   <img src="assets/viewer.svg" alt="Trajectory viewer" width="900">
 </p>
 
+## Course notebooks
+
+The `examples/` directory holds notebooks for a human reader, one for each part of
+the toolbox, with a plot for each result. They are built and executed by
+`scripts/build_notebooks.py`, so a change to a tool is a change there. Each notebook
+runs on the real episode set if `data/episodes/s98_v2` is present and on a synthetic
+light curve otherwise. Install the `notebooks` extra to run them.
+
 ## Results
 
 Episode set `s98_v1` has 200 episodes from 39 stars observed in TESS sector 98. The
