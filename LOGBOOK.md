@@ -846,3 +846,12 @@ between the two on one model is the value of the hand-written policy; that is wh
 the reinforcement-learning phase must learn from the reward, so from here the rules
 block is frozen and new knowledge goes into tools as verdicts. The `full_v7base`
 series starts with Inkling-Small on s98_v2 with the base prompt.
+
+**Three-episode check of the base prompt**
+(`results/smoke/agent_inkling_small_s98_v2_base3.json`, Inkling-Small, `tml_v0`,
+$0.15, no errors). With no procedure in the prompt the model called summarize,
+bls_peaks, single_events, search_signals, fold, fit_transit, odd_even and
+secondary_eclipse on its own, in an order of its choosing. ep_0001 hit (12 calls),
+ep_0002 true null (6 calls), ep_0000 false alarm: the 16.9-day one-dip signal
+submitted as a period, which the rules prompt's one-event rule had blocked. That is
+the expected shape of the gap. The full run is `results/full_v7base/`.
