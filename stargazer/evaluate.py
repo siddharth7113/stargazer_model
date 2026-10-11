@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time as _time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -122,7 +122,8 @@ def evaluate(
         on a remote model is idle most of the time, so 8 to 16 workers give a near
         linear speed-up. The detector must be safe to call from several threads;
         the baseline and the agent are. Results are in episode order whatever the
-        completion order. ``progress`` is called from the main thread.
+        completion order. ``progress`` is called from the main thread as each
+        episode completes, so a slow episode does not hide the finished ones.
 
     Notes
     -----
@@ -148,20 +149,25 @@ def evaluate(
         prediction.extra["seconds"] = round(_time.time() - t_one, 2)
         return prediction
 
+    predictions: dict[str, Prediction] = {}
     if workers <= 1:
-        outcomes = ((episode_id, run_one(episode_id)) for episode_id in ids)
+        for episode_id in ids:
+            predictions[episode_id] = run_one(episode_id)
+            if progress:
+                progress(episode_id, predictions[episode_id], truth[episode_id])
     else:
-        pool = ThreadPoolExecutor(max_workers=workers)
-        futures = {episode_id: pool.submit(run_one, episode_id) for episode_id in ids}
-        outcomes = ((episode_id, futures[episode_id].result()) for episode_id in ids)
-    for episode_id, prediction in outcomes:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(run_one, episode_id): episode_id for episode_id in ids}
+            for future in as_completed(futures):
+                episode_id = futures[future]
+                predictions[episode_id] = future.result()
+                if progress:
+                    progress(episode_id, predictions[episode_id], truth[episode_id])
+    for episode_id in ids:
+        prediction = predictions[episode_id]
         if "error" in prediction.extra:
             errors.append(episode_id)
         preds[episode_id] = prediction.to_dict()
-        if progress:
-            progress(episode_id, prediction, truth[episode_id])
-    if workers > 1:
-        pool.shutdown(wait=True)
     truth_sub = {episode_id: truth[episode_id] for episode_id in ids}
     rows, summary = score_set(preds, truth_sub, period_rtol=period_rtol, epoch_frac=epoch_frac)
     config = {

@@ -123,13 +123,13 @@ def test_evaluate_with_workers_matches_serial_order_and_values(episodes):
     parallel = evaluate(
         AlwaysNone(), episodes, workers=4, progress=lambda episode_id, *_: seen.append(episode_id)
     )
-    assert list(parallel.preds) == list(serial.preds) == episodes.ids
+    assert list(parallel.preds) == list(serial.preds) == episodes.ids  # results stay in order
     for episode_id in episodes.ids:
         without_timing = {key: value for key, value in parallel.preds[episode_id].items() if key != "seconds"}
         assert without_timing == {
             key: value for key, value in serial.preds[episode_id].items() if key != "seconds"
         }
-    assert seen == episodes.ids and parallel.config["workers"] == 4
+    assert sorted(seen) == episodes.ids and parallel.config["workers"] == 4  # progress in completion order
 
 
 def test_evaluate_with_workers_records_errors(episodes):
