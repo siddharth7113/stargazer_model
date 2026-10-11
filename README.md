@@ -5,8 +5,7 @@
 <h1 align="center">Star Gazer</h1>
 
 <p align="center">
-  A verifiable benchmark and reinforcement-learning environment for finding exoplanets in light curves.<br>
-  A language model works through a light curve with an astronomer's classical tools, and the benchmark scores its decision against an exact answer key.
+  A benchmark and reinforcement-learning environment for exoplanet detection in TESS light curves.
 </p>
 
 <p align="center">
@@ -31,34 +30,34 @@
 
 ## Purpose
 
-Mission pipelines search every star once with one fixed set of thresholds, so a signal
-below the cut never reaches a human. Star Gazer tests a different way of
-working. A language model receives one light curve together with the classical tools of
-an astronomer, among them Box Least Squares (BLS), phase folding, an odd-even check and
-a single-event search. The model calls the tools it needs, in the order it chooses, and
-decides whether the star has a transiting planet and at what period and epoch. The
-benchmark then scores that decision against an answer key that is exact, because the
-planets were put there on purpose.
+Star Gazer is a Python package for measuring how well a language model finds
+transiting planets in light curves. The model is given one light curve and a set of
+analysis tools (Box Least Squares, phase folding, an odd-even depth check, a
+single-event search), calls them as it sees fit, and reports whether it found a
+transit and at what period and epoch. The package scores the report, runs the
+classical Box Least Squares pipeline on the same data for comparison, and saves the
+full record of each run.
 
-The answer key comes from injection and recovery, the method the Kepler and TESS teams
-use to measure their own pipelines. The build step takes real Transiting Exoplanet
-Survey Satellite (TESS) light curves of stars with no detected planet and multiplies
-synthetic transits with known parameters into some of them. Each episode therefore has
-a known truth, the build configuration sets how faint and how long-period the
-injections are, and a new episode set costs one command.
+The test data are made by injection and recovery, the standard method for measuring
+the completeness of a transit survey. Synthetic transits with known parameters are
+multiplied into real TESS light curves of stars with no detected planet, and a fraction
+of the light curves is left untouched. The truth for each episode is therefore known
+exactly, and the difficulty of a set is chosen when it is built.
 
-The same design makes every result reproducible by anyone with the repository. Each
-random choice has a seed, each data file has a hash in a manifest, and each results
-file records the git commit, the episode-set hash, the full detector configuration and
-the score of every episode. The detector sees only time, flux and flux error, while the
-truth lives in a separate file that only the scorer reads, so a detector cannot learn
-the answers from its input.
+Each episode set has a manifest with the hash of every file, and each results file
+records the git commit, the hash of the episode set, the detector configuration and
+the score of every episode. The truth file is kept apart from the episode files and is
+read only by the scorer.
+
+The documentation is at <https://stargazer-model.readthedocs.io/>. PLAN.md holds the
+roadmap and LOGBOOK.md holds every run made so far, with the command that produced it.
 
 ## Installation
 
-Clone the repository, create a virtual environment with uv and install the package
-with its optional extras. The agent commands read provider keys from `.env`, which git
-ignores, and the test suite runs without network access.
+Star Gazer requires Python 3.13. Clone the repository and install it in editable mode
+with the optional extras for development, documentation, the Tinker backend and the
+trajectory viewer. The agent commands read API keys from a `.env` file in the project
+root, which git ignores. The test suite runs without network access.
 
 ```bash
 git clone git@github.com:siddharth7113/stargazer_model.git star_finder && cd star_finder
@@ -73,12 +72,9 @@ pytest                          # offline test suite, no network
   <img src="assets/quickstart.gif" alt="Quick start: baseline, agent, trajectory, compare" width="900">
 </p>
 
-The commands below take one TESS sector from host-star selection to a comparison
-table. The first three build an episode set, the next two run the classical baseline
-and a language-model agent on it, and the last two inspect and compare the results.
-The recording above comes from `assets/quickstart.tape`, which
-[VHS](https://github.com/charmbracelet/vhs) replays, so it stays in step with the
-commands.
+The commands below build an episode set from one TESS sector, run the baseline and a
+language-model agent on it, and compare the two. The recording was made with
+[VHS](https://github.com/charmbracelet/vhs) from `assets/quickstart.tape`.
 
 ```bash
 stargazer targets  --sector 98 --n 60 --seed 1               # host stars with no TOI
@@ -108,15 +104,15 @@ flowchart LR
     score --> res[Results + provenance]
 ```
 
-A detector is any object with a `detect(time, flux, flux_err) -> Prediction` method,
-so a new detection method plugs into the benchmark without changes to the benchmark
-itself. Two detectors ship with the package. The first is the classical BLS baseline,
-which sets the floor that any agent has to clear. The second is a tool-using agent that
-drives any chat model through a single backend method, so the agent loop, the tools and
-the prompt belong to Star Gazer and a model provider contributes only text completion.
-The Tinker backend uses the Tinker cookbook renderers to prompt and parse each model
-family in its native tool format, which lets Qwen, Nemotron and Inkling compete on
-equal terms.
+A detector is any object with a `detect(time, flux, flux_err) -> Prediction` method.
+The package provides two: `BLSDetector`, the classical Box Least Squares pipeline with a
+signal detection efficiency threshold, and `ToolAgentDetector`, which runs a chat model
+in a loop with the analysis tools until the model submits a prediction. The agent loop,
+the tools and the prompt are part of the package; a backend only has to turn a list of
+messages into one assistant turn. Two backends are included, one for OpenAI-compatible
+servers such as OpenRouter and one for Tinker. The Tinker backend formats prompts and
+parses tool calls with the Tinker cookbook renderers, so each model family is used in
+its own tool-calling format.
 
 ```python
 from stargazer import BLSDetector, EpisodeSet, ToolAgentDetector, evaluate
@@ -134,11 +130,10 @@ agent.save("results/my_run.json")
 
 ## Trajectories
 
-A score says how often a model is right, and a trajectory says how it got there. Star
-Gazer saves one trajectory for each episode, with the model's thinking, each tool call
-and its arguments, each tool result and the final answer. `stargazer view` opens them
-in a terminal viewer with filters for hits, misses and false alarms, and
-`stargazer show` prints one episode to the console.
+The results file of an agent run holds the complete trajectory of every episode: the
+model's reasoning where the backend exposes it, each tool call with its arguments, each
+tool result and the final submission. `stargazer view` opens the file in a terminal
+viewer, and `stargazer show` prints one episode.
 
 <!-- viewer screenshot -->
 <p align="center">
@@ -147,12 +142,12 @@ in a terminal viewer with filters for hits, misses and false alarms, and
 
 ## Results
 
-The table below is for episode set `s98_v1`: 200 episodes drawn from 39 stars in TESS
-sector 98, each a 57-day light curve, with injected periods from 0.5 to 20 days, depths
-from 100 ppm to 1 percent, and 29 percent of the episodes left without a planet.
-Completeness is the fraction of injected planets recovered at the right period and
-epoch, and the false-alarm rate is the fraction of planet-free episodes on which the
-system claimed a detection.
+Episode set `s98_v1` has 200 episodes from 39 stars observed in TESS sector 98. The
+light curves are 57 days long; the injected periods run from 0.5 to 20 days and the
+depths from 100 ppm to 1 percent; 29 percent of the episodes have no injected transit.
+Completeness is the fraction of injected transits recovered at the correct period and
+epoch. The false-alarm rate is the fraction of episodes without a transit on which a
+detection was reported.
 
 | system | false alarm | completeness | mean score | tokens/episode |
 |---|---|---|---|---|
@@ -161,12 +156,11 @@ system claimed a detection.
 | Inkling-Small, original tools | 19% | 40% | 0.522 | 21,000 |
 | Qwen3.8-27B, original tools | 24% | 43% | 0.527 | 57,000 |
 
-With the original toolbox the agents land level with the thresholded baseline. Their
-wrong answers come from unrelated noise peaks on faint injections, which the tools
-surfaced and the models had no way to reject, so the toolbox is the current ceiling
-and model size matters less than the evidence a model can ask for. Runs with the
-masked re-search and single-event tools are in progress, and LOGBOOK.md holds every
-number with the command that produced it.
+With this set of tools the two agents are about level with the thresholded baseline.
+Most of their wrong periods are noise peaks on faint injections, which the Box Least
+Squares tool returned as the top result and the model had no tool to reject. Two tools
+were added in response, a masked re-search and a single-event search, and the runs
+with them are described in LOGBOOK.md.
 
 ## Toolbox
 
@@ -181,11 +175,9 @@ number with the command that produced it.
 | secondary eclipse, ephemeris match, centroid motion, difference imaging, Gaia dilution | vetting | planned |
 | vetting report, preregistered predictions | reporting | planned |
 
-Each tool is a function of the three light-curve arrays, with a JSON Schema for the
-model, a numpydoc Notes section that states its equation and its source, and a unit
-test on synthetic data. The planned rows follow the order in which a human vetter
-works: a deeper search first, then the checks that separate planets from eclipsing
-binaries and systematics, then a report.
+Each tool is a function of the time, flux and flux-error arrays. It has a JSON Schema
+that the model sees, a numpydoc docstring with the equation and a reference, and a
+unit test on synthetic data.
 
 ## Layout
 
@@ -214,10 +206,10 @@ docs/            Sphinx documentation with Mermaid diagrams
 
 ## Documentation
 
-The documentation lives on Read the Docs at <https://stargazer-model.readthedocs.io/>
-and is rebuilt on each push to `main`. It covers the methodology, the architecture with
-class, flow and sequence diagrams, the scoring rules, the verifiability mechanisms and
-the references. To build it locally:
+The documentation is built with Sphinx from the `docs/` directory and published at
+<https://stargazer-model.readthedocs.io/> on each push to `main`. It covers the
+method, the architecture, the scoring rules, the provenance records and the
+references. To build it locally:
 
 ```bash
 sphinx-build -b html docs docs/_build/html
@@ -225,7 +217,6 @@ sphinx-build -b html docs docs/_build/html
 
 ## License
 
-The code is released under the BSD 3-Clause license, which permits use and
-modification as long as the copyright notice stays in each copy and the author's name
-is not used to endorse derived work. The TESS light curves are NASA data in the public domain,
-and the logo is original work released with the code.
+Star Gazer is distributed under the 3-Clause BSD license; see the LICENSE file. The
+TESS light curves are NASA data in the public domain. The logo is original work
+released with the code.
