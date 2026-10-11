@@ -36,12 +36,14 @@ missed planet, or no submission.
 
 You cannot see the data. You see tool results. Follow this procedure:
 1. summarize, once. Note point_scatter_ppm and whether the star is active.
-2. bls_peaks, once. Treat every peak as a hypothesis, not a result.
-3. For the strongest one or two peaks: fold at phase_half_width 0.5, then 0.05, then odd_even.
+2. search_signals, once. It finds the strongest peak, masks it and searches again until the
+   rest is noise. Treat every signal as a hypothesis, not a result. If residual_sde is near
+   min_sde, bls_peaks with the signals in masks shows what is left.
+3. For each signal, strongest first: fold at phase_half_width 0.5, then 0.05, then odd_even.
 4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
-   fold shows no clear dip, test half_period or the next peak.
-5. If the strongest peak fails the checks, call bls_peaks again with that peak in masks: a
-   strong feature hides weaker periodic signals until it is removed.
+   fold shows no clear dip, test half_period or the next signal.
+5. If a signal fails the checks, go to the next one: a strong feature that is not a planet
+   still hides weaker signals, and search_signals already removed it for you.
 6. If no periodic signal convinces you, call single_events. A single deep event can be a
    long-period planet with one transit in the data; look for a second event of the same
    depth and fold at the implied period before you decide. If there is no partner, submit
@@ -50,9 +52,11 @@ You cannot see the data. You see tool results. Follow this procedure:
 
 Decision rules: a periodic planet is one clean dip at phase 0 in the zoomed fold, a flat
 curve away from it, and odd_even verdict consistent. A single event is one dip with snr
-above about 10, a duration of hours, and no partner of the same depth. A high sde alone is
-not evidence; on real stars noise reaches sde 10 to 14. If nothing meets the rules, submit
-detected=false.
+above about 10, a duration of hours, a depth below 5 percent (50,000 ppm; deeper is a
+stellar companion, not a planet), and no partner of the same depth. On a star whose flux
+range is more than 5 percent, a lone dip is variability unless a second event of the same
+depth and duration exists. A high sde alone is not evidence; on real stars noise reaches
+sde 10 to 14. If nothing meets the rules, submit detected=false.
 
 Every tool result has calls_remaining, a safety limit. Take the calls you need; a careful
 analysis uses about 6 to 12. Submit before it reaches 0; when it is 1, submit what you have.

@@ -41,7 +41,8 @@ On each turn:
 |---|---|---|
 | `summarize` | none | cadence, point scatter, flux range, gaps |
 | `bls_peaks` | `min_period`, `max_period`, `detrend_window_days`, `masks` | the five strongest distinct BLS peaks with SDE, depth, duration, alias periods and event counts |
-| `single_events` | `detrend_window_days` | the strongest individual dips, ranked by the single-event statistic |
+| `search_signals` | `min_period`, `max_period`, `detrend_window_days`, `min_sde`, `max_signals` | the signals found in turn by search, mask and search again, with the residual SDE and the stop reason |
+| `single_events` | `detrend_window_days` | the strongest individual dips, ranked by the single-event statistic, with the noise at each event's timescale |
 | `fold` | `period`, `t0`, `phase_half_width`, `detrend_window_days` | a 40-bin phase curve and its depth |
 | `odd_even` | `period`, `t0`, `duration` | odd and even depths, their difference in sigma, and a verdict |
 | `submit_prediction` | `detected`, `period`, `t0`, `duration`, `depth`, `reasoning` | ends the episode |

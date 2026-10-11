@@ -153,6 +153,80 @@ def bls_peaks(
     return {"peaks": peaks, "n_periods_searched": len(periods), "n_points_masked": n_masked}
 
 
+def search_signals(
+    time: np.ndarray,
+    flux: np.ndarray,
+    min_period: float = 0.5,
+    max_period: float | None = None,
+    detrend_window_days: float = 0.75,
+    min_sde: float = 10.0,
+    max_signals: int = 3,
+) -> dict:
+    """Find every periodic signal in turn: search, mask the strongest, search again.
+
+    Parameters
+    ----------
+    time, flux : ndarray
+    min_period, max_period : float
+        Period search bounds, days. ``max_period`` defaults to half the span.
+    detrend_window_days : float
+        Savitzky-Golay window, see :func:`stargazer.baseline.detrend`.
+    min_sde : float
+        The search stops when the strongest remaining peak has a signal detection
+        efficiency (SDE) below this value.
+    max_signals : int
+        The search stops after this many signals.
+
+    Returns
+    -------
+    dict
+        ``signals``: the peaks accepted in order, each with the fields of
+        :func:`bls_peaks` plus ``rank``; ``residual_sde``: the SDE of the strongest
+        peak left after the last mask, so the caller sees where the search stopped;
+        ``stop``: ``"below_min_sde"`` or ``"max_signals"``.
+
+    Notes
+    -----
+    This is the multiple-planet search of the Kepler pipeline [4]_: after a transit
+    signal passes, its events are removed from the light curve and the search runs
+    again, until the strongest peak fails the threshold. A deep eclipse or a strong
+    dip dominates the periodogram at every period, so a second, shallower signal
+    only appears once the first is masked. Each pass calls :func:`bls_peaks` with
+    the signals found so far as ``masks``. The SDE of each signal is measured on the
+    pass that found it. The default ``min_sde`` of 10 is where noise peaks on real
+    TESS stars end, as the LOGBOOK records; a signal above it is still a hypothesis
+    to fold and vet.
+
+    References
+    ----------
+    .. [4] Jenkins, J. M., et al. (2010). Transiting planet search in the Kepler
+       pipeline. Proceedings of SPIE, 7740, 77400D. https://doi.org/10.1117/12.856764
+    """
+    signals: list[dict] = []
+    residual_sde = None
+    stop = "max_signals"
+    while len(signals) < max_signals:
+        found = bls_peaks(
+            time,
+            flux,
+            min_period=min_period,
+            max_period=max_period,
+            detrend_window_days=detrend_window_days,
+            masks=[{key: signal[key] for key in ("period", "t0", "duration")} for signal in signals],
+        )["peaks"]
+        if not found:
+            stop = "below_min_sde"
+            break
+        residual_sde = found[0]["sde"]
+        if residual_sde < min_sde:
+            stop = "below_min_sde"
+            break
+        signals.append({"rank": len(signals) + 1, **found[0]})
+    if stop == "max_signals":
+        residual_sde = None
+    return {"signals": signals, "residual_sde": residual_sde, "stop": stop}
+
+
 def fold(
     time: np.ndarray,
     flux: np.ndarray,
@@ -625,6 +699,46 @@ TOOLS: tuple[ToolSpec, ...] = (
                 masks=masks,
             )
         ),
+    ),
+    ToolSpec(
+        name="search_signals",
+        description=(
+            "Run the full periodic search in one call: find the strongest peak, mask it, search again, "
+            "and stop when the strongest remaining peak has sde below min_sde or after max_signals. "
+            "Returns signals in order (each with period, t0, duration, depth_ppm, sde, "
+            "n_events_in_data and the alias periods), residual_sde (the strongest peak left, so a "
+            "value near min_sde means a third signal may hide there) and stop. Each signal is a "
+            "hypothesis: fold and odd_even it before you submit. Use this in place of repeated "
+            "bls_peaks calls with masks."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "min_period": _number("Shortest period to search, days.", 0.5, positive=True),
+                "max_period": _number(
+                    "Longest period to search, days. Default is half the span.",
+                    None,
+                    nullable=True,
+                    positive=True,
+                ),
+                "detrend_window_days": _number(
+                    "Detrending window, days. Default 0.75. Use 0.3 on an active star.", 0.75, positive=True
+                ),
+                "min_sde": _number(
+                    "Stop when the strongest remaining peak is below this sde. Default 10, where noise "
+                    "peaks on real stars end.",
+                    10.0,
+                    positive=True,
+                ),
+                "max_signals": {
+                    "type": "integer",
+                    "description": "Stop after this many signals. Default 3.",
+                    "default": 3,
+                },
+            },
+            "required": [],
+        },
+        function=lambda time, flux, **arguments: search_signals(time, flux, **arguments),
     ),
     ToolSpec(
         name="single_events",

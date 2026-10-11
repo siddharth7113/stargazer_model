@@ -176,6 +176,10 @@ def test_registry_periods_durations_and_depth_are_positive():
         ("bls_peaks", "min_period"),
         ("bls_peaks", "max_period"),
         ("bls_peaks", "detrend_window_days"),
+        ("search_signals", "min_period"),
+        ("search_signals", "max_period"),
+        ("search_signals", "detrend_window_days"),
+        ("search_signals", "min_sde"),
         ("fold", "period"),
         ("fold", "phase_half_width"),
         ("fold", "detrend_window_days"),
@@ -268,6 +272,36 @@ def test_bls_peaks_masks_argument_is_validated():
     spec = TOOLS_BY_NAME["bls_peaks"]
     assert spec.validate({"masks": [{"period": 3.0, "t0": 1.0, "duration": 0.1}]}) == []
     assert any("must be array" in problem for problem in spec.validate({"masks": "3.0"}))
+
+
+def test_search_signals_finds_two_signals_in_order(lc, star):
+    """A 1 percent, 3-day signal and a 0.2 percent, 7-day signal come back as ranks 1 and 2."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    strong = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star)
+    weak = make_truth(period=7.0, t0=2.0, depth=0.002, b=0.0, star=star)
+    both = inject(relative, inject(relative, flux, strong), weak)
+    result = tools.search_signals(relative, both)
+    periods = [signal["period"] for signal in result["signals"]]
+    assert abs(periods[0] / 3.0 - 1) < 0.01 and abs(periods[1] / 7.0 - 1) < 0.01
+    assert [signal["rank"] for signal in result["signals"]][:2] == [1, 2]
+
+
+def test_search_signals_stops_on_noise(lc):
+    """Pure noise returns no signal, and the residual SDE below the threshold says why the search stopped."""
+    time, flux, _ = lc
+    result = tools.search_signals(time - time.min(), flux)
+    assert result["signals"] == [] and result["stop"] == "below_min_sde"
+    assert result["residual_sde"] is not None and result["residual_sde"] < 10.0
+
+
+def test_search_signals_stops_at_max_signals(lc, star):
+    """With ``max_signals`` 1 the search returns one signal and no residual, since it did not look further."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    injected = inject(relative, flux, make_truth(period=3.0, t0=1.0, depth=0.01, b=0.0, star=star))
+    result = tools.search_signals(relative, injected, max_signals=1)
+    assert len(result["signals"]) == 1 and result["stop"] == "max_signals" and result["residual_sde"] is None
 
 
 def test_single_events_finds_a_lone_transit(lc, star):

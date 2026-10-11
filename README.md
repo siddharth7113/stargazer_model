@@ -168,10 +168,11 @@ with them are described in LOGBOOK.md.
 |---|---|---|
 | `summarize` | cadence, noise level, flux range, gaps | done |
 | `bls_peaks` | Box Least Squares; distinct peaks, alias periods, event counts, masks for rejected signals | done |
-| `single_events` | strongest individual dips by the single-event statistic | done |
+| `search_signals` | search, mask the strongest signal, search again, until the rest is noise | done |
+| `single_events` | strongest individual dips by the single-event statistic, with the noise at each timescale | done |
 | `fold` | binned phase curve at a period and epoch | done |
 | `odd_even` | per-event depth comparison with a verdict | done |
-| iterative multi-signal search, transit-shape fit, duration consistency | detection | planned |
+| transit-shape fit, duration consistency | detection | planned |
 | secondary eclipse, ephemeris match, centroid motion, difference imaging, Gaia dilution | vetting | planned |
 | vetting report, preregistered predictions | reporting | planned |
 

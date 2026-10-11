@@ -237,6 +237,21 @@ def test_summary_line_of_bls_peaks_gives_count_and_top_peak():
     assert summary_line(_result("bls_peaks", PEAKS)) == expected
 
 
+def test_summary_line_of_search_signals_gives_count_top_signal_and_residual():
+    """The line shows how many signals the search accepted, the first one, and the SDE it stopped at."""
+    result = {
+        "signals": [{"rank": 1, "period": 3.0, "sde": 25.3, "depth_ppm": 9800.0}],
+        "residual_sde": 6.2,
+        "stop": "below_min_sde",
+    }
+    assert summary_line(_result("search_signals", result)) == (
+        "1 signals · top P=3.000 d sde 25.3 depth 9,800 ppm · residual sde 6.2"
+    )
+    assert summary_line(_result("search_signals", {"signals": [], "residual_sde": 4.0})) == (
+        "0 signals · residual sde 4.0"
+    )
+
+
 def test_summary_line_of_single_events_gives_count_and_first_event():
     """The single-event search reports how many events it found and the strongest one."""
     result = {"events": [{"time": 20.0, "snr": 23.12, "depth_ppm": 9800.0}, {"time": 5.0}]}

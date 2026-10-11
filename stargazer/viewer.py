@@ -483,6 +483,22 @@ def _peaks_line(arguments: dict, data: dict) -> str:
     )
 
 
+def _signals_line(arguments: dict, data: dict) -> str:
+    """Summarise a ``search_signals`` result: the count, the top signal and the residual."""
+    signals = data.get("signals") or []
+    residual = (
+        f" · residual sde {_field(data, 'residual_sde', '{:.1f}')}"
+        if data.get("residual_sde") is not None
+        else ""
+    )
+    if not signals:
+        return f"0 signals{residual}"
+    top = signals[0]
+    period, sde = _field(top, "period", "{:.3f}"), _field(top, "sde", "{:.1f}")
+    depth = _field(top, "depth_ppm", "{:,.0f}")
+    return f"{len(signals)} signals · top P={period} d sde {sde} depth {depth} ppm{residual}"
+
+
 def _events_line(arguments: dict, data: dict) -> str:
     """Summarise a ``single_events`` result: the count and the first event."""
     events = data.get("events") or []
@@ -528,6 +544,7 @@ def _submit_line(arguments: dict, data: dict) -> str:
 SUMMARY_LINES: dict[str, Callable[[dict, dict], str]] = {
     "summarize": _summarize_line,
     "bls_peaks": _peaks_line,
+    "search_signals": _signals_line,
     "single_events": _events_line,
     "fold": _fold_line,
     "odd_even": _odd_even_line,

@@ -576,3 +576,36 @@ repeated null false alarms) and ep_0004
 periodic false alarm at a 12.08-day noise peak (the prompt-rule item in the PLAN),
 ep_0004 declined again at snr 11.4. The full run with the guard is
 `results/full_v3form/agent_inkling_small_s98_v2_edge.json`, launched after the check.
+
+**Prompt: depth and variability rules for a single event.** Offline, the strongest
+single event on the 69 null episodes of s98_v2 with the guarded tool: median snr 5.1,
+90th percentile 10.4, six above 20. Those six are 18 to 44 percent deep on stars with
+a flux range of 20 to 55 percent (TIC 287841093, 231822771 and 9380768), which are
+stellar eclipses or large-amplitude variables. The true event of each one-transit
+injection above expected snr 15 sits at tool snr 9 to 18 (ep_0079 and ep_0029 at 376
+and 161). An snr rule alone cannot separate the two groups, so the prompt's decision
+rules now add: a single event needs a depth below 5 percent, and on a star whose flux
+range exceeds 5 percent a lone dip needs a partner. Prompt change; the comparable
+series stays `full_v3form`, which the edge-guard run already belongs to with the
+older prompt (its config records the prompt hash).
+
+**Tool: `search_signals`, the multiple-planet search.** One call runs bls_peaks, takes
+the strongest peak, masks it and searches again, until the strongest remaining peak
+has sde below `min_sde` (default 10, where noise peaks on real stars end) or
+`max_signals` (default 3) are found. It returns the signals in order with the
+bls_peaks fields, `residual_sde` (the strongest peak left, so the model can see a
+third signal waiting near the threshold) and `stop`. Reference: Jenkins et al. 2010,
+the Kepler transiting planet search. The prompt procedure now calls it at step 2 in
+place of bls_peaks and drops the manual mask step; bls_peaks stays available. Tests: a
+1 percent 3-day and a 0.2 percent 7-day signal come back as ranks 1 and 2; noise
+returns no signal with the residual below 10; `max_signals` 1 stops after one. The
+viewer summarises the result. Tool change: the next full runs are the `full_v4search`
+series.
+
+**Three-episode check of search_signals**
+(`results/smoke/agent_inkling_small_s98_v2_search3.json`, Inkling-Small, `tml_v0`,
+$0.11). ep_0001 hit (one signal at 0.776 days, sde 23.6, residual 8.9, folded and
+odd_even consistent, 8 calls); ep_0000 true null (one signal at sde 10.9, folded to
+a noisy dip, declined); ep_0002 true null (zero signals, residual 7.7, 6 calls). The
+model used search_signals at step 2 on every episode and still called bls_peaks once
+for its own check. No errors. The full run is `results/full_v4search/`.
