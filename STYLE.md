@@ -39,8 +39,10 @@ Technical English, adapted for code. Apply these rules.
   standard package does the job. Say why in the pull request.
 - Use absolute imports: `from stargazer.evaluate import Results`. Do not use relative
   imports. ruff rule TID252 enforces this.
-- Put each equation in a numpydoc `Notes` section. Give each symbol, its unit and the
-  source of the equation.
+- Put each equation in a numpydoc `Notes` section. Give each symbol and its unit.
+- Cite the source of each equation, constant and table with a numbered numpydoc
+  `References` entry: authors, year, title, journal, volume, page, DOI. Cite it in the
+  text as ``[n]_``. Do not cite with a bare "(Author Year)" in prose.
 - Define a physical constant once, as a named module constant. State its value and
   source in the module docstring.
 - Replace a chain of `if` statements on a value with a lookup table and a search.

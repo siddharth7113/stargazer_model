@@ -2,14 +2,29 @@
 
 Steps:
 
-1. Get the list of SPOC 120 s targets in a sector from MAST.
+1. Get the list of TESS [1]_ targets with SPOC [2]_ 120 s data in a sector from MAST.
 2. Draw a seeded random subset.
-3. Get the TESS Input Catalog (TIC) parameters of the subset.
+3. Get the TESS Input Catalog (TIC) [3]_ parameters of the subset.
 4. Apply brightness and dwarf cuts.
-5. Remove each star in the ExoFOP TESS Object of Interest (TOI) list.
+5. Remove each star in the ExoFOP TESS Object of Interest (TOI) [4]_ list.
 
 The output records the TOI CSV hash and download time. This makes the exclusion
 auditable.
+
+References
+----------
+.. [1] Ricker, G. R., Winn, J. N., Vanderspek, R., et al. (2015). Transiting Exoplanet
+   Survey Satellite (TESS). Journal of Astronomical Telescopes, Instruments, and
+   Systems, 1, 014003. https://doi.org/10.1117/1.JATIS.1.1.014003
+.. [2] Jenkins, J. M., Twicken, J. D., McCauliff, S., et al. (2016). The TESS Science
+   Processing Operations Center. Proceedings of SPIE, 9913, 99133E.
+   https://doi.org/10.1117/12.2233418
+.. [3] Stassun, K. G., Oelkers, R. J., Paegert, M., et al. (2019). The revised TESS
+   Input Catalog and Candidate Target List. The Astronomical Journal, 158, 138.
+   https://doi.org/10.3847/1538-3881/ab3467
+.. [4] Guerrero, N. M., Seager, S., Huang, C. X., et al. (2021). The TESS Objects of
+   Interest Catalog from the TESS Prime Mission. The Astrophysical Journal
+   Supplement Series, 254, 39. https://doi.org/10.3847/1538-4365/abefe1
 """
 
 from __future__ import annotations
@@ -80,13 +95,17 @@ def sector_two_minute_tics(sector: int) -> list[int]:
     return sorted(tics)
 
 
-def _cell(row, col: str, key: str):
+def _cell(row, col: str, key: str) -> float | str | None:
+    """Read one catalogue cell. A masked, empty or non-finite value becomes None."""
     v = row[col]
     try:
         if v is None or (hasattr(v, "mask") and v.mask):
             return None
-        return str(v) if key == "lumclass" else float(v)
-    except Exception:
+        if key == "lumclass":
+            return str(v)
+        x = float(v)
+        return x if np.isfinite(x) else None
+    except (TypeError, ValueError):
         return None
 
 
@@ -145,7 +164,7 @@ def select_targets(
     rejected = {"no_params": 0, "tmag": 0, "teff": 0, "radius": 0, "lumclass": 0}
     for t in pool:
         p = params.get(t)
-        if not p or any(p.get(k) is None for k in ("teff", "radius_rsun", "tmag")):
+        if not p or any(p.get(k) is None for k in ("teff", "radius_rsun", "tmag", "logg")):
             rejected["no_params"] += 1
         elif p["tmag"] > tmag_max:
             rejected["tmag"] += 1

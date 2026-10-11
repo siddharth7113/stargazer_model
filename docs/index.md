@@ -23,4 +23,5 @@ plan
 logbook
 style
 api
+references
 ```

@@ -138,6 +138,35 @@ sequenceDiagram
     U->>U: results.save(path)
 ```
 
+## The agent
+
+A language model takes part through :class:`stargazer.agent.ToolAgentDetector`. The
+loop belongs to Star Gazer. A provider only implements ``complete(messages, tools)``.
+
+```{mermaid}
+sequenceDiagram
+    participant A as ToolAgentDetector
+    participant B as ChatBackend
+    participant T as tools.call_tool
+    A->>B: complete(system + user, tool definitions)
+    B-->>A: AssistantTurn(tool_calls=[bls_peaks])
+    A->>T: bls_peaks(time, flux)
+    T-->>A: {peaks: [...]}
+    A->>B: complete(... + tool result)
+    B-->>A: AssistantTurn(tool_calls=[fold, odd_even])
+    A->>T: fold, odd_even
+    T-->>A: results
+    A->>B: complete(...)
+    B-->>A: AssistantTurn(tool_calls=[submit_prediction])
+    A-->>A: Prediction + transcript
+```
+
+Two backends exist. ``OpenAICompatibleBackend`` speaks the chat-completions API with
+function calling, which OpenRouter, vLLM and Ollama accept. ``TinkerBackend`` samples
+from a base model or a trained checkpoint on Tinker and parses tool calls from text in
+the Qwen3 convention. The tool definitions live once, in ``stargazer.tools.TOOLS``,
+with a JSON Schema for each, and the loop validates every call before it runs.
+
 ## The reinforcement-learning view
 
 In tier 3 the same objects become an environment. `EpisodeSet` supplies the episode on

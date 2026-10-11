@@ -1,9 +1,26 @@
 """Baseline detector.
 
-Steps: Savitzky-Golay detrend, bin, astropy Box Least Squares (BLS), then a signal
-detection efficiency (SDE) threshold. The baseline is simple by design. It is the floor
-that each other system must beat. It also shows where a classical search fails, for
-example on single transits and on shallow signals on active stars.
+Steps: Savitzky-Golay detrend [1]_ through lightkurve [2]_, bin, astropy Box Least
+Squares (BLS) [3]_ [4]_, then a signal detection efficiency (SDE) threshold [3]_. The
+baseline is simple by design. It is the floor that each other system must beat. It also
+shows where a classical search fails, for example on single transits and on shallow
+signals on active stars.
+
+References
+----------
+.. [1] Savitzky, A. and Golay, M. J. E. (1964). Smoothing and differentiation of data
+   by simplified least squares procedures. Analytical Chemistry, 36, 1627.
+   https://doi.org/10.1021/ac60214a047
+.. [2] Lightkurve Collaboration, Cardoso, J. V. de M., Hedges, C., et al. (2018).
+   Lightkurve: Kepler and TESS time series analysis in Python. Astrophysics Source
+   Code Library, ascl:1812.013. https://ascl.net/1812.013
+.. [3] Kovács, G., Zucker, S., and Mazeh, T. (2002). A box-fitting algorithm in the
+   search for periodic transits. Astronomy and Astrophysics, 391, 369.
+   https://doi.org/10.1051/0004-6361:20020802
+.. [4] Astropy Collaboration, Price-Whelan, A. M., Lim, P. L., et al. (2022). The
+   Astropy Project: sustaining and growing a community-oriented open-source project
+   and the latest major release (v5.0) of the core package. The Astrophysical
+   Journal, 935, 167. https://doi.org/10.3847/1538-4357/ac7c74
 """
 
 from __future__ import annotations
@@ -45,8 +62,8 @@ def detrend(
 
     Notes
     -----
-    The function uses ``lightkurve.LightCurve.flatten``, which wraps
-    ``scipy.signal.savgol_filter``. The filter fits a polynomial of order
+    The function uses ``lightkurve.LightCurve.flatten`` [2]_, which wraps
+    ``scipy.signal.savgol_filter`` [1]_. The filter fits a polynomial of order
     ``polyorder`` in a sliding window and divides the flux by the fit. It:
 
     - converts ``window_days`` to an odd number of cadences from the median time step,
@@ -111,7 +128,7 @@ def bin_lc(
 class BLSDetector:
     """The reference detection system: a classical Box Least Squares (BLS) search.
 
-    BLS (Kovacs et al. 2002) folds the light curve at each trial period and looks
+    BLS [3]_ folds the light curve at each trial period and looks
     for a box-shaped dip. It is the standard first-pass transit search. This class
     is the floor that each other system must beat, and it is the simplest example
     of the :class:`~stargazer.types.Detector` protocol. It also shows where a
@@ -152,7 +169,7 @@ class BLSDetector:
            at least two transits fit in the data.
         4. ``BoxLeastSquares.power`` with the log-likelihood objective. For each period
            and duration it finds the best epoch and reports the power.
-        5. The signal detection efficiency (Kovacs et al. 2002) is
+        5. The signal detection efficiency of Kovács, Zucker and Mazeh [3]_ is
 
            ``SDE = (max(power) - mean(power)) / std(power)``
 

@@ -45,6 +45,7 @@ A training loop or a language-model harness imports the SDK directly.
 | `Detector`, `Prediction` | The interface each detection system implements |
 | `BLSDetector` | The Box Least Squares (BLS) baseline |
 | `evaluate`, `Results` | Run a detector and write a results file |
+| `ToolAgentDetector`, `ChatBackend` | A language-model agent with analysis tools, any provider |
 | `score_episode` | The scoring rule. Use it directly as a reward |
 
 Example:
@@ -73,6 +74,10 @@ stargazer/
   score.py       scoring rules and set-level metrics
   evaluate.py    evaluate and Results
   baseline.py    BLSDetector
+  tools.py       analysis tools with JSON schemas, one registry for every backend
+  agent.py       ToolAgentDetector and the ChatBackend protocol
+  backends.py    OpenAICompatibleBackend (OpenRouter, vLLM, Ollama) and TinkerBackend
+  calibrate.py   threshold choice from recorded statistics
   provenance.py  hashes, manifests, git commit, timestamps
   cli.py         command line
 tests/           offline tests

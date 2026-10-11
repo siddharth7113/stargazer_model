@@ -48,6 +48,10 @@ class BuildConfig:
     depth_range: tuple[float, float] = (1e-4, 1e-2)
 
 
+def _has_finite(d: dict, *keys: str) -> bool:
+    return all(d.get(k) is not None and np.isfinite(float(d[k])) for k in keys)
+
+
 class EpisodeSet:
     """A set of light curves with hidden answers, ready for evaluation.
 
@@ -144,9 +148,11 @@ class EpisodeSet:
         ep_dir = out_dir / "episodes"
         ep_dir.mkdir(parents=True, exist_ok=True)
 
-        hosts = [t for t in targets["targets"] if cache.has(t["tic"], t["sector"])]
+        cached = [t for t in targets["targets"] if cache.has(t["tic"], t["sector"])]
+        hosts = [t for t in cached if _has_finite(t, "logg", "radius_rsun")]
+        skipped = [t["tic"] for t in cached if t not in hosts]
         if not hosts:
-            raise RuntimeError("no cached light curves for any target; run fetch first")
+            raise RuntimeError("no cached light curves with finite stellar parameters; run fetch first")
 
         truth = {}
         for i in range(cfg.n):
@@ -196,6 +202,7 @@ class EpisodeSet:
             "targets_file": str(targets_path) if targets_path else None,
             "targets_sha256": Digest.of_file(targets_path).hex if targets_path else None,
             "n_available_hosts": len(hosts),
+            "hosts_skipped_missing_params": skipped,
         }
         (out_dir / "config.json").write_text(json.dumps(config, indent=2))
         Manifest.of_directory(out_dir).write(out_dir)

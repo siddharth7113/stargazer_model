@@ -81,3 +81,39 @@ def test_evaluate_round_trip(tmp_path, star):
     assert back.episode_set_hash == es.hash
     assert back.config["sde_threshold"] == 7.0 and "period_rtol" in back.config
     assert set(back.preds) == set(es.ids)
+
+
+def test_evaluate_records_detector_errors(tmp_path, star):
+    from stargazer.evaluate import evaluate
+    from stargazer.types import Prediction
+
+    class Flaky:
+        name = "flaky"
+        config = {}
+        calls = 0
+
+        def detect(self, time, flux, flux_err):
+            Flaky.calls += 1
+            if Flaky.calls % 2 == 0:
+                raise RuntimeError("boom")
+            return Prediction(detected=False)
+
+    cache, targets, _ = _fake_cache(tmp_path, star)
+    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=4, seed=5))
+    res = evaluate(Flaky(), es)
+    assert set(res.preds) == set(es.ids)
+    assert len(res.config["errors"]) == 2
+    assert all("error" in res.preds[k] for k in res.config["errors"])
+    import pytest
+
+    with pytest.raises(RuntimeError):
+        evaluate(Flaky(), es, record_errors=False)
+
+
+def test_build_skips_hosts_with_nan_parameters(tmp_path, star):
+    cache, targets, _ = _fake_cache(tmp_path, star)
+    targets["targets"][0]["logg"] = float("nan")
+    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=6, seed=1))
+    assert es.config["hosts_skipped_missing_params"] == [1000]
+    assert all(v["tic"] != 1000 for v in es.truth.values())
+    assert all(np.isfinite(v["transit"]["a_rs"]) for v in es.truth.values() if v["kind"] == "transit")

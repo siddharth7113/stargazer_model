@@ -95,3 +95,11 @@ def test_limb_darkening_table_lookup():
     assert limb_darkening_for_teff(9000.0) == (0.33, 0.28)
     custom = ((5000.0, 0.1, 0.1), (np.inf, 0.2, 0.2))
     assert limb_darkening_for_teff(7000.0, table=custom) == (0.2, 0.2)
+
+
+def test_make_truth_rejects_missing_or_nan_star_parameters():
+    import pytest
+
+    for bad in ({"logg": None, "radius_rsun": 1.0}, {"logg": 4.4, "radius_rsun": float("nan")}, {}):
+        with pytest.raises(ValueError):
+            make_truth(period=3.0, t0=0.0, depth=1e-3, b=0.0, star=bad)

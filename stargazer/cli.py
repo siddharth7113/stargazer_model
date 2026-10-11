@@ -105,6 +105,47 @@ def cmd_score(a: argparse.Namespace) -> None:
     print(f"results -> {out}")
 
 
+def cmd_agent(a: argparse.Namespace) -> None:
+    """Run the tool-using agent with a model backend on a few episodes and score it."""
+    from stargazer.agent import ToolAgentDetector
+    from stargazer.episodes import EpisodeSet
+    from stargazer.evaluate import evaluate
+
+    if a.backend == "openai":
+        from stargazer.backends import OpenAICompatibleBackend
+
+        backend = OpenAICompatibleBackend(
+            model=a.model, base_url=a.base_url, api_key_env=a.api_key_env, temperature=a.temperature
+        )
+    else:
+        from stargazer.backends import TinkerBackend
+
+        backend = TinkerBackend(base_model=a.model, model_path=a.model_path, temperature=a.temperature)
+    es = EpisodeSet(a.episodes)
+    det = ToolAgentDetector(backend, max_tool_calls=a.max_tool_calls)
+    ids = es.ids[: a.limit] if a.limit else None
+
+    def progress(k, p, tr):
+        u = p.extra.get("usage", {})
+        tokens = int(u.get("input_tokens", 0) + u.get("output_tokens", 0))
+        print(
+            f"{k} {tr['kind']:8s} det={p.detected!s:5s} stop={p.extra.get('stop')} "
+            f"calls={p.extra.get('n_tool_calls')} tokens={tokens} usd={u.get('usd', 0):.4f}",
+            flush=True,
+        )
+
+    res = evaluate(det, es, ids=ids, period_rtol=a.period_rtol, progress=progress)
+    tag = a.model.replace("/", "_")
+    out = (
+        a.out
+        or Path("results") / f"agent_{a.backend}_{tag}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
+    )
+    res.save(out)
+    total_usd = sum(p.get("usage", {}).get("usd", 0) for p in res.preds.values())
+    print(json.dumps(res.summary, indent=1))
+    print(f"total reported cost usd={total_usd:.4f}\nresults -> {out}")
+
+
 def cmd_calibrate(a: argparse.Namespace) -> None:
     """Sweep the detection threshold on a results file and print the table."""
     from stargazer.calibrate import choose_threshold, threshold_sweep
@@ -200,6 +241,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--period-rtol", type=float, default=0.01)
     p.add_argument("--out", default=None)
     p.set_defaults(func=cmd_score)
+
+    p = sub.add_parser("agent", help="run the tool-using agent with a model backend")
+    p.add_argument("--episodes", required=True)
+    p.add_argument("--backend", choices=["openai", "tinker"], default="openai")
+    p.add_argument("--model", required=True, help="provider model id, or Tinker base model")
+    p.add_argument("--base-url", default="https://openrouter.ai/api/v1")
+    p.add_argument("--api-key-env", default="OPENROUTER_API_KEY")
+    p.add_argument("--model-path", default=None, help="tinker:// checkpoint path")
+    p.add_argument("--temperature", type=float, default=0.0)
+    p.add_argument("--max-tool-calls", type=int, default=12)
+    p.add_argument("--limit", type=int, default=3, help="episodes to run; 0 means all")
+    p.add_argument("--period-rtol", type=float, default=0.01)
+    p.add_argument("--out", default=None)
+    p.set_defaults(func=cmd_agent)
 
     p = sub.add_parser("calibrate", help="sweep the detection threshold on a results file")
     p.add_argument("--results", required=True)

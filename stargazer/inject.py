@@ -2,16 +2,39 @@
 
 Constants
 ---------
-The module uses these constants. The source for each is given.
-
 ``G_SI = 6.67430e-11``
-    Newtonian constant of gravitation, m^3 kg^-1 s^-2. CODATA 2018.
+    Newtonian constant of gravitation, m^3 kg^-1 s^-2, CODATA 2018 [1]_.
 ``R_SUN = 6.957e8``
-    Nominal solar radius, m. IAU 2015 Resolution B3.
+    Nominal solar radius, m, IAU 2015 Resolution B3 [2]_.
 ``DAY = 86400.0``
     Seconds in one day.
 
-Each function that computes a physical quantity gives its equation in a Notes section.
+Each function that computes a physical quantity gives its equation in a Notes section
+and cites its source by number from the list below.
+
+References
+----------
+.. [1] Tiesinga, E., Mohr, P. J., Newell, D. B., and Taylor, B. N. (2021). CODATA
+   recommended values of the fundamental physical constants: 2018. Reviews of Modern
+   Physics, 93, 025010. https://doi.org/10.1103/RevModPhys.93.025010
+.. [2] Prša, A., Harmanec, P., Torres, G., et al. (2016). Nominal values for selected
+   solar and planetary quantities: IAU 2015 Resolution B3. The Astronomical Journal,
+   152, 41. https://doi.org/10.3847/0004-6256/152/2/41
+.. [3] Seager, S. and Mallén-Ornelas, G. (2003). A unique solution of planet and star
+   parameters from an extrasolar planet transit light curve. The Astrophysical
+   Journal, 585, 1038. https://doi.org/10.1086/346105
+.. [4] Claret, A. (2017). Limb and gravity-darkening coefficients for the TESS
+   satellite. Astronomy and Astrophysics, 600, A30.
+   https://doi.org/10.1051/0004-6361/201629705
+.. [5] Kreidberg, L. (2015). batman: BAsic Transit Model cAlculatioN in Python.
+   Publications of the Astronomical Society of the Pacific, 127, 1161.
+   https://doi.org/10.1086/683602
+.. [6] Jenkins, J. M. (2002). The impact of solar-like variability on the detectability
+   of transiting terrestrial planets. The Astrophysical Journal, 575, 493.
+   https://doi.org/10.1086/341136
+.. [7] Stassun, K. G., Oelkers, R. J., Paegert, M., et al. (2019). The revised TESS
+   Input Catalog and Candidate Target List. The Astronomical Journal, 158, 138.
+   https://doi.org/10.3847/1538-3881/ab3467
 """
 
 from __future__ import annotations
@@ -80,6 +103,10 @@ class TransitTruth:
         return cls(**{k: d[k] for k in cls.__dataclass_fields__})
 
 
+def _finite(x: object) -> bool:
+    return x is not None and np.isfinite(float(x))
+
+
 def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> float:
     """Return the semi-major axis in stellar radii. Use Kepler's third law.
 
@@ -102,10 +129,12 @@ def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> f
     The steps are:
 
     1. Surface gravity in SI: ``g = 10**logg * 1e-2`` converts cm s^-2 to m s^-2.
-    2. Stellar mass from gravity and radius: ``M = g * R**2 / G``.
+       ``logg`` and the radius come from the TESS Input Catalog [7]_.
+    2. Stellar mass from gravity and radius: ``M = g * R**2 / G``, with ``G`` from
+       CODATA 2018 [1]_.
     3. Kepler's third law for a planet of negligible mass:
        ``a**3 = G * M * P**2 / (4 * pi**2)``.
-    4. Divide by the radius: ``a / R``.
+    4. Divide by the radius: ``a / R``, with the solar radius from IAU 2015 [2]_.
 
     Steps 2 and 3 combine to ``a / R = (g * R * P**2 / (4 * pi**2))**(1/3) / R``. The
     code keeps the steps separate for clarity. The planet mass is neglected. This is
@@ -140,8 +169,8 @@ def transit_duration(period: float, a_rs: float, inc_deg: float, rp_rs: float, b
 
     Notes
     -----
-    T14 is the time from first to fourth contact. For a circular orbit
-    (Seager and Mallen-Ornelas 2003, equation 3):
+    T14 is the time from first to fourth contact. For a circular orbit, equation 3
+    of Seager and Mallén-Ornelas [3]_ gives:
 
     ``T14 = (P / pi) * arcsin( sqrt((1 + k)**2 - b**2) / (a_rs * sin(i)) )``
 
@@ -168,9 +197,9 @@ LIMB_DARKENING_TABLE: tuple[tuple[float, float, float], ...] = (
 )
 """Quadratic limb-darkening coefficients for the TESS band by effective temperature.
 
-A coarse digest of Claret (2017, A&A 600, A30) at ``logg = 4.5`` and solar
-metallicity. Each row is ``(teff_upper_bound_K, u1, u2)``. Rows are in ascending
-order of the bound. Replace this table to use another law or a finer grid.
+A coarse digest of Claret [4]_ at ``logg = 4.5`` and solar metallicity. Each row is
+``(teff_upper_bound_K, u1, u2)``. Rows are in ascending order of the bound. Replace this
+table to use another law or a finer grid.
 """
 
 SOLAR_TYPE_LIMB_DARKENING: tuple[float, float] = (0.40, 0.25)
@@ -228,8 +257,15 @@ def make_truth(period: float, t0: float, depth: float, b: float, star: dict) -> 
     b : float
         Impact parameter.
     star : dict
-        Must have ``logg`` and ``radius_rsun``. If a value is missing, the function
-        uses the solar value. ``teff`` selects the limb darkening.
+        Must have finite ``logg`` and ``radius_rsun``. ``teff`` selects the limb
+        darkening and may be missing.
+
+    Raises
+    ------
+    ValueError
+        If ``logg`` or ``radius_rsun`` is missing or not finite. The function does not
+        substitute a default, because a wrong stellar density gives a wrong duration
+        and the truth record would then be silently wrong.
 
     Notes
     -----
@@ -243,9 +279,10 @@ def make_truth(period: float, t0: float, depth: float, b: float, star: dict) -> 
     - ``duration`` from :func:`transit_duration`.
     """
     rp_rs = float(np.sqrt(depth))
-    logg = star.get("logg") if star.get("logg") is not None else 4.4
-    radius = star.get("radius_rsun") if star.get("radius_rsun") is not None else 1.0
-    a_rs = a_rs_from_star(period, logg, radius)
+    logg, radius = star.get("logg"), star.get("radius_rsun")
+    if not _finite(logg) or not _finite(radius):
+        raise ValueError(f"host needs finite logg and radius_rsun, got logg={logg} radius={radius}")
+    a_rs = a_rs_from_star(period, float(logg), float(radius))
     b = float(min(b, a_rs * 0.999))
     inc = float(np.degrees(np.arccos(b / a_rs)))
     u1, u2 = limb_darkening_for_teff(star.get("teff"))
@@ -258,7 +295,7 @@ def transit_model(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
 
     Notes
     -----
-    batman (Kreidberg 2015) integrates the quadratic limb-darkening law over the part
+    batman [5]_ integrates the quadratic limb-darkening law over the part
     of the stellar disc that the planet covers. The orbit is circular: eccentricity 0
     and argument of periastron 90 degrees. The model is evaluated at each time stamp
     without exposure-time integration. At 2-minute cadence the smoothing from a finite
@@ -419,7 +456,7 @@ def expected_snr(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> flo
 
     This is the matched-filter signal-to-noise ratio of a box of the right depth and
     duration against white noise. It is the same quantity the Kepler pipeline calls
-    the multiple event statistic, up to the box-versus-limb-darkened shape. It is an
+    the multiple event statistic [6]_, up to the box-versus-limb-darkened shape. It is an
     upper bound for a real detector, which also has to find the period.
     """
     n_in = int(in_transit_mask(time, truth).sum())

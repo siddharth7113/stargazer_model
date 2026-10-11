@@ -14,5 +14,8 @@
    stargazer.evaluate
    stargazer.calibrate
    stargazer.baseline
+   stargazer.tools
+   stargazer.agent
+   stargazer.backends
    stargazer.provenance
 ```

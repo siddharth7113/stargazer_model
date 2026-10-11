@@ -94,6 +94,7 @@ def evaluate(
     period_rtol: float = 0.01,
     epoch_frac: float = 0.5,
     progress: Callable[[str, Prediction, dict], None] | None = None,
+    record_errors: bool = True,
 ) -> Results:
     """Run a detector on each episode and score the predictions.
 
@@ -107,15 +108,32 @@ def evaluate(
         Scoring tolerances, recorded in the results config.
     progress : callable, optional
         Called with ``(ep_id, prediction, truth_record)`` after each episode.
+    record_errors : bool
+        If True, an exception in ``detect`` becomes a prediction of "none" with the
+        error text in ``extra["error"]``, and the episode id goes into
+        ``config["errors"]``. If False, the exception propagates.
+
+    Notes
+    -----
+    A detector that crashes on one light curve must not lose a run of two hundred.
+    The crash is scored as a miss or a true null, which is what a reader would see
+    from that system in practice, and the error is kept so it can be fixed.
     """
     truth = episodes.truth
     ids = list(ids) if ids is not None else episodes.ids
     preds: dict[str, dict] = {}
+    errors: list[str] = []
     t_start = _time.time()
     for k in ids:
         t, f, fe = episodes.load(k)
         t1 = _time.time()
-        p = detector.detect(t, f, fe)
+        try:
+            p = detector.detect(t, f, fe)
+        except Exception as e:  # a detector failure is a recorded miss, not a lost run
+            if not record_errors:
+                raise
+            p = Prediction(detected=False, extra={"error": f"{type(e).__name__}: {e}"[:500]})
+            errors.append(k)
         p.extra["seconds"] = round(_time.time() - t1, 2)
         preds[k] = p.to_dict()
         if progress:
@@ -128,6 +146,7 @@ def evaluate(
         "epoch_frac": epoch_frac,
         "wall_seconds": round(_time.time() - t_start, 1),
         "n_requested": len(ids),
+        "errors": errors,
     }
     return Results(
         system=detector.name,

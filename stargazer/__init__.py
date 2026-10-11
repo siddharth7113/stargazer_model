@@ -44,6 +44,8 @@ Detector, Prediction
     The interface any detection system implements.
 BLSDetector
     The classical baseline.
+ToolAgentDetector, ChatBackend
+    A language-model agent with analysis tools, and the provider interface.
 evaluate, Results
     Run a detector and write a provenance-carrying results file.
 score_episode, score_set
@@ -52,6 +54,7 @@ score_episode, score_set
 
 __version__ = "0.1.0"
 
+from stargazer.agent import ChatBackend, ToolAgentDetector
 from stargazer.baseline import BLSDetector
 from stargazer.data import LightCurve, LightCurveCache
 from stargazer.episodes import BuildConfig, EpisodeSet
@@ -64,12 +67,14 @@ from stargazer.types import Detector, Prediction
 __all__ = [
     "BLSDetector",
     "BuildConfig",
+    "ChatBackend",
     "Detector",
     "EpisodeSet",
     "LightCurve",
     "LightCurveCache",
     "Prediction",
     "Results",
+    "ToolAgentDetector",
     "TransitTruth",
     "evaluate",
     "inject",
