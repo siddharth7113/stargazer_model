@@ -5,7 +5,6 @@ import json
 import pytest
 
 from stargazer.backends import OpenAICompatibleBackend, TinkerBackend, recommended_sampling
-from stargazer.tools import tool_definitions
 
 
 def test_openai_backend_config_has_no_secret(monkeypatch):
@@ -20,41 +19,6 @@ def test_openai_backend_requires_key(monkeypatch):
     monkeypatch.delenv("MISSING_KEY", raising=False)
     with pytest.raises(RuntimeError, match="MISSING_KEY"):
         OpenAICompatibleBackend("m", api_key_env="MISSING_KEY")._get_client()
-
-
-def test_tinker_render_puts_tools_in_system_prompt():
-    """Tinker has no function-calling API, so the tool schemas are appended to the system prompt as JSON."""
-    out = TinkerBackend.render_messages([{"role": "system", "content": "SYS"}], tool_definitions())
-    assert out[0]["role"] == "system" and out[0]["content"].startswith("SYS")
-    assert "# Tools" in out[0]["content"] and '"name": "fold"' in out[0]["content"]
-
-
-def test_tinker_render_assistant_tool_calls_as_text():
-    """An assistant turn with tool_calls is rendered in the Qwen3 ``<tool_call>`` convention."""
-    call = {
-        "id": "a",
-        "type": "function",
-        "function": {"name": "fold", "arguments": json.dumps({"period": 3.0})},
-    }
-    out = TinkerBackend.render_messages([{"role": "assistant", "content": "", "tool_calls": [call]}], [])
-    expected = '<tool_call>\n{"name": "fold", "arguments": {"period": 3.0}}\n</tool_call>'
-    assert out[0]["role"] == "assistant" and expected in out[0]["content"]
-
-
-def test_tinker_render_merges_tool_results_into_one_user_turn():
-    """Two tool results after one assistant turn become one user message with two response blocks."""
-    messages = [
-        {"role": "tool", "tool_call_id": "a", "content": "{}"},
-        {"role": "tool", "tool_call_id": "b", "content": "{}"},
-    ]
-    out = TinkerBackend.render_messages(messages, [])
-    assert len(out) == 1 and out[0]["role"] == "user" and out[0]["content"].count("<tool_response>") == 2
-
-
-def test_tinker_render_passes_plain_user_messages_through():
-    """A user message without tool content is unchanged."""
-    out = TinkerBackend.render_messages([{"role": "user", "content": "go"}], [])
-    assert out == [{"role": "user", "content": "go"}]
 
 
 def test_tinker_parse_extracts_valid_calls_and_skips_malformed():
@@ -76,23 +40,6 @@ def test_tinker_config_records_checkpoint_and_renderer():
     """A trained checkpoint path and the chat template must be in ``config`` to reproduce a run."""
     config = TinkerBackend(model_path="tinker://run/weights").config
     assert config["model_path"] == "tinker://run/weights" and config["renderer"] == "qwen3_disable_thinking"
-
-
-def test_tinker_split_thinking_with_tags():
-    """A ``<think>`` block is returned separately and removed from the answer text."""
-    thinking, rest = TinkerBackend.split_thinking("<think>\nreason\n</think>\nanswer")
-    assert thinking == "reason" and rest == "answer"
-
-
-def test_tinker_split_thinking_with_implicit_open_tag():
-    """Some reasoning templates emit only the closing tag; everything before it is the trace."""
-    thinking, rest = TinkerBackend.split_thinking("reason\n</think>\nanswer")
-    assert thinking == "reason" and rest == "answer"
-
-
-def test_tinker_split_thinking_without_tags():
-    """Plain text has no trace."""
-    assert TinkerBackend.split_thinking("answer") == ("", "answer")
 
 
 def test_recommended_sampling_by_mode():
@@ -127,3 +74,50 @@ def test_openai_backend_default_temperature_and_seed():
     """The OpenAI-compatible backend samples at 0.7 by default and records its seed."""
     config = OpenAICompatibleBackend("m").config
     assert config["temperature"] == 0.7 and config["seed"] == 0
+
+
+def test_tinker_to_cookbook_messages_converts_calls_and_results():
+    """Assistant tool calls become cookbook ToolCall objects; a tool result gets the call's id and name."""
+    pytest.importorskip("tinker_cookbook")
+    messages = [
+        {"role": "system", "content": "SYS"},
+        {"role": "user", "content": "go"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "a",
+                    "type": "function",
+                    "function": {"name": "fold", "arguments": json.dumps({"period": 3.0})},
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "a", "content": "{}"},
+    ]
+    out = TinkerBackend.to_cookbook_messages(messages)
+    assert [message["role"] for message in out] == ["user", "assistant", "tool"]
+    call = out[1]["tool_calls"][0]
+    assert (
+        call.function.name == "fold"
+        and json.loads(call.function.arguments) == {"period": 3.0}
+        and call.id == "a"
+    )
+    assert out[2]["tool_call_id"] == "a" and out[2]["name"] == "fold"
+
+
+def test_tinker_split_content_separates_thinking_and_text():
+    """A parts list yields the thinking part and the text part; a plain string is all text."""
+    thinking, text = TinkerBackend.split_content([{"thinking": "hmm"}, {"text": "answer"}])
+    assert thinking == "hmm" and text == "answer"
+    assert TinkerBackend.split_content("plain") == ("", "plain")
+
+
+def test_tinker_parse_tool_calls_fallback_skips_malformed():
+    """The plain-text fallback parser keeps one well-formed block and drops a broken one."""
+    text = (
+        '<tool_call>\n{"name": "fold", "arguments": {"period": 3.0}}\n</tool_call>\n'
+        "<tool_call>\nnot json\n</tool_call>"
+    )
+    calls = TinkerBackend.parse_tool_calls(text)
+    assert len(calls) == 1 and calls[0].name == "fold" and calls[0].arguments == {"period": 3.0}

@@ -158,21 +158,20 @@ def recommended_sampling(renderer: str) -> dict[str, float | int]:
 
 
 TOOL_CALL_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
-THINK_RE = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 
 
 class TinkerBackend:
-    """Sample from a base model or a LoRA checkpoint on Tinker, with tool calls parsed from text.
+    """Sample from a base model or a LoRA checkpoint on Tinker, in the model's native tool format.
 
     Parameters
     ----------
     base_model : str
-        For example ``"Qwen/Qwen3-8B"``.
+        For example ``"Qwen/Qwen3.8-27B"``.
     model_path : str or None
         A ``tinker://`` path to saved weights. None samples the base model.
     renderer : str
-        Chat template name from ``tinker_cookbook.renderers``. ``qwen3_disable_thinking``
-        runs without a thinking block; ``qwen3`` enables the thinking mode.
+        Chat template name from ``tinker_cookbook.renderers``, for example
+        ``qwen3_8_disable_thinking``, ``nemotron3_disable_thinking`` or ``tml_v0``.
     max_tokens, temperature, top_p, top_k : int or float, optional
         None means the value from :func:`recommended_sampling` for the renderer.
     seed : int
@@ -181,12 +180,21 @@ class TinkerBackend:
 
     Notes
     -----
-    Tinker exposes sampling, not a chat-completions API, so this backend renders the
-    conversation itself. The tool definitions go into the system prompt as JSON in the
-    Qwen3 convention, and the model is asked to emit each call as
-    ``<tool_call>{"name": ..., "arguments": {...}}</tool_call>``. Tool results are sent
-    back as a user message wrapped in ``<tool_response>`` tags. The same text format is
-    what the RL phase trains on, so evaluation and training see one convention.
+    Tinker exposes sampling, not a chat-completions API. The cookbook renderer for
+    each model family knows that family's wire format: how tools are declared, how a
+    tool call is written and how a tool result is fed back. This backend therefore
+    does three things through the renderer and nothing by hand:
+
+    1. ``create_conversation_prefix_with_tools`` turns the tool definitions and the
+       system prompt into the family's own tool declaration.
+    2. ``build_generation_prompt`` renders the conversation, including earlier tool
+       calls and results, into tokens.
+    3. ``parse_response`` turns the sampled tokens into a message with parsed
+       ``tool_calls``, the text, and any thinking part.
+
+    A tool call the renderer could not parse is reported in ``unparsed_tool_calls``;
+    the backend keeps its raw text in the turn content so the trajectory shows what
+    the model wrote, and the agent loop's nudge asks for a proper call.
     """
 
     name = "tinker"
@@ -239,58 +247,86 @@ class TinkerBackend:
             from tinker_cookbook.tokenizer_utils import get_tokenizer
 
             service = tinker.ServiceClient()
+            self._tokenizer = get_tokenizer(self._base_model)
+            self._renderer = renderers.get_renderer(self._renderer_name, self._tokenizer)
             if self._model_path:
                 self._sampler = service.create_sampling_client(model_path=self._model_path)
             else:
                 self._sampler = service.create_sampling_client(base_model=self._base_model)
-            self._tokenizer = get_tokenizer(self._base_model)
-            self._renderer = renderers.get_renderer(self._renderer_name, self._tokenizer)
 
     @staticmethod
-    def render_messages(messages: list[dict], tools: list[dict]) -> list[dict]:
-        """Convert OpenAI-format messages to plain text turns with the tool protocol inline.
+    def to_cookbook_messages(messages: list[dict]) -> list[dict]:
+        """Convert OpenAI-format messages (without the system message) to cookbook messages.
 
         Returns
         -------
         list of dict
-            ``system``, ``user`` and ``assistant`` messages with string content only.
+            Cookbook ``Message`` dicts. Assistant tool calls become cookbook ``ToolCall``
+            objects. A tool result carries ``tool_call_id`` and the function ``name``,
+            looked up from the assistant call it answers, because some formats need
+            the id and others the name.
         """
-        tool_block = "\n".join(json.dumps(tool["function"]) for tool in tools)
-        protocol = (
-            "\n\n# Tools\n\nYou may call these functions. For each call, output exactly:\n"
-            '<tool_call>\n{"name": "<function-name>", "arguments": {...}}\n</tool_call>\n'
-            "Results come back inside <tool_response> tags.\n\n" + tool_block
-        )
+        from tinker_cookbook.renderers import ToolCall as CookbookToolCall
+
+        names_by_id: dict[str, str] = {}
         out: list[dict] = []
         for message in messages:
-            if message["role"] == "system":
-                out.append({"role": "system", "content": message["content"] + protocol})
-            elif message["role"] == "assistant":
-                text = message.get("content") or ""
-                for tc in message.get("tool_calls", []):
-                    fn = tc["function"]
-                    args = (
-                        fn["arguments"] if isinstance(fn["arguments"], dict) else json.loads(fn["arguments"])
+            role = message["role"]
+            if role == "system":
+                continue
+            if role == "assistant":
+                converted: dict = {"role": "assistant", "content": message.get("content") or ""}
+                calls = []
+                for call in message.get("tool_calls", []):
+                    function = call["function"]
+                    arguments = function["arguments"]
+                    if not isinstance(arguments, str):
+                        arguments = json.dumps(arguments)
+                    names_by_id[call["id"]] = function["name"]
+                    calls.append(
+                        CookbookToolCall(
+                            function=CookbookToolCall.FunctionBody(
+                                name=function["name"], arguments=arguments
+                            ),
+                            id=call["id"],
+                        )
                     )
-                    text += (
-                        "\n<tool_call>\n"
-                        + json.dumps({"name": fn["name"], "arguments": args})
-                        + "\n</tool_call>"
-                    )
-                out.append({"role": "assistant", "content": text})
-            elif message["role"] == "tool":
-                content = "<tool_response>\n" + message["content"] + "\n</tool_response>"
-                if out and out[-1]["role"] == "user":
-                    out[-1]["content"] += "\n" + content
-                else:
-                    out.append({"role": "user", "content": content})
+                if calls:
+                    converted["tool_calls"] = calls
+                out.append(converted)
+            elif role == "tool":
+                out.append(
+                    {
+                        "role": "tool",
+                        "content": message["content"],
+                        "tool_call_id": message.get("tool_call_id", ""),
+                        "name": names_by_id.get(message.get("tool_call_id", ""), ""),
+                    }
+                )
             else:
-                out.append({"role": message["role"], "content": message["content"]})
+                out.append({"role": role, "content": message["content"]})
         return out
 
     @staticmethod
+    def split_content(content) -> tuple[str, str]:
+        """Return ``(thinking, text)`` from a cookbook message content.
+
+        Content is a string or a list of parts; a part with a ``thinking`` key is the
+        reasoning trace and a part with a ``text`` key is the answer.
+        """
+        if isinstance(content, str):
+            return "", content
+        thinking, text = [], []
+        for part in content:
+            if "thinking" in part:
+                thinking.append(part["thinking"])
+            elif "text" in part:
+                text.append(part["text"])
+        return "\n".join(thinking).strip(), "".join(text).strip()
+
+    @staticmethod
     def parse_tool_calls(text: str) -> list[ToolCall]:
-        """Extract ``<tool_call>`` JSON blocks from model text. Malformed JSON is skipped."""
+        """Extract ``<tool_call>`` JSON blocks from plain text. A fallback for text without a renderer."""
         calls = []
         for raw in TOOL_CALL_RE.findall(text):
             try:
@@ -307,11 +343,14 @@ class TinkerBackend:
         return calls
 
     def complete(self, messages: list[dict], tools: list[dict]) -> AssistantTurn:
-        """Render, sample one sequence, parse tool calls from the text."""
+        """Render with the model's own tool format, sample once, parse with the renderer."""
         from tinker import types
 
         self._setup()
-        prompt = self._renderer.build_generation_prompt(self.render_messages(messages, tools))
+        system_prompt = next((message["content"] for message in messages if message["role"] == "system"), "")
+        tool_specs = [tool["function"] for tool in tools]
+        prefix = self._renderer.create_conversation_prefix_with_tools(tool_specs, system_prompt=system_prompt)
+        prompt = self._renderer.build_generation_prompt(prefix + self.to_cookbook_messages(messages))
         params = types.SamplingParams(
             max_tokens=self._max_tokens,
             temperature=self._temperature,
@@ -323,27 +362,37 @@ class TinkerBackend:
         result = self._sampler.sample(prompt=prompt, num_samples=1, sampling_params=params).result()
         sequence = result.sequences[0]
         tokens = list(sequence.tokens)
-        text = self._tokenizer.decode(tokens, skip_special_tokens=True)
-        thinking, text = self.split_thinking(text)
+        message, termination = self._renderer.parse_response(tokens)
+        thinking, text = self.split_content(message.get("content", ""))
+        calls = [
+            ToolCall(
+                id=call.id or uuid.uuid4().hex[:8],
+                name=call.function.name,
+                arguments=_arguments_dict(call.function.arguments),
+            )
+            for call in message.get("tool_calls", [])
+        ]
+        unparsed = message.get("unparsed_tool_calls") or []
+        if unparsed:
+            text = (
+                text + "\n" + "\n".join(getattr(call, "raw_text", str(call)) for call in unparsed)
+            ).strip()
         usage = {"input_tokens": float(prompt.length), "output_tokens": float(len(tokens)), "usd": 0.0}
         return AssistantTurn(
-            content=TOOL_CALL_RE.sub("", text).strip(),
-            tool_calls=self.parse_tool_calls(text),
+            content=text,
+            tool_calls=calls,
             usage=usage,
             thinking=thinking,
-            truncated=getattr(sequence, "stop_reason", "stop") == "length",
+            truncated=getattr(sequence, "stop_reason", "stop") == "length" or str(termination) == "malformed",
         )
 
-    @staticmethod
-    def split_thinking(text: str) -> tuple[str, str]:
-        """Separate ``<think>`` blocks from the answer. Return ``(thinking, rest)``.
 
-        A reasoning renderer may leave the opening tag implicit and end the trace with
-        ``</think>``; that case is handled by taking everything before the closing tag.
-        """
-        blocks = THINK_RE.findall(text)
-        rest = THINK_RE.sub("", text)
-        if not blocks and "</think>" in rest:
-            head, _, rest = rest.partition("</think>")
-            blocks = [head]
-        return "\n".join(block.strip() for block in blocks), rest.strip()
+def _arguments_dict(arguments) -> dict:
+    """Parse a tool call's arguments, which the renderer gives as a JSON string."""
+    if isinstance(arguments, dict):
+        return arguments
+    try:
+        parsed = json.loads(arguments or "{}")
+    except json.JSONDecodeError:
+        return {"_malformed": arguments}
+    return parsed if isinstance(parsed, dict) else {"_malformed": arguments}
