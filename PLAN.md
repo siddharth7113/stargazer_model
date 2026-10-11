@@ -47,6 +47,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] BLS baseline; threshold chosen from null episodes (18.6 on s98_v1 for a 5 percent false-alarm rate)
 - [x] Episode sets: s98_v1 (periods to 20 days) and s98_v2 (periods to 60 days, single transits common)
 - [x] Baseline on s98_v2 recorded in the LOGBOOK
+- [ ] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; 15 of 200 s98_v2 episodes sit on known binaries (LOGBOOK 2026-10-11)
 - [ ] One small episode set committed to git for tests and demonstrations
 - [ ] Repeat each comparison run with three seeds and report mean and spread
 
@@ -85,10 +86,10 @@ description written for the model. The agent gets the tool only when the test pa
 ### 3b Vetting against false positives
 - [x] `odd_even`: per-event depths with a verdict word
 - [x] Secondary eclipse search at phase 0.5 and at any other phase; `secondary_eclipse` (LOGBOOK 2026-10-11)
-- [ ] Ephemeris match: is the period and epoch a known eclipsing binary, TOI or nearby variable?
+- [x] Ephemeris match: is the period and epoch a known eclipsing binary, TOI or nearby variable? `ephemeris_match` on the episode context (LOGBOOK 2026-10-11)
 - [ ] Centroid motion from the target pixel file: does the dip come from the target or a neighbour?
 - [ ] Difference imaging: in-transit minus out-of-transit image, where is the signal?
-- [ ] Gaia neighbours within the aperture and the dilution they imply
+- [x] Gaia neighbours within the aperture and the dilution they imply; `nearby_stars` (LOGBOOK 2026-10-11)
 - [ ] Systematics: momentum dumps, scattered light, and the Earth-and-Moon windows in TESS
 - [ ] Stellar context: rotation period, flares, variability class from the light curve
 - [ ] TRICERATOPS or an equivalent false-positive probability as the final number
@@ -135,31 +136,26 @@ curve as three arrays, so each survey needs only a loader and a target list.
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The day added the single-event submission form, four tools (search_signals,
-fit_transit, secondary_eclipse, and the rebuilt single_events with a window tied to
-the box width, noise at the box timescale and a segment-edge guard), and three full
-Inkling-Small runs on s98_v2 that measure each step: `results/full_v3form/` (the
-form, then the edge guard), `results/full_v4search/` (search_signals and the prompt
-rules; mean score 0.538 at an 11 percent false-alarm rate, the best so far). The
-`full_v5fit` run, with fit_transit and secondary_eclipse, gives 0.583 at a 3 percent
-false-alarm rate (LOGBOOK), the best so far; it also showed that a lone transit paired
-with an epoch in a gap was reported as two events, which is fixed. Inkling-Small needs
-`--renderer tml_v0`. The course notebooks (Phase 3d) exist for every tool and the scorer.
-
-The prompt is split into `base` (the task, the scoring, the units) and `rules` (the
-procedure and decision rules of 2026-10-11, frozen). The owner wants the model to
-learn the rules, so runs use `--prompt base` from here and the rules prompt is a
-comparison row. The `full_v6count` run is read in the LOGBOOK; the `full_v7base`
-run with the base prompt is the next number.
+The day added the single-event submission form, six tools (search_signals,
+fit_transit, secondary_eclipse, ephemeris_match, nearby_stars, and the rebuilt
+single_events), the catalogue context of each episode (`stargazer context`), two
+system prompts (`base`, the default, and `rules`, frozen), seven course notebooks in
+`examples/`, and seven full Inkling-Small runs on s98_v2 that measure each step. The
+README table has the series. Best with the rules prompt: mean score 0.583 at a 3
+percent false-alarm rate (`full_v5fit`). With the base prompt: 0.476 at 40 percent,
+with more planets found; the 0.08 gap is the restraint the rules encode, which Phase
+5 must learn from the reward. Inkling-Small needs `--renderer tml_v0`. s98_v2 has
+`context.json`; its hash changed, the episode files did not.
 
 First steps for the next session:
-1. Read `results/full_v7base/agent_inkling_small_s98_v2.json` against the v6count
-   row. The gap is the value of the rules block. Then the same with the rules prompt
-   and the three-way shape verdict if the gap is large, so both rows share the tools.
-2. Phase 3b: the ephemeris match against known eclipsing binaries and TOIs, the last
-   vetting tool that needs only the light curve's coordinates and the catalogues.
-3. The larger models on s98_v1 and s98_v2, three seeds each, and the course notebooks
-   (Phase 3d) for the tools that exist.
+1. Three seeds of the base prompt and of the rules prompt on s98_v2 with the full
+   toolbox including the catalogue tools, so the spread of one seed is known before
+   any further change is judged. Results in `results/full_v8seeds/`.
+2. Host selection: exclude catalogued eclipsing binaries, then rebuild s98_v3 and
+   rerun the BLS baseline, so the false-alarm hosts of today are not binaries.
+3. The larger models with the base prompt, three seeds each.
+4. The pixel tools (centroid motion, difference imaging) need the target pixel files,
+   several gigabytes for 39 stars; the owner decides whether to download them.
 
 ## Open questions
 

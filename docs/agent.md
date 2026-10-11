@@ -47,6 +47,8 @@ On each turn:
 | `fit_transit` | `period`, `t0`, `duration`, `detrend_window_days` | a batman fit: depth, duration, impact parameter, host density with a verdict, shape, significance |
 | `odd_even` | `period`, `t0`, `duration` | odd and even depths, their difference in sigma, and a verdict |
 | `secondary_eclipse` | `period`, `t0`, `duration`, `detrend_window_days` | the depth at phase 0.5 and the strongest other dip, in sigma, with a verdict |
+| `ephemeris_match` | `period`, `t0` | the star's TOI and eclipsing-binary entries that match the period or an alias, the epoch offset, the Gaia class, with a verdict; needs the episode's context |
+| `nearby_stars` | none | Gaia sources within two pixels with their flux fraction and the depth each could make, with a verdict; needs the episode's context |
 | `submit_prediction` | `detected`, `period`, `t0`, `duration`, `depth`, `reasoning` | ends the episode |
 
 `masks` takes a list of `{period, t0, duration}` objects. The masked points are removed

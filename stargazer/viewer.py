@@ -549,6 +549,26 @@ def _secondary_line(arguments: dict, data: dict) -> str:
     return f"verdict {_field(data, 'verdict')} · {secondary} · {other}"
 
 
+def _ephemeris_line(arguments: dict, data: dict) -> str:
+    """Summarise an ``ephemeris_match`` result: the verdict and the first match."""
+    matches = data.get("matches") or []
+    if not matches:
+        counts = f"{_field(data, 'n_tois')} TOIs · {_field(data, 'n_eclipsing_binaries')} EBs"
+        return f"verdict {_field(data, 'verdict')} · {counts}"
+    first = matches[0]
+    period = _field(first.get("entry", {}), "period", "{:.4f}")
+    return (
+        f"verdict {_field(data, 'verdict')} · {first.get('source')} P={period} d · ratio {first.get('ratio')}"
+    )
+
+
+def _nearby_line(arguments: dict, data: dict) -> str:
+    """Summarise a ``nearby_stars`` result: the verdict, the count and the brightest neighbour."""
+    brightest = _field(data, "brightest_delta_gmag", "{:.1f}")
+    count = _field(data, "n_within_radius")
+    return f"verdict {_field(data, 'verdict')} · {count} within 2 px · brightest \u0394G {brightest}"
+
+
 def _submit_line(arguments: dict, data: dict) -> str:
     """Summarise a ``submit_prediction`` call from its arguments: detection, period or event, epoch."""
     if not arguments.get("detected"):
@@ -569,6 +589,8 @@ SUMMARY_LINES: dict[str, Callable[[dict, dict], str]] = {
     "fit_transit": _fit_line,
     "odd_even": _odd_even_line,
     "secondary_eclipse": _secondary_line,
+    "ephemeris_match": _ephemeris_line,
+    "nearby_stars": _nearby_line,
     "submit_prediction": _submit_line,
 }
 """One-line summary of the result of each tool. Other tools get one line of JSON."""

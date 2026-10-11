@@ -281,6 +281,25 @@ def test_summary_line_of_secondary_eclipse_leads_with_the_verdict():
     )
 
 
+def test_summary_lines_of_the_catalogue_tools_lead_with_the_verdict():
+    """Both catalogue tools show their verdict first, then the one number a reader checks."""
+    match = {
+        "verdict": "known_eclipsing_binary",
+        "matches": [{"source": "eclipsing_binary", "entry": {"period": 2.0148}, "ratio": 0.5}],
+    }
+    assert (
+        summary_line(_result("ephemeris_match", match))
+        == "verdict known_eclipsing_binary · eclipsing_binary P=2.0148 d · ratio 0.5"
+    )
+    none = {"verdict": "no_match", "matches": [], "n_tois": 0, "n_eclipsing_binaries": 0}
+    assert summary_line(_result("ephemeris_match", none)) == "verdict no_match · 0 TOIs · 0 EBs"
+    near = {"verdict": "possible_blend", "n_within_radius": 2, "brightest_delta_gmag": 2.5}
+    assert (
+        summary_line(_result("nearby_stars", near))
+        == "verdict possible_blend · 2 within 2 px · brightest \u0394G 2.5"
+    )
+
+
 def test_summary_line_of_single_events_gives_count_and_first_event():
     """The single-event search reports how many events it found and the strongest one."""
     result = {"events": [{"time": 20.0, "snr": 23.12, "depth_ppm": 9800.0}, {"time": 5.0}]}

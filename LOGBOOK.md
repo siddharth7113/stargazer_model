@@ -913,3 +913,24 @@ files are identical; the manifest hash moved from
 `d03935c59b8706b8715c3363c917eef30d09c65ebdba46c654079a86b453d731` to
 `f73a513c1687c338c3e1b8d60ed9e32883ff68694f7946ec2fb39d0ecb85a490` because the
 manifest lists the new file. Results files before this point record the old hash.
+
+**Three-episode check of the catalogue tools**
+(`results/smoke/agent_inkling_small_s98_v2_catalogue3.json`, Inkling-Small,
+`tml_v0`, base prompt, ids ep_0025, ep_0054, ep_0005, hosts in the TESS
+eclipsing-binary catalogue). The prompts do not name the two tools; the model
+called ephemeris_match and nearby_stars on every episode from their descriptions.
+ep_0025 true null: the 1.007-day peak matched the catalogued binary at 2.015 days
+at ratio 0.5, and the model declined, naming the match. ep_0054 true null: the
+17.707-day eclipse matched the catalogued 17.703-day binary. ep_0005 miss: the
+injected 1.62-day planet sits on a host whose catalogued binary period is 1.622
+days, so the injection fell on a real 25 percent eclipse, and the model declined the
+whole signal as the binary.
+
+Finding. 15 of the 200 episodes of s98_v2 sit on hosts in the TESS eclipsing-binary
+catalogue, and 5 more carry the Gaia class ECL. The host selection excluded TOI
+hosts and not binaries. An injection on such a host is unfindable by design, and
+the hosts' own eclipses are the deep false alarms seen all day (TIC 287841093,
+231822771, 9380768). The three remaining false-alarm hosts (TIC 146420104,
+121711742, 55270064) have no catalogue entry and no bright neighbour within two
+pixels, so their signals are either unknown or systematics; the pixel tools would
+say which. PLAN gains the exclusion as a Phase 1 item for s98_v3.

@@ -851,7 +851,7 @@ def ephemeris_match(context, period: float, t0: float, period_rtol: float = 0.01
     Notes
     -----
     A candidate that repeats a catalogue period is not a new signal. The TESS
-    vetting reports run this check as the ephemeris match [1]_. A period matches if
+    vetting reports run this check as the ephemeris match [10]_. A period matches if
 
     ``|P / (P_cat * ratio) - 1| < period_rtol``
 
@@ -866,7 +866,7 @@ def ephemeris_match(context, period: float, t0: float, period_rtol: float = 0.01
 
     References
     ----------
-    .. [1] Twicken, J. D., et al. (2018). Kepler data validation I: architecture,
+    .. [10] Twicken, J. D., et al. (2018). Kepler data validation I: architecture,
        diagnostic tests, and data products for vetting transiting planet candidates.
        Publications of the Astronomical Society of the Pacific, 130, 064502.
        https://doi.org/10.1088/1538-3873/aab694
@@ -935,14 +935,14 @@ def nearby_stars(context, radius_arcsec: float = 42.0) -> dict:
     aperture. A neighbour with G magnitude difference :math:`\Delta G` contributes
     the flux ratio :math:`r = 10^{-0.4 \Delta G}` relative to the target, and a total
     eclipse of that neighbour dims the sum by :math:`r / (1 + r)`, the largest depth
-    the neighbour can make on the target [1]_. The verdict is ``possible_blend`` if
+    the neighbour can make on the target [11]_. The verdict is ``possible_blend`` if
     a neighbour within the radius is brighter than :data:`BLEND_DELTA_GMAG`
     magnitudes below the target, else ``isolated``. The list is a geometric bound;
     only the pixel data say where a dip comes from.
 
     References
     ----------
-    .. [1] Ciardi, D. R., et al. (2015). Understanding the effects of stellar
+    .. [11] Ciardi, D. R., et al. (2015). Understanding the effects of stellar
        multiplicity on the derived planet radii from transit surveys: implications
        for Kepler, K2, and TESS. The Astrophysical Journal, 805, 16.
        https://doi.org/10.1088/0004-637X/805/1/16

@@ -203,7 +203,9 @@ that the reinforcement-learning phase has to learn.
 | `fit_transit` | batman fit: depth, duration, impact parameter, host density and shape verdicts | done |
 | `odd_even` | per-event depth comparison with a verdict | done |
 | `secondary_eclipse` | second dip at phase 0.5 or any other phase, with a verdict | done |
-| ephemeris match, centroid motion, difference imaging, Gaia dilution | vetting | planned |
+| `ephemeris_match` | the candidate against the star's TOI and eclipsing-binary entries and its Gaia class, with a verdict | done |
+| `nearby_stars` | Gaia sources within two pixels, their flux fraction and the depth each could make, with a verdict | done |
+| centroid motion, difference imaging | vetting, needs the pixel data | planned |
 | vetting report, preregistered predictions | reporting | planned |
 
 Each tool is a function of the time, flux and flux-error arrays. It has a JSON Schema
