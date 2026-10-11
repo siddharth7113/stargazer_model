@@ -1,7 +1,15 @@
 import numpy as np
 
-from stargazer.inject import (a_rs_from_star, expected_snr, in_transit_mask, inject, make_truth,
-                              sample_truth, transit_count, transit_duration, transit_model)
+from stargazer.inject import (
+    a_rs_from_star,
+    expected_snr,
+    in_transit_mask,
+    inject,
+    make_truth,
+    sample_truth,
+    transit_count,
+    transit_model,
+)
 
 
 def test_a_rs_sun_like_matches_known_value():
@@ -11,7 +19,7 @@ def test_a_rs_sun_like_matches_known_value():
 
 
 def test_depth_at_mid_transit_matches_rp_rs_squared(lc, star):
-    time, flux, _ = lc
+    time, _, _ = lc
     truth = make_truth(period=3.0, t0=time.min() + 1.0, depth=0.01, b=0.0, star=star)
     model = transit_model(time, truth)
     dip = 1.0 - model.min()

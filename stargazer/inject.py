@@ -1,9 +1,11 @@
-"""Transit injection with batman. All parameters are explicit and stored as truth.
+"""Transit injection with batman. Each parameter is explicit. The truth record stores it.
 
-Geometry follows the standard relations:
-  a/R* from Kepler's third law using stellar density (logg and radius from the TIC),
-  inclination from impact parameter b = a/R* cos(i),
-  T14 = P/pi * arcsin( sqrt((1+k)^2 - b^2) / (a/R* sin i) ), k = Rp/R*.
+The geometry uses the standard relations:
+
+* ``a/R*`` comes from Kepler's third law and the stellar density. The density comes
+  from ``logg`` and the radius in the TESS Input Catalog (TIC).
+* The inclination comes from the impact parameter: ``b = a/R* cos(i)``.
+* ``T14 = P/pi * arcsin( sqrt((1+k)^2 - b^2) / (a/R* sin i) )``, with ``k = Rp/R*``.
 """
 
 from __future__ import annotations
@@ -17,45 +19,84 @@ R_SUN = 6.957e8
 DAY = 86400.0
 
 
-@dataclass
+@dataclass(frozen=True)
 class TransitTruth:
-    period: float        # days
-    t0: float            # days, same time base as the light curve
-    rp_rs: float         # planet to star radius ratio
-    a_rs: float          # semi-major axis in stellar radii
+    """Injected transit parameters.
+
+    Parameters
+    ----------
+    period : float
+        Orbital period in days.
+    t0 : float
+        Epoch of a transit centre, in the light curve's time base (days).
+    rp_rs : float
+        Planet to star radius ratio.
+    a_rs : float
+        Semi-major axis in stellar radii.
+    inc_deg : float
+        Orbital inclination in degrees.
+    b : float
+        Impact parameter.
+    u1, u2 : float
+        Quadratic limb-darkening coefficients.
+    duration : float
+        Total transit duration T14 in days.
+    depth : float
+        Geometric depth ``rp_rs**2`` before limb darkening.
+    """
+
+    period: float
+    t0: float
+    rp_rs: float
+    a_rs: float
     inc_deg: float
-    b: float             # impact parameter
+    b: float
     u1: float
     u2: float
-    duration: float      # T14 in days
-    depth: float         # rp_rs**2, geometric depth before limb darkening
+    duration: float
+    depth: float
 
     def to_dict(self) -> dict:
+        """Return a plain dictionary."""
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> "TransitTruth":
+    def from_dict(cls, d: dict) -> TransitTruth:
+        """Build from a dictionary. Ignore unknown keys."""
         return cls(**{k: d[k] for k in cls.__dataclass_fields__})
 
 
 def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> float:
-    g = 10.0 ** logg_cgs * 1e-2  # cgs cm/s^2 -> m/s^2
-    R = radius_rsun * R_SUN
-    M = g * R**2 / G_SI
-    P = period_days * DAY
-    a = (G_SI * M * P**2 / (4 * np.pi**2)) ** (1.0 / 3.0)
-    return float(a / R)
+    """Return the semi-major axis in stellar radii. Use Kepler's third law.
+
+    Parameters
+    ----------
+    period_days : float
+    logg_cgs : float
+        Surface gravity, log10 of cm/s^2.
+    radius_rsun : float
+        Stellar radius in solar radii.
+    """
+    g = 10.0**logg_cgs * 1e-2
+    r = radius_rsun * R_SUN
+    mass = g * r**2 / G_SI
+    p = period_days * DAY
+    a = (G_SI * mass * p**2 / (4 * np.pi**2)) ** (1.0 / 3.0)
+    return float(a / r)
 
 
 def transit_duration(period: float, a_rs: float, inc_deg: float, rp_rs: float, b: float) -> float:
+    """Return the total transit duration T14 in days. Assume a circular orbit."""
     inc = np.radians(inc_deg)
     arg = np.sqrt(max((1 + rp_rs) ** 2 - b**2, 0.0)) / (a_rs * np.sin(inc))
     return float(period / np.pi * np.arcsin(min(arg, 1.0)))
 
 
 def limb_darkening_for_teff(teff: float | None) -> tuple[float, float]:
-    """Coarse quadratic coefficients in the TESS band. Good enough for injection;
-    the exact values are stored in truth so nothing is hidden."""
+    """Return approximate quadratic limb-darkening coefficients for the TESS band.
+
+    The truth record stores the values used.
+    """
     if teff is None:
         return 0.40, 0.25
     if teff < 4000:
@@ -68,6 +109,16 @@ def limb_darkening_for_teff(teff: float | None) -> tuple[float, float]:
 
 
 def make_truth(period: float, t0: float, depth: float, b: float, star: dict) -> TransitTruth:
+    """Derive the full geometry from the free parameters and the host star.
+
+    Parameters
+    ----------
+    period, t0, depth, b : float
+        Free parameters.
+    star : dict
+        Must have ``logg`` and ``radius_rsun``. If a value is missing, the function
+        uses the solar value. ``teff`` selects the limb darkening.
+    """
     rp_rs = float(np.sqrt(depth))
     logg = star.get("logg") if star.get("logg") is not None else 4.4
     radius = star.get("radius_rsun") if star.get("radius_rsun") is not None else 1.0
@@ -80,6 +131,7 @@ def make_truth(period: float, t0: float, depth: float, b: float, star: dict) -> 
 
 
 def transit_model(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
+    """Return the batman model flux. The flux is one out of transit."""
     import batman
 
     p = batman.TransitParams()
@@ -92,11 +144,11 @@ def transit_model(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
     p.w = 90.0
     p.limb_dark = "quadratic"
     p.u = [truth.u1, truth.u2]
-    m = batman.TransitModel(p, np.asarray(time, dtype=np.float64))
-    return m.light_curve(p)
+    return batman.TransitModel(p, np.asarray(time, dtype=np.float64)).light_curve(p)
 
 
 def inject(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> np.ndarray:
+    """Multiply the flux by the transit model."""
     return flux * transit_model(time, truth)
 
 
@@ -108,6 +160,12 @@ def sample_truth(
     depth_range: tuple[float, float] = (2e-4, 2e-2),
     b_max: float = 0.9,
 ) -> TransitTruth:
+    """Draw one injection. Period and depth are log-uniform. Impact parameter is uniform.
+
+    The epoch is uniform in the first period after the start of the light curve. A
+    long-period draw can give an episode with one transit or no transit. This is
+    intentional.
+    """
     period = float(np.exp(rng.uniform(np.log(period_range[0]), np.log(period_range[1]))))
     depth = float(np.exp(rng.uniform(np.log(depth_range[0]), np.log(depth_range[1]))))
     b = float(rng.uniform(0.0, b_max))
@@ -116,18 +174,19 @@ def sample_truth(
 
 
 def point_scatter(flux: np.ndarray) -> float:
-    """Robust point-to-point scatter: 1.4826 * MAD of successive differences / sqrt(2)."""
+    """Robust point-to-point scatter: ``1.4826 * MAD(diff) / sqrt(2)``."""
     d = np.diff(flux)
     return float(1.4826 * np.median(np.abs(d - np.median(d))) / np.sqrt(2.0))
 
 
 def in_transit_mask(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
+    """Return a boolean mask. True marks points within half a duration of a transit centre."""
     phase = ((time - truth.t0 + 0.5 * truth.period) % truth.period) - 0.5 * truth.period
     return np.abs(phase) < 0.5 * truth.duration
 
 
 def transit_count(time: np.ndarray, truth: TransitTruth, min_points: int = 3) -> int:
-    """Number of distinct transit events with at least `min_points` in-transit samples."""
+    """Return the number of transit events that have at least ``min_points`` samples."""
     m = in_transit_mask(time, truth)
     if not m.any():
         return 0
@@ -137,8 +196,10 @@ def transit_count(time: np.ndarray, truth: TransitTruth, min_points: int = 3) ->
 
 
 def expected_snr(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> float:
-    """depth / sigma * sqrt(N_in_transit), with sigma the point-to-point scatter of
-    the light curve before injection. Standard single-event-statistic style estimate."""
+    """Return the expected detection statistic ``depth / sigma * sqrt(N_in_transit)``.
+
+    ``sigma`` is the point-to-point scatter of the flux before injection.
+    """
     n_in = int(in_transit_mask(time, truth).sum())
     sigma = point_scatter(flux)
     if n_in == 0 or sigma == 0:

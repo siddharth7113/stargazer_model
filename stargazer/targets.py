@@ -1,12 +1,20 @@
 """Select host stars with no known transit signal for injection.
 
-Pipeline: MAST observation list for a sector (SPOC 120 s) -> seeded random subset ->
-TIC catalogue parameters -> dwarf and brightness cuts -> exclude anything in the ExoFOP
-TOI list. The TOI CSV hash and download time are recorded so the exclusion is auditable.
+Steps:
+
+1. Get the list of SPOC 120 s targets in a sector from MAST.
+2. Draw a seeded random subset.
+3. Get the TESS Input Catalog (TIC) parameters of the subset.
+4. Apply brightness and dwarf cuts.
+5. Remove each star in the ExoFOP TESS Object of Interest (TOI) list.
+
+The output records the TOI CSV hash and download time. This makes the exclusion
+auditable.
 """
 
 from __future__ import annotations
 
+import csv
 import io
 import json
 import urllib.request
@@ -17,29 +25,43 @@ import numpy as np
 from .provenance import sha256_bytes, utc_now
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
+TIC_COLUMNS = [
+    ("Tmag", "tmag"),
+    ("Teff", "teff"),
+    ("rad", "radius_rsun"),
+    ("logg", "logg"),
+    ("mass", "mass_msun"),
+    ("lumclass", "lumclass"),
+    ("ra", "ra"),
+    ("dec", "dec"),
+]
 
 
 def download_toi_tics(url: str = TOI_URL) -> tuple[set[int], str]:
-    """Return the set of TIC IDs with a TOI and the SHA-256 of the CSV as downloaded."""
+    """Download the TOI table.
+
+    Returns
+    -------
+    tics : set of int
+        Every TIC ID with a TOI.
+    sha256 : str
+        Hash of the CSV exactly as downloaded.
+    """
     with urllib.request.urlopen(url, timeout=120) as r:
         raw = r.read()
-    digest = sha256_bytes(raw)
-    import csv
-
     tics = set()
-    reader = csv.DictReader(io.StringIO(raw.decode("utf-8", errors="replace")))
-    for row in reader:
+    for row in csv.DictReader(io.StringIO(raw.decode("utf-8", errors="replace"))):
         v = row.get("TIC ID") or row.get("TIC")
         if v:
             try:
                 tics.add(int(float(v)))
             except ValueError:
-                pass
-    return tics, digest
+                continue
+    return tics, sha256_bytes(raw)
 
 
 def sector_two_minute_tics(sector: int) -> list[int]:
-    """All TIC IDs with a SPOC 120 s light curve in `sector`, from MAST."""
+    """Return all TIC IDs that have a SPOC 120 s light curve in a sector. The source is MAST."""
     from astroquery.mast import Observations
 
     obs = Observations.query_criteria(
@@ -58,25 +80,25 @@ def sector_two_minute_tics(sector: int) -> list[int]:
     return sorted(tics)
 
 
+def _cell(row, col: str, key: str):
+    v = row[col]
+    try:
+        if v is None or (hasattr(v, "mask") and v.mask):
+            return None
+        return str(v) if key == "lumclass" else float(v)
+    except Exception:
+        return None
+
+
 def tic_params(tics: list[int]) -> dict[int, dict]:
+    """Fetch TIC catalogue parameters in batches of 500."""
     from astroquery.mast import Catalogs
 
     out = {}
     for i in range(0, len(tics), 500):
-        chunk = [str(t) for t in tics[i : i + 500]]
-        tab = Catalogs.query_criteria(catalog="Tic", ID=chunk)
+        tab = Catalogs.query_criteria(catalog="Tic", ID=[str(t) for t in tics[i : i + 500]])
         for row in tab:
-            d = {}
-            for col, key in [("Tmag", "tmag"), ("Teff", "teff"), ("rad", "radius_rsun"),
-                             ("logg", "logg"), ("mass", "mass_msun"), ("lumclass", "lumclass"),
-                             ("ra", "ra"), ("dec", "dec")]:
-                v = row[col]
-                try:
-                    d[key] = None if (v is None or (hasattr(v, "mask") and v.mask)) else (
-                        str(v) if key == "lumclass" else float(v))
-                except Exception:
-                    d[key] = None
-            out[int(row["ID"])] = d
+            out[int(row["ID"])] = {key: _cell(row, col, key) for col, key in TIC_COLUMNS}
     return out
 
 
@@ -89,36 +111,54 @@ def select_targets(
     radius_max: float = 1.5,
     oversample: int = 4,
 ) -> dict:
+    """Pick up to ``n`` quiet dwarf hosts with no TOI in a sector.
+
+    Parameters
+    ----------
+    sector : int
+    n : int
+        Number wanted.
+    seed : int
+        Seed for the subset drawn from the sector list.
+    tmag_max : float
+        Brightness cut.
+    teff_range : tuple of float
+        Effective temperature window in K.
+    radius_max : float
+        Radius cut in solar radii, to keep dwarfs.
+    oversample : int
+        Number of stars to draw before the cuts, as a multiple of ``n``.
+
+    Returns
+    -------
+    dict
+        The selected targets, and each count and hash needed to audit the selection.
+    """
     rng = np.random.default_rng(seed)
     all_tics = sector_two_minute_tics(sector)
     toi_tics, toi_hash = download_toi_tics()
     toi_time = utc_now()
     candidates = [t for t in all_tics if t not in toi_tics]
-    pool = list(rng.choice(candidates, size=min(len(candidates), n * oversample), replace=False))
-    pool = [int(t) for t in pool]
+    pool = [int(t) for t in rng.choice(candidates, size=min(len(candidates), n * oversample), replace=False)]
     params = tic_params(pool)
     chosen = []
     rejected = {"no_params": 0, "tmag": 0, "teff": 0, "radius": 0, "lumclass": 0}
     for t in pool:
         p = params.get(t)
-        if not p or p.get("teff") is None or p.get("radius_rsun") is None or p.get("tmag") is None:
+        if not p or any(p.get(k) is None for k in ("teff", "radius_rsun", "tmag")):
             rejected["no_params"] += 1
-            continue
-        if p["tmag"] > tmag_max:
+        elif p["tmag"] > tmag_max:
             rejected["tmag"] += 1
-            continue
-        if not (teff_range[0] <= p["teff"] <= teff_range[1]):
+        elif not (teff_range[0] <= p["teff"] <= teff_range[1]):
             rejected["teff"] += 1
-            continue
-        if p["radius_rsun"] > radius_max:
+        elif p["radius_rsun"] > radius_max:
             rejected["radius"] += 1
-            continue
-        if p.get("lumclass") not in (None, "DWARF"):
+        elif p.get("lumclass") not in (None, "DWARF"):
             rejected["lumclass"] += 1
-            continue
-        chosen.append({"tic": t, "sector": sector, **p})
-        if len(chosen) >= n:
-            break
+        else:
+            chosen.append({"tic": t, "sector": sector, **p})
+            if len(chosen) >= n:
+                break
     return {
         "created": utc_now(),
         "sector": sector,
@@ -135,9 +175,11 @@ def select_targets(
 
 
 def save_targets(d: dict, path: Path) -> None:
+    """Write a targets dictionary as JSON."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(d, indent=2))
 
 
 def load_targets(path: Path) -> dict:
+    """Read a targets JSON."""
     return json.loads(Path(path).read_text())

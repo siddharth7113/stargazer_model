@@ -1,9 +1,11 @@
-import numpy as np
-
 from stargazer.score import score_episode, summarize
 
-T = {"kind": "transit", "snr": 12.0, "n_transits": 4,
-     "transit": {"period": 3.0, "t0": 1.0, "duration": 0.1, "depth": 0.001}}
+T = {
+    "kind": "transit",
+    "snr": 12.0,
+    "n_transits": 4,
+    "transit": {"period": 3.0, "t0": 1.0, "duration": 0.1, "depth": 0.001},
+}
 N = {"kind": "null"}
 
 

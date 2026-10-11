@@ -6,3 +6,4 @@ data/cache/
 .pytest_cache/
 .ruff_cache/
 uv.lock
+results/*.log
