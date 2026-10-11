@@ -17,14 +17,24 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
     "sphinxcontrib.mermaid",
     "sphinx_copybutton",
     "sphinx_design",
+    "sphinxcontrib.bibtex",
 ]
 
-myst_enable_extensions = ["colon_fence", "deflist", "fieldlist", "tasklist"]
+myst_enable_extensions = ["colon_fence", "deflist", "fieldlist", "tasklist", "dollarmath", "amsmath"]
+myst_dmath_double_inline = True
+math_numfig = True
+math_eqref_format = "Eq. {number}"
+numfig = True
 myst_fence_as_directive = ["mermaid"]
 myst_heading_anchors = 3
+
+bibtex_bibfiles = ["references.bib"]
+bibtex_default_style = "plain"
+bibtex_reference_style = "author_year"
 
 autosummary_generate = True
 autodoc_default_options = {"members": True, "undoc-members": False, "show-inheritance": True}

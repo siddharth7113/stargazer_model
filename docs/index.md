@@ -2,43 +2,44 @@
 
 Star Gazer is a Python package for measuring how well a language model finds
 transiting planets in TESS light curves. It builds test sets by injecting synthetic
-transits into real light curves, runs a detector on them, scores the predictions
-against the injected truth and records the provenance of each run. The package also
-contains the classical Box Least Squares pipeline as a baseline, a set of analysis
-tools that a language model can call, and backends for OpenAI-compatible servers and
-for Tinker.
+transits into real light curves, runs a detector on each light curve, scores the
+predictions against the injected truth and records the provenance of every run.
+
+The package contains:
+
+- an episode-set builder that selects host stars, downloads their light curves and
+  injects transits with the batman model;
+- a scorer with credit for period aliases and for single-transit answers;
+- a classical Box Least Squares (BLS) detector as a baseline;
+- analysis tools that a language model calls through a JSON Schema interface;
+- an agent loop with backends for OpenAI-compatible servers and for Tinker;
+- a terminal viewer for the saved trajectories.
 
 ::::{grid} 1 2 2 3
 :gutter: 3
 
-:::{grid-item-card} Overview
-:link: overview
+:::{grid-item-card} Installation
+:link: install
 :link-type: doc
-The problem, the injection-and-recovery method and the task tiers.
+Requirements, optional extras and API keys.
 :::
 
-:::{grid-item-card} Architecture
-:link: architecture
+:::{grid-item-card} Quickstart
+:link: quickstart
 :link-type: doc
-The software development kit (SDK), the agent loop and the backends, with class, flow and sequence diagrams.
+From an episode set to a comparison table in seven commands.
 :::
 
-:::{grid-item-card} Scoring
-:link: scoring
+:::{grid-item-card} User guide
+:link: concepts
 :link-type: doc
-The scoring rules, the alias credit and the threshold choice from recorded data.
+Episode sets, the baseline, the agent, scoring and reproducibility.
 :::
 
-:::{grid-item-card} Usage
-:link: usage
+:::{grid-item-card} Command line
+:link: cli
 :link-type: doc
-Commands to build an episode set, run the baseline and an agent, read a trajectory and compare systems.
-:::
-
-:::{grid-item-card} Logbook
-:link: logbook
-:link-type: doc
-Every number produced so far, with the command that produced it.
+Every `stargazer` command and its options.
 :::
 
 :::{grid-item-card} API reference
@@ -46,26 +47,53 @@ Every number produced so far, with the command that produced it.
 :link-type: doc
 Every module, class and function, with equations and references.
 :::
+
+:::{grid-item-card} Logbook
+:link: logbook
+:link-type: doc
+Every run so far, with the command that produced it.
+:::
 ::::
 
 ```{toctree}
-:maxdepth: 2
-:caption: Guide
+:maxdepth: 1
+:caption: Getting started
+:hidden:
 
-overview
-architecture
-data
+install
+quickstart
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: User guide
+:hidden:
+
+concepts
+episode_sets
+baseline
+agent
 scoring
-verifiability
-usage
+trajectories
+reproducibility
+```
+
+```{toctree}
+:maxdepth: 1
+:caption: Reference
+:hidden:
+
+cli
+api
+architecture
+references
 ```
 
 ```{toctree}
 :maxdepth: 1
 :caption: Project
+:hidden:
 
 plan
 logbook
-api
-references
 ```

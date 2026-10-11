@@ -91,7 +91,7 @@ def detrend(
 def bin_lc(
     time: np.ndarray, flux: np.ndarray, bin_minutes: float
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Bin to a fixed cadence. The error of a bin is the global scatter divided by sqrt(n).
+    r"""Bin to a fixed cadence. The error of a bin is the global scatter divided by sqrt(n).
 
     Parameters
     ----------
@@ -107,10 +107,10 @@ def bin_lc(
 
     Notes
     -----
-    Each point gets a bin index ``floor((t - t_min) / w)`` with ``w`` the width in
-    days. The binned time and flux are the means in the bin. The error is
-    ``std(flux) / sqrt(n)`` with ``n`` the number of points in the bin and
-    ``std(flux)`` the standard deviation of the whole detrended light curve. This
+    Each point gets a bin index :math:`\lfloor (t - t_\mathrm{min}) / w \rfloor` with
+    :math:`w` the width in days. The binned time and flux are the means in the bin. The
+    error is :math:`\sigma_F / \sqrt{n}` with :math:`n` the number of points in the bin
+    and :math:`\sigma_F` the standard deviation of the whole detrended light curve. This
     assumes white noise. Binning from 2 minutes to 10 minutes reduces the number of
     points by five and the BLS run time by about the same factor. It does not reduce
     sensitivity to transits longer than about one hour.
@@ -154,7 +154,7 @@ class BLSDetector:
         return dict(self._config)
 
     def detect(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> Prediction:
-        """Run detrend, bin and BLS. Report a detection if the SDE is at or above the threshold.
+        r"""Run detrend, bin and BLS. Report a detection if the SDE is at or above the threshold.
 
         Notes
         -----
@@ -171,7 +171,10 @@ class BLSDetector:
            and duration it finds the best epoch and reports the power.
         5. The signal detection efficiency of Kovács, Zucker and Mazeh [3]_ is
 
-           ``SDE = (max(power) - mean(power)) / std(power)``
+           .. math::
+
+              \mathrm{SDE} = \frac{\max(\mathrm{power}) - \mathrm{mean}(\mathrm{power})}
+                                  {\mathrm{std}(\mathrm{power})}
 
            over the whole period grid. It measures how far the best peak stands above
            the typical peak. Pure noise gives an SDE of about 5 to 7 on a grid of this

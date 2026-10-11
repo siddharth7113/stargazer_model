@@ -108,7 +108,7 @@ def _finite(value: object) -> bool:
 
 
 def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> float:
-    """Return the semi-major axis in stellar radii. Use Kepler's third law.
+    r"""Return the semi-major axis in stellar radii. Use Kepler's third law.
 
     Parameters
     ----------
@@ -128,20 +128,30 @@ def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> f
     -----
     The steps are:
 
-    1. Surface gravity in SI: ``g = 10**logg * 1e-2`` converts cm s^-2 to m s^-2.
+    1. Surface gravity in SI: :math:`g = 10^{\log g} \times 10^{-2}` converts
+       :math:`\mathrm{cm\,s^{-2}}` to :math:`\mathrm{m\,s^{-2}}`.
        ``logg`` and the radius come from the TESS Input Catalog [7]_.
-    2. Stellar mass from gravity and radius: ``M = g * R**2 / G``, with ``G`` from
-       CODATA 2018 [1]_.
+    2. Stellar mass from gravity and radius: :math:`M_\star = g R_\star^2 / G`, with
+       :math:`G` from CODATA 2018 [1]_.
     3. Kepler's third law for a planet of negligible mass:
-       ``a**3 = G * M * P**2 / (4 * pi**2)``.
-    4. Divide by the radius: ``a / R``, with the solar radius from IAU 2015 [2]_.
 
-    Steps 2 and 3 combine to ``a / R = (g * R * P**2 / (4 * pi**2))**(1/3) / R``. The
-    code keeps the steps separate for clarity. The planet mass is neglected. This is
+       .. math::
+
+          a^3 = \frac{G M_\star P^2}{4 \pi^2}
+
+    4. Divide by the radius: :math:`a / R_\star`, with the solar radius from IAU 2015 [2]_.
+
+    Steps 2 and 3 combine to
+
+    .. math::
+
+       \frac{a}{R_\star} = \left( \frac{g R_\star^2 P^2}{4 \pi^2} \right)^{1/3} \frac{1}{R_\star}
+
+    The code keeps the steps separate for clarity. The planet mass is neglected. This is
     accurate to better than 0.1 percent for a planet below a few Jupiter masses.
 
-    Example: the Sun with ``logg = 4.438`` and ``P = 365.25`` days gives ``a / R = 215``,
-    which is one astronomical unit in solar radii.
+    Example: the Sun with :math:`\log g = 4.438` and :math:`P = 365.25` days gives
+    :math:`a / R_\star = 215`, which is one astronomical unit in solar radii.
     """
     gravity = 10.0**logg_cgs * 1e-2  # m s^-2
     radius_m = radius_rsun * R_SUN  # m
@@ -152,7 +162,7 @@ def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> f
 
 
 def transit_duration(period: float, a_rs: float, inc_deg: float, rp_rs: float, b: float) -> float:
-    """Return the total transit duration T14, days. Assume a circular orbit.
+    r"""Return the total transit duration T14, days. Assume a circular orbit.
 
     Parameters
     ----------
@@ -169,18 +179,21 @@ def transit_duration(period: float, a_rs: float, inc_deg: float, rp_rs: float, b
 
     Notes
     -----
-    T14 is the time from first to fourth contact. For a circular orbit, equation 3
-    of Seager and Mallén-Ornelas [3]_ gives:
+    :math:`T_{14}` is the time from first to fourth contact. For a circular orbit,
+    equation 3 of Seager and Mallén-Ornelas [3]_ gives:
 
-    ``T14 = (P / pi) * arcsin( sqrt((1 + k)**2 - b**2) / (a_rs * sin(i)) )``
+    .. math::
 
-    where ``k = rp_rs``. The term ``(1 + k)**2 - b**2`` is the chord length squared
-    across the stellar disc, in stellar radii. If ``b > 1 + k`` the planet does not
-    transit; the code clamps the square root to zero, which gives a duration of zero.
-    The arcsine argument is clamped to one for very close orbits.
+       T_{14} = \frac{P}{\pi} \arcsin\left( \frac{\sqrt{(1 + k)^2 - b^2}}{(a / R_\star) \sin i} \right)
 
-    Example: Earth and Sun with ``a_rs = 215``, ``b = 0``, ``k = 0.0092`` give
-    ``T14 = 0.545`` days, which is 13.1 hours.
+    where :math:`k = R_p / R_\star` is ``rp_rs`` and :math:`a / R_\star` is ``a_rs``. The
+    term :math:`(1 + k)^2 - b^2` is the chord length squared across the stellar disc, in
+    stellar radii. If :math:`b > 1 + k` the planet does not transit; the code clamps the
+    square root to zero, which gives a duration of zero. The arcsine argument is clamped
+    to one for very close orbits.
+
+    Example: Earth and Sun with :math:`a / R_\star = 215`, :math:`b = 0`,
+    :math:`k = 0.0092` give :math:`T_{14} = 0.545` days, which is 13.1 hours.
     """
     inc = np.radians(inc_deg)
     chord = np.sqrt(max((1 + rp_rs) ** 2 - b**2, 0.0))  # stellar radii
@@ -211,7 +224,7 @@ def limb_darkening_for_teff(
     table: tuple[tuple[float, float, float], ...] = LIMB_DARKENING_TABLE,
     default: tuple[float, float] = SOLAR_TYPE_LIMB_DARKENING,
 ) -> tuple[float, float]:
-    """Return quadratic limb-darkening coefficients for an effective temperature.
+    r"""Return quadratic limb-darkening coefficients for an effective temperature.
 
     Parameters
     ----------
@@ -228,8 +241,14 @@ def limb_darkening_for_teff(
 
     Notes
     -----
-    The quadratic law is ``I(mu) / I(1) = 1 - u1 * (1 - mu) - u2 * (1 - mu)**2``, where
-    ``mu`` is the cosine of the angle between the line of sight and the surface normal.
+    The quadratic law is
+
+    .. math::
+
+       \frac{I(\mu)}{I(1)} = 1 - u_1 (1 - \mu) - u_2 (1 - \mu)^2
+
+    where :math:`\mu` is the cosine of the angle between the line of sight and the
+    surface normal.
 
     The function finds the first row whose upper bound is above ``teff`` with a binary
     search over the bounds. The coefficients change only the transit shape, not the
@@ -244,7 +263,7 @@ def limb_darkening_for_teff(
 
 
 def make_truth(period: float, t0: float, depth: float, b: float, star: dict) -> TransitTruth:
-    """Derive the full geometry from the free parameters and the host star.
+    r"""Derive the full geometry from the free parameters and the host star.
 
     Parameters
     ----------
@@ -271,11 +290,12 @@ def make_truth(period: float, t0: float, depth: float, b: float, star: dict) -> 
     -----
     The derived quantities are:
 
-    - ``rp_rs = sqrt(depth)``, because the geometric depth is the area ratio.
+    - ``rp_rs`` is :math:`k = R_p / R_\star = \sqrt{\delta}`, because the geometric depth
+      :math:`\delta` is the area ratio.
     - ``a_rs`` from :func:`a_rs_from_star`.
-    - ``b`` is clamped below ``a_rs``, so that the inclination is defined.
-    - ``inc = arccos(b / a_rs)``, from the definition ``b = a_rs * cos(i)`` for a
-      circular orbit.
+    - :math:`b` is clamped below :math:`a / R_\star`, so that the inclination is defined.
+    - :math:`i = \arccos\left( b R_\star / a \right)`, from the definition
+      :math:`b = (a / R_\star) \cos i` for a circular orbit.
     - ``duration`` from :func:`transit_duration`.
     """
     rp_rs = float(np.sqrt(depth))
@@ -317,11 +337,12 @@ def transit_model(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
 
 
 def inject(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> np.ndarray:
-    """Multiply the flux by the transit model.
+    r"""Multiply the flux by the transit model.
 
     Notes
     -----
-    The injection is multiplicative: ``flux_out = flux_in * model``. The model is one
+    The injection is multiplicative:
+    :math:`F_\mathrm{out} = F_\mathrm{in} \cdot F_\mathrm{model}`. The model is one
     out of transit, so the noise and the stellar variability of the real light curve
     are unchanged there. In transit the noise scales with the model, which is what a
     real transit does.
@@ -337,7 +358,7 @@ def sample_truth(
     depth_range: tuple[float, float] = (1e-4, 1e-2),
     b_max: float = 0.9,
 ) -> TransitTruth:
-    """Draw one injection. Period and depth are log-uniform. Impact parameter is uniform.
+    r"""Draw one injection. Period and depth are log-uniform. Impact parameter is uniform.
 
     Parameters
     ----------
@@ -358,11 +379,14 @@ def sample_truth(
     -----
     The draws, in order, are:
 
-    1. ``period = exp(U(log(p_min), log(p_max)))``. Log-uniform gives equal weight to
-       each decade, so short and long periods are both well sampled.
-    2. ``depth = exp(U(log(d_min), log(d_max)))``, for the same reason.
-    3. ``b = U(0, b_max)``. The cap avoids grazing transits with near-zero duration.
-    4. ``t0 = t_start + U(0, period)``.
+    1. :math:`P = \exp\left( \mathcal{U}(\ln P_\mathrm{min}, \ln P_\mathrm{max}) \right)`.
+       Log-uniform gives equal weight to each decade, so short and long periods are both
+       well sampled.
+    2. :math:`\delta = \exp\left( \mathcal{U}(\ln \delta_\mathrm{min}, \ln \delta_\mathrm{max}) \right)`,
+       for the same reason.
+    3. :math:`b = \mathcal{U}(0, b_\mathrm{max})`. The cap avoids grazing transits with
+       near-zero duration.
+    4. :math:`t_0 = t_\mathrm{start} + \mathcal{U}(0, P)`.
 
     The order matters for reproducibility. Do not change it without a new episode set
     version.
@@ -379,20 +403,23 @@ def sample_truth(
 
 
 def point_scatter(flux: np.ndarray) -> float:
-    """Return the robust point-to-point scatter of the flux.
+    r"""Return the robust point-to-point scatter of the flux.
 
     Notes
     -----
     The estimator is
 
-    ``sigma = 1.4826 * MAD(diff(flux)) / sqrt(2)``
+    .. math::
 
-    - ``diff(flux)`` removes slow stellar variability and systematics, so the estimate
-      reflects the white-noise level that limits transit detection.
-    - ``MAD`` is the median absolute deviation from the median. It is insensitive to
-      outliers and to transits already in the data.
-    - ``1.4826`` converts a MAD to a standard deviation for a Gaussian distribution.
-    - ``sqrt(2)`` corrects for the fact that a difference of two independent values
+       \sigma = \frac{1.4826 \, \mathrm{MAD}(\Delta F)}{\sqrt{2}}
+
+    - :math:`\Delta F`, the difference of consecutive flux values, removes slow stellar
+      variability and systematics, so the estimate reflects the white-noise level that
+      limits transit detection.
+    - :math:`\mathrm{MAD}` is the median absolute deviation from the median. It is
+      insensitive to outliers and to transits already in the data.
+    - :math:`1.4826` converts a MAD to a standard deviation for a Gaussian distribution.
+    - :math:`\sqrt{2}` corrects for the fact that a difference of two independent values
       has twice the variance of one value.
     """
     differences = np.diff(flux)
@@ -400,26 +427,29 @@ def point_scatter(flux: np.ndarray) -> float:
 
 
 def in_transit_mask(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
-    """Return a boolean mask. True marks points within half a duration of a transit centre.
+    r"""Return a boolean mask. True marks points within half a duration of a transit centre.
 
     Notes
     -----
     The phase in days, centred on zero, is
 
-    ``phase = ((t - t0 + P/2) mod P) - P/2``
+    .. math::
 
-    which lies in ``[-P/2, P/2)``. A point is in transit if ``|phase| < T14 / 2``.
+       \phi = \left( (t - t_0 + P/2) \bmod P \right) - P/2
+
+    which lies in :math:`[-P/2, P/2)`. A point is in transit if :math:`|\phi| < T_{14} / 2`.
     """
     phase = ((time - truth.t0 + 0.5 * truth.period) % truth.period) - 0.5 * truth.period
     return np.abs(phase) < 0.5 * truth.duration
 
 
 def transit_count(time: np.ndarray, truth: TransitTruth, min_points: int = 3) -> int:
-    """Return the number of transit events that have at least ``min_points`` samples.
+    r"""Return the number of transit events that have at least ``min_points`` samples.
 
     Notes
     -----
-    Each in-transit point gets an integer epoch number ``round((t - t0) / P)``. The
+    Each in-transit point gets an integer epoch number
+    :math:`\mathrm{round}\left( (t - t_0) / P \right)`. The
     function counts the distinct epoch numbers with at least ``min_points`` points.
     A transit that falls in a data gap has no points and is not counted. A transit at
     the edge of a gap with fewer than ``min_points`` points is not counted either.
@@ -433,7 +463,7 @@ def transit_count(time: np.ndarray, truth: TransitTruth, min_points: int = 3) ->
 
 
 def expected_snr(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> float:
-    """Return the expected detection statistic of the injection.
+    r"""Return the expected detection statistic of the injection.
 
     Parameters
     ----------
@@ -447,12 +477,14 @@ def expected_snr(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> flo
     -----
     The statistic is
 
-    ``SNR = depth / sigma * sqrt(N_in)``
+    .. math::
 
-    - ``depth`` is the geometric depth.
-    - ``sigma`` is :func:`point_scatter` of the flux before injection.
-    - ``N_in`` is the number of points inside the transit windows, summed over all
-      transits in the data.
+       \mathrm{SNR} = \frac{\delta}{\sigma} \sqrt{N_\mathrm{in}}
+
+    - :math:`\delta` is the geometric depth.
+    - :math:`\sigma` is :func:`point_scatter` of the flux before injection.
+    - :math:`N_\mathrm{in}` is the number of points inside the transit windows, summed
+      over all transits in the data.
 
     This is the matched-filter signal-to-noise ratio of a box of the right depth and
     duration against white noise. It is the same quantity the Kepler pipeline calls

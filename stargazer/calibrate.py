@@ -79,14 +79,14 @@ def choose_threshold(
 
     Notes
     -----
-    Sort the ``n`` null statistics in ascending order. For the ``i``-th value as the
-    threshold, the nulls at or above it number ``n - i``, so the false-alarm rate is
-    ``(n - i) / n``. Return the first value where this rate is at or below
+    Sort the :math:`n` null statistics in ascending order. For the :math:`i`-th value as
+    the threshold, the nulls at or above it number :math:`n - i`, so the false-alarm rate
+    is :math:`(n - i) / n`. Return the first value where this rate is at or below
     ``max_false_alarm``. If no value qualifies, return a threshold just above the
     largest null statistic, which gives a false-alarm rate of zero on this set.
 
-    With ``n`` null episodes the smallest non-zero rate the set can resolve is
-    ``1 / n``. A target of 0.05 needs at least 20 null episodes to mean anything.
+    With :math:`n` null episodes the smallest non-zero rate the set can resolve is
+    :math:`1 / n`. A target of 0.05 needs at least 20 null episodes to mean anything.
     """
     null_stats = sorted(
         float(pred.get(stat, -np.inf))

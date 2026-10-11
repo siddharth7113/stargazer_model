@@ -3,7 +3,7 @@
 Star Gazer is a Python library with a thin command line over it. The command line
 calls the same functions that a training loop or a language-model harness imports.
 
-## Components
+## Class diagram
 
 ```{mermaid}
 classDiagram
@@ -88,7 +88,7 @@ classDiagram
     Results ..> EpisodeSet : records hash
 ```
 
-## Modules
+## Module map
 
 ```
 stargazer/
@@ -139,7 +139,7 @@ flowchart LR
 A detector reads only the episode file. The scorer reads the prediction and the truth
 record.
 
-## An evaluation run
+## Evaluation sequence
 
 ```{mermaid}
 sequenceDiagram
@@ -163,47 +163,19 @@ sequenceDiagram
     U->>U: results.save(path)
 ```
 
-## The agent
+## Agent
 
-A language model is run through :class:`stargazer.agent.ToolAgentDetector`, which
-holds the system prompt, the tool definitions and the loop. A backend implements one
-method, ``complete(messages, tools)``, that returns the next assistant turn.
+The agent loop, the tools and the backends are described in {doc}`agent`.
 
-```{mermaid}
-sequenceDiagram
-    participant A as ToolAgentDetector
-    participant B as ChatBackend
-    participant T as tools.call_tool
-    A->>B: complete(system + user, tool definitions)
-    B-->>A: AssistantTurn(tool_calls=[bls_peaks])
-    A->>T: bls_peaks(time, flux)
-    T-->>A: {peaks: [...]}
-    A->>B: complete(... + tool result)
-    B-->>A: AssistantTurn(tool_calls=[fold, odd_even])
-    A->>T: fold, odd_even
-    T-->>A: results
-    A->>B: complete(...)
-    B-->>A: AssistantTurn(tool_calls=[submit_prediction])
-    A-->>A: Prediction + transcript
-```
+## Reinforcement-learning environment
 
-Two backends exist. ``OpenAICompatibleBackend`` speaks the chat-completions API with
-function calling, which OpenRouter, vLLM and Ollama accept. ``TinkerBackend`` samples
-from a base model or a trained checkpoint on Tinker. It declares the tools and parses
-replies through the cookbook renderer of the model family, so Qwen, Nemotron and
-Inkling each see their own native tool format. The tool definitions live once, in
-``stargazer.tools.TOOLS``, with a JSON Schema for each, and the loop validates every
-call before it runs.
+In tier 3 the same objects form an environment:
 
-The tools are ``summarize``, ``bls_peaks`` (with optional masks of rejected signals so a
-strong feature cannot hide a weaker periodic one), ``single_events`` (the strongest
-individual dips, for planets with one or two transits in the data), ``fold``,
-``odd_even`` and ``submit_prediction``. Each tool result carries ``calls_remaining``. A
-turn without a tool call gets a reminder before the episode ends.
+| Environment part | Star Gazer object |
+|---|---|
+| reset | {meth}`~stargazer.episodes.EpisodeSet.load` of the next episode |
+| actions | the functions in {mod}`stargazer.tools` |
+| reward | {func}`~stargazer.score.score_episode` |
+| evaluation log | {class}`~stargazer.evaluate.Results` |
 
-## The reinforcement-learning view
-
-In tier 3 the same objects form an environment. `EpisodeSet` supplies the episode on
-`reset`, the functions in `tools.py` are the actions, `score_episode` is the reward and
-`Results` is the evaluation log. The training loop owns the policy and the optimiser;
-the package supplies the data, the tools and the reward.
+The training loop owns the policy and the optimiser.
