@@ -18,6 +18,8 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinxcontrib.mermaid",
+    "sphinx_copybutton",
+    "sphinx_design",
 ]
 
 myst_enable_extensions = ["colon_fence", "deflist", "fieldlist", "tasklist"]
@@ -39,5 +41,37 @@ intersphinx_mapping = {
 html_theme = "furo"
 html_title = "Star Gazer"
 html_static_path = ["_static"]
+html_logo = "_static/logo.svg"
+html_favicon = "_static/logo.svg"
+html_css_files = ["custom.css"]
+html_theme_options = {
+    "sidebar_hide_name": False,
+    "light_css_variables": {
+        "color-brand-primary": "#2a9d8f",
+        "color-brand-content": "#1d6f86",
+        "color-background-primary": "#fffdf8",
+        "color-background-secondary": "#fbf6ec",
+        "color-admonition-background": "#fff7e6",
+        "font-stack": "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif",
+        "font-stack--monospace": "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#5cc8b8",
+        "color-brand-content": "#8fd3e8",
+        "color-background-primary": "#111722",
+        "color-background-secondary": "#161e2c",
+    },
+    "source_repository": "https://github.com/siddharth7113/stargazer_model",
+    "source_branch": "main",
+    "source_directory": "docs/",
+}
+pygments_style = "friendly"
+pygments_dark_style = "monokai"
+copybutton_prompt_text = r">>> |\$ "
+copybutton_prompt_is_regexp = True
+mermaid_init_js = (
+    "mermaid.initialize({startOnLoad:true, theme:'neutral', "
+    "themeVariables:{fontFamily:'Inter, sans-serif'}});"
+)
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 exclude_patterns = ["_build"]
