@@ -10,3 +10,4 @@ results/*.log
 docs/_build/
 docs/generated/
 .env
+data/episodes/
