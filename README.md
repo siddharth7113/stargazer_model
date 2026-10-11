@@ -6,7 +6,7 @@
 
 <p align="center">
   A verifiable benchmark and reinforcement-learning environment for finding exoplanets in light curves.<br>
-  A language model works through a light curve with an astronomer's classical tools, and the benchmark scores its answer against an exact answer key.
+  A language model works through a light curve with an astronomer's classical tools, and the benchmark scores its decision against an exact answer key.
 </p>
 
 <p align="center">
@@ -31,18 +31,18 @@
 
 ## Purpose
 
-Mission pipelines search every star once, with one fixed set of thresholds, and the
-candidates they miss stay missed. Star Gazer tests a different way of working. A
-language model receives one light curve together with the classical tools of an
-astronomer, among them Box Least Squares (BLS), phase folding, an odd-even check and a
-single-event search. The model calls the tools it needs, in the order it chooses, and
+Mission pipelines search every star once with one fixed set of thresholds, so a signal
+below the cut never reaches a human. Star Gazer tests a different way of
+working. A language model receives one light curve together with the classical tools of
+an astronomer, among them Box Least Squares (BLS), phase folding, an odd-even check and
+a single-event search. The model calls the tools it needs, in the order it chooses, and
 decides whether the star has a transiting planet and at what period and epoch. The
 benchmark then scores that decision against an answer key that is exact, because the
 planets were put there on purpose.
 
 The answer key comes from injection and recovery, the method the Kepler and TESS teams
 use to measure their own pipelines. The build step takes real Transiting Exoplanet
-Survey Satellite (TESS) light curves of stars with no known planet and multiplies
+Survey Satellite (TESS) light curves of stars with no detected planet and multiplies
 synthetic transits with known parameters into some of them. Each episode therefore has
 a known truth, the build configuration sets how faint and how long-period the
 injections are, and a new episode set costs one command.
@@ -77,8 +77,8 @@ The commands below take one TESS sector from host-star selection to a comparison
 table. The first three build an episode set, the next two run the classical baseline
 and a language-model agent on it, and the last two inspect and compare the results.
 The recording above comes from `assets/quickstart.tape`, which
-[VHS](https://github.com/charmbracelet/vhs) replays, so the recording stays in step
-with the commands.
+[VHS](https://github.com/charmbracelet/vhs) replays, so it stays in step with the
+commands.
 
 ```bash
 stargazer targets  --sector 98 --n 60 --seed 1               # host stars with no TOI
@@ -227,5 +227,5 @@ sphinx-build -b html docs docs/_build/html
 
 The code is released under the BSD 3-Clause license, which permits use and
 modification as long as the copyright notice stays in each copy and the author's name
-is not used to endorse derived work. The TESS data are NASA data in the public domain,
+is not used to endorse derived work. The TESS light curves are NASA data in the public domain,
 and the logo is original work released with the code.
