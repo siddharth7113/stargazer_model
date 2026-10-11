@@ -738,3 +738,45 @@ near-degenerate b and k pair is wide, so the error is honest and not useful as a
 detection statistic; and on a host with a strong periodic signal the noise at the
 6-hour box timescale is 420 ppm, so the 6-hour injected event is found by the
 1-hour box at snr 9 and not by its own width.
+
+**Inkling-Small, full s98_v2 run with fit_transit and secondary_eclipse**
+(`results/full_v5fit/agent_inkling_small_s98_v2.json`, log beside it; renderer
+`tml_v0`, temperature 0.6, seed 0, eight workers, no errors, 819 s, $9.68, 33,625
+tokens and 8.4 tool calls an episode; tools and prompt of commit `6f9b513`).
+
+```
+stargazer agent --episodes data/episodes/s98_v2 --backend tinker --model thinkingmachines/Inkling-Small \
+    --renderer tml_v0 --limit 0 --workers 8 --out results/full_v5fit/agent_inkling_small_s98_v2.json
+```
+
+| run | false alarm | exact | with aliases | mean score | one transit | two | 3-5 | 6+ | wrong period | calls/ep | cost |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| v2tools | 0.11 | 0.32 | 0.34 | 0.533 | 0/18 | 1/14 | 4/22 | 38/73 | 6 | 9.7 | $9.16 |
+| v3form + edge guard | 0.12 | 0.28 | 0.34 | 0.515 | 2/18 | 2/14 | 6/22 | 33/73 | 8 | 9.6 | $9.65 |
+| v4search | 0.11 | 0.32 | 0.35 | 0.538 | 2/18 | 2/14 | 5/22 | 36/73 | 10 | 8.0 | $7.86 |
+| v5fit | 0.03 | 0.35 | 0.37 | 0.583 | 1/18 | 2/14 | 4/22 | 40/73 | 4 | 8.4 | $9.68 |
+| BLS at 5 percent false alarm | 0.05 | 0.25 | - | - | 0/18 | 2/14 | 27% | 51% | - | - | - |
+
+Outcomes: 43 hits, 1 alias, 4 wrong periods, 3 event hits, 76 misses, 71 true nulls,
+2 false alarms. The model called fit_transit on 154 episodes and secondary_eclipse on
+126.
+
+Reading. The two vetting tools did what they are for. False alarms fell from 8 to 2,
+wrong periods from 10 to 4, and the mean score is the highest of the series at 0.583,
+with exact completeness above the earlier runs and far above the BLS baseline at a
+lower false-alarm rate. The two false alarms are one host (TIC in the results file)
+with a real 0.946-day signal, fitted flat_bottom and plausible at 7 sigma with no
+secondary, on four episodes of that host (two counted as wrong periods); that is a
+signal in the star, not a harness error, and a known cost of injection into real
+hosts.
+
+Finding. The one-transit bin fell from 2 to 1 because ep_0029 and ep_0079, the two
+bright lone transits, were submitted as periods. The search paired each real dip
+with an epoch inside a gap: bls_peaks reported `n_events_in_data` 2 from floor
+arithmetic, the fold showed one clean dip, fit_transit said flat_bottom and plausible
+at 35 sigma, and odd_even said insufficient_data with one event of one parity and
+none of the other, which the model did not read as a warning. The count is now the
+number of epochs with at least three points in transit, so both episodes report 1,
+and the prompt says that a signal with one event is a single event and that
+odd_even with one event and none of the other parity means the same. A test covers
+an epoch inside the gap. Tool and prompt change: the next series is `full_v6count`.

@@ -679,6 +679,238 @@ plt.show()
             ),
         ],
     ),
+    Notebook(
+        "06_scoring",
+        [
+            (
+                "markdown",
+                """
+# 6. Scoring
+
+The scorer compares one prediction with the hidden truth of one episode and returns
+a number between 0 and 1 with an outcome word. It reads no files and uses no
+network, so a training loop can call it on each rollout. This notebook runs it on
+the loaded episode with several predictions and shows what each rule does.
+""",
+            ),
+            (
+                "markdown",
+                """
+## The periodic form
+
+A prediction with a period is credited 1.0 at the true period, 0.5 at half or
+double, 0.25 at a third or triple, within 1 percent. The epoch is folded on the true
+period and must fall within half a duration of a transit centre; it is worth 30
+percent of the credit. A wrong period scores zero, the same as a false alarm.
+""",
+            ),
+            (
+                "code",
+                """
+from stargazer.score import score_episode
+
+transit = truth["transit"]
+predictions = {
+    "right period and epoch": {"detected": True, "period": transit["period"], "t0": transit["t0"]},
+    "right period, wrong epoch": {
+        "detected": True,
+        "period": transit["period"],
+        "t0": transit["t0"] + 0.4 * transit["period"],
+    },
+    "double period": {"detected": True, "period": 2 * transit["period"], "t0": transit["t0"]},
+    "wrong period": {"detected": True, "period": 1.37 * transit["period"], "t0": transit["t0"]},
+    "no detection": {"detected": False},
+}
+for label, prediction in predictions.items():
+    row = score_episode(prediction, truth)
+    print(f"{label:28s} outcome {row['outcome']:13s} score {row['score']:.2f}")
+""",
+            ),
+            (
+                "markdown",
+                """
+## The single-event form
+
+A prediction with no period claims one event at a time. The event passes the same
+epoch check. It scores 1.0 on an episode with one transit in the data, where no
+period was measurable, and 0.5 where the data held more transits. The loaded
+episode has many transits, so an event on one of them scores 0.5.
+""",
+            ),
+            (
+                "code",
+                """
+one_transit = {**truth, "n_transits": 1}
+on_transit = {
+    "detected": True,
+    "t0": transit["t0"],
+    "duration": transit["duration"],
+    "depth": transit["depth"],
+}
+off_transit = {**on_transit, "t0": transit["t0"] + 0.5 * transit["period"]}
+for label, prediction, record in (
+    ("event on a transit, many in the data", on_transit, truth),
+    ("event on a transit, one in the data", on_transit, one_transit),
+    ("event between transits", off_transit, truth),
+):
+    row = score_episode(prediction, record)
+    print(f"{label:38s} outcome {row['outcome']:13s} score {row['score']:.2f}")
+""",
+            ),
+            (
+                "markdown",
+                """
+## A null episode
+
+On an episode with no injection, "none" scores 1.0 and any detection scores 0.0.
+""",
+            ),
+            (
+                "code",
+                """
+null = {"kind": "null"}
+for label, prediction in (("no detection", {"detected": False}), ("a detection", on_transit)):
+    row = score_episode(prediction, null)
+    print(f"{label:14s} outcome {row['outcome']:12s} score {row['score']:.2f}")
+""",
+            ),
+            (
+                "markdown",
+                """
+## The score against the period error
+
+The plot sweeps the predicted period across the true one and shows the score. The
+tolerance is a strict band of 1 percent; the aliases at half and double are narrower
+bands at half credit.
+""",
+            ),
+            (
+                "code",
+                """
+ratios = np.linspace(0.45, 2.1, 2000)
+scores = [
+    score_episode({"detected": True, "period": ratio * transit["period"], "t0": transit["t0"]}, truth)[
+        "score"
+    ]
+    for ratio in ratios
+]
+fig, axis = plt.subplots()
+axis.plot(ratios, scores, color="tab:red")
+axis.set_xlabel("predicted period / true period")
+axis.set_ylabel("score")
+plt.show()
+""",
+            ),
+        ],
+    ),
+    Notebook(
+        "07_reading_a_run",
+        [
+            (
+                "markdown",
+                """
+# 7. Reading a run
+
+A run writes one results file: the configuration that produced it, each
+prediction with its full trajectory, each score row, and the set-level summary.
+This notebook reads the most recent full run of Inkling-Small on s98_v2 if it is
+present, and the three-episode check otherwise, and shows how to read it.
+""",
+            ),
+            (
+                "code",
+                """
+import json
+
+candidates = [
+    Path("../results/full_v5fit/agent_inkling_small_s98_v2.json"),
+    Path("../results/full_v4search/agent_inkling_small_s98_v2.json"),
+    Path("../results/smoke/agent_inkling_small_s98_v2_fit3.json"),
+]
+results_path = next(path for path in candidates if path.exists())
+results = json.loads(results_path.read_text())
+print(results_path.name, "·", results["system"], "·", len(results["episodes"]), "episodes")
+settings = ("backend_base_model", "backend_renderer", "period_rtol", "single_event_credit")
+print({key: results["config"][key] for key in settings})
+""",
+            ),
+            (
+                "markdown",
+                """
+## The summary
+
+The two headline numbers are the false-alarm rate, the share of null episodes with
+a detection, and the completeness, the share of injected transits found. The
+completeness by transit count shows the regime the single-event form opened.
+""",
+            ),
+            (
+                "code",
+                """
+summary = results["summary"]
+print("false-alarm rate", round(summary["false_alarm_rate"], 3))
+exact, with_aliases = summary["completeness_exact"], summary["completeness_with_aliases"]
+print("completeness exact", round(exact, 3), "with aliases", round(with_aliases, 3))
+print("mean score", round(summary["mean_score"], 3))
+fig, axis = plt.subplots(figsize=(6, 3.5))
+labels = list(summary["by_n_transits"])
+values = [bin_["completeness"] or 0.0 for bin_ in summary["by_n_transits"].values()]
+counts = [bin_["n"] for bin_ in summary["by_n_transits"].values()]
+axis.bar(labels, values, color="tab:red")
+for index, (value, count) in enumerate(zip(values, counts, strict=True)):
+    axis.text(index, value + 0.01, f"n={count}", ha="center")
+axis.set_xlabel("transits in the data")
+axis.set_ylabel("completeness")
+plt.show()
+""",
+            ),
+            (
+                "markdown",
+                """
+## The outcomes
+
+Each episode has one outcome word. A hit is the right period; an alias is half or
+double; a wrong period is a detection at an unrelated period; an event hit is a
+credited single event; a miss is an injection the model declined; a true null and a
+false alarm are the two answers on an empty star.
+""",
+            ),
+            (
+                "code",
+                """
+from collections import Counter
+
+outcomes = Counter(record["score"]["outcome"] for record in results["episodes"].values())
+for outcome, count in outcomes.most_common():
+    print(f"{outcome:14s} {count}")
+""",
+            ),
+            (
+                "markdown",
+                """
+## One trajectory
+
+The prediction of each episode holds the transcript: each tool call with its
+arguments and its result. The cell prints the calls of the first hit, so the reader
+sees the procedure the model followed. The `stargazer show` command prints the same
+with the tool results summarised.
+""",
+            ),
+            (
+                "code",
+                """
+hits = [episode for episode, record in results["episodes"].items() if record["score"]["outcome"] == "hit"]
+first_hit = hits[0]
+record = results["episodes"][first_hit]
+print(first_hit, "·", record["score"]["outcome"], "· score", record["score"]["score"])
+for step, call in enumerate(record["pred"]["transcript"], start=1):
+    arguments = {key: value for key, value in call["arguments"].items() if key != "reasoning"}
+    print(f"{step:2d} {call['tool']:18s} {arguments}")
+print("reasoning:", record["pred"].get("reasoning"))
+""",
+            ),
+        ],
+    ),
 ]
 
 

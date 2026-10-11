@@ -68,6 +68,7 @@ ban-relative-imports = "all"
 convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
+"examples/*.ipynb" = ["F401"]  # the shared preamble imports numpy for every notebook
 # tests: require a module docstring (D100) and a function docstring (D103); skip class-level rules
 "tests/**/*" = ["D101", "D102", "D104", "D105", "D106", "D107"]
 "scripts/*" = ["D"]

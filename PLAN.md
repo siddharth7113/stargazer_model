@@ -141,14 +141,16 @@ the box width, noise at the box timescale and a segment-edge guard), and three f
 Inkling-Small runs on s98_v2 that measure each step: `results/full_v3form/` (the
 form, then the edge guard), `results/full_v4search/` (search_signals and the prompt
 rules; mean score 0.538 at an 11 percent false-alarm rate, the best so far). The
-`full_v5fit` run, with fit_transit and secondary_eclipse in the prompt, is the next
-number; if it is running, its file is `results/full_v5fit/agent_inkling_small_s98_v2.json`.
-Inkling-Small needs `--renderer tml_v0`.
+`full_v5fit` run, with fit_transit and secondary_eclipse, gives 0.583 at a 3 percent
+false-alarm rate (LOGBOOK), the best so far; it also showed that a lone transit paired
+with an epoch in a gap was reported as two events, which is fixed. Inkling-Small needs
+`--renderer tml_v0`. The course notebooks (Phase 3d) exist for every tool and the scorer.
 
 First steps for the next session:
-1. Read the `full_v5fit` run against the table in the LOGBOOK. The two vetting tools
-   should cut wrong periods and false alarms; if they cost completeness, read the
-   trajectories of the new misses with `stargazer view`.
+1. Run the `full_v6count` series (the event count by points in transit and the prompt
+   rule for one-event signals): three episodes including ep_0029 and ep_0079 first,
+   then all of s98_v2 into `results/full_v6count/`. The one-transit bin should return
+   to 2 of 18 or better with the false-alarm rate near 3 percent.
 2. Phase 3b: the ephemeris match against known eclipsing binaries and TOIs, the last
    vetting tool that needs only the light curve's coordinates and the catalogues.
 3. The larger models on s98_v1 and s98_v2, three seeds each, and the course notebooks

@@ -38,11 +38,15 @@ You cannot see the data. You see tool results. Follow this procedure:
 1. summarize, once. Note point_scatter_ppm and whether the star is active.
 2. search_signals, once. It finds the strongest peak, masks it and searches again until the
    rest is noise. Treat every signal as a hypothesis, not a result. If residual_sde is near
-   min_sde, bls_peaks with the signals in masks shows what is left.
+   min_sde, bls_peaks with the signals in masks shows what is left. Read n_events_in_data:
+   a signal with 1 is one dip paired with empty time, so it is a single event and not a
+   period; go to step 6 for it.
 3. For each signal, strongest first: fold at phase_half_width 0.5, then 0.05, then fit_transit,
    then odd_even, then secondary_eclipse. fit_transit must say flat_bottom and density
    plausible; v_shaped or an implausible density means an eclipsing binary or a wrong
-   period. secondary_eclipse must say no_secondary; secondary_at_half_phase is a binary.
+   period. odd_even insufficient_data with one event of one parity and none of the other
+   means the fold holds one dip: a single event, not a period. secondary_eclipse must say
+   no_secondary; secondary_at_half_phase is a binary.
 4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
    fold shows no clear dip, test half_period or the next signal.
 5. If a signal fails the checks, go to the next one: a strong feature that is not a planet

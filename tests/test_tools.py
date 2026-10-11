@@ -260,6 +260,15 @@ def test_bls_peaks_derived_fields(injected):
     assert top["n_events_in_data"] == 9  # 27 days at 3 days from t0 = 1: events at 1, 4, ..., 25
 
 
+def test_bls_peaks_event_count_skips_an_epoch_in_the_gap(lc, star):
+    """With t0 = 1.5 the epoch at 13.5 lies inside the gap from day 13 to 14, so 8 events have data, not 9."""
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=3.0, t0=1.5, depth=0.01, b=0.0, star=star)
+    top = tools.bls_peaks(relative, inject(relative, flux, truth))["peaks"][0]
+    assert abs(top["period"] / 3.0 - 1) < 0.01 and top["n_events_in_data"] == 8
+
+
 def test_bls_peaks_mask_reveals_weaker_signal(lc, star):
     """With a 1 percent, 3-day signal masked, a 0.2 percent, 7-day signal becomes the top peak."""
     time, flux, _ = lc

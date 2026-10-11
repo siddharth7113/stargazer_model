@@ -62,6 +62,17 @@ def summarize(time: np.ndarray, flux: np.ndarray) -> dict:
     }
 
 
+def _events_with_data(
+    time: np.ndarray, period: float, t0: float, duration: float, min_points: int = 3
+) -> int:
+    """Return the number of transit epochs with at least ``min_points`` points within half a duration."""
+    phase = ((time - t0 + 0.5 * period) % period) - 0.5 * period
+    in_transit = np.abs(phase) < 0.5 * duration
+    epochs = np.round((time[in_transit] - t0) / period).astype(int)
+    _, counts = np.unique(epochs, return_counts=True)
+    return int(np.sum(counts >= min_points))
+
+
 def bls_peaks(
     time: np.ndarray,
     flux: np.ndarray,
@@ -95,7 +106,10 @@ def bls_peaks(
         half_period, double_period`` for the strongest peaks, each at least 2 percent
         apart in period. ``n_periods_searched`` and ``n_points_masked``. The alias
         periods and the event count are derived here so the model does not do
-        arithmetic on them.
+        arithmetic on them. ``n_events_in_data`` counts the transit epochs with at
+        least three points in transit, so an epoch that falls in a gap does not
+        count; a peak with one such event is one dip that the fold pairs with empty
+        time, which is the single-event case and not a period.
 
     Notes
     -----
@@ -143,7 +157,7 @@ def bls_peaks(
                 "duration": round(float(res.duration[index]), 3),
                 "depth_ppm": round(float(res.depth[index]) * 1e6, 1),
                 "sde": round((float(power[index]) - mean) / std, 2),
-                "n_events_in_data": int(np.floor((work_time.max() - epoch) / period)) + 1,
+                "n_events_in_data": _events_with_data(work_time, period, epoch, float(res.duration[index])),
                 "half_period": round(period / 2, 5),
                 "double_period": round(period * 2, 5),
             }
