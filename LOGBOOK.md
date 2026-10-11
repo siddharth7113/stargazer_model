@@ -789,3 +789,48 @@ one event against none, called single_events and submitted the lone dip. On ep_0
 the faint one-transit injection (expected snr 16) that the model declined in two
 earlier checks, it submitted the event at snr 11.4 for the same reasons. The full run
 is `results/full_v6count/`.
+
+**Inkling-Small, full s98_v2 run with the event count by points in transit**
+(`results/full_v6count/agent_inkling_small_s98_v2.json`, log beside it; renderer
+`tml_v0`, temperature 0.6, seed 0, eight workers, no errors, 799 s, $9.60, 33,341
+tokens and 8.2 tool calls an episode; tools and prompt of commit `db99a6e`).
+
+```
+stargazer agent --episodes data/episodes/s98_v2 --backend tinker --model thinkingmachines/Inkling-Small \
+    --renderer tml_v0 --limit 0 --workers 8 --out results/full_v6count/agent_inkling_small_s98_v2.json
+```
+
+| run | false alarm | exact | with aliases | mean score | one transit | two | 3-5 | 6+ | wrong period | hits |
+|---|---|---|---|---|---|---|---|---|---|---|
+| v5fit | 0.03 | 0.35 | 0.37 | 0.583 | 1/18 | 2/14 | 4/22 | 40/73 | 4 | 43 |
+| v6count | 0.05 | 0.33 | 0.35 | 0.558 | 3/18 | 2/14 | 4/22 | 36/73 | 2 | 39 |
+
+Outcomes: 39 hits, 3 aliases, 2 wrong periods, 3 event hits, 2 wrong events, 78
+misses, 69 true nulls, 4 false alarms. Gained against v5fit: ep_0004, ep_0029 and
+ep_0079, the three one-transit episodes of the check, all event hits, so the
+one-transit bin is 3 of 18, the best so far, and wrong periods are 2. Lost: five
+hits became misses, ep_0021, ep_0046, ep_0061, ep_0072 and ep_0107, with expected snr
+16 to 142 and 24 to 66 transits each. The four false alarms are two hosts (TIC
+146420104 at 15.37 days, TIC 121711742 at 28.11 days) with the same answer on both
+of their episodes, real features of those stars. The two wrong events are an 18
+percent eclipsing binary submitted as an event against the depth rule (ep_0145) and
+an edge-time t0 on ep_0172.
+
+Finding. The five lost hits share one cause: fit_transit at the true period returned
+`v_shaped`, with b + k between 0.90 and 1.00, on transits of 1.2 to 1.7 hours at
+periods of 0.5 to 1.6 days, and the model obeyed the rule. Over both runs, 6 of 98
+fits at a true period are v_shaped, against 40 of 106 fits at a wrong period or on
+a null, so the verdict separates the two groups but its 0.9 bound sits inside the
+spread of true planets with short transits, where six 5-minute bins cannot fix b.
+Four of the five were hits in v5fit with the same tools, so the model's reading of
+a v_shaped verdict varies from seed to seed; the verdict needs a middle word.
+
+**fit_transit: three-way shape verdict.** `shape` is now flat_bottom below b + k of
+0.9, grazing_uncertain from 0.9 to 1.0, and v_shaped at 1.0 and above
+(`SHAPE_VERDICTS`). In the v6count run the fits at a wrong period or on a null fell
+66, 26 and 14 into the three bands, and the fits at a true period 92, 6 and 0, so the
+middle band holds both true short transits and wrong answers, and the model must
+decide it by odd_even, secondary_eclipse and the depth; the prompt says so and no
+longer requires flat_bottom. Offline, the five lost hits now read grazing_uncertain
+(ep_0046 at 0.92, ep_0107 at 1.00, ep_0061 at 0.90). The grazing test accepts either
+of the two upper verdicts. Tool and prompt change: the next series is `full_v7shape`.

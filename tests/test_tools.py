@@ -335,14 +335,14 @@ def test_fit_transit_recovers_depth_duration_and_geometry(lc, star):
 
 
 def test_fit_transit_calls_a_grazing_dip_v_shaped(lc, star):
-    """A grazing injection, b near 1, has no flat bottom and comes back ``v_shaped``."""
+    """A grazing injection, b near 1, has no flat bottom; the fit lands at or near the limb."""
     time, flux, _ = lc
     relative = time - time.min()
     truth = make_truth(period=3.0, t0=1.0, depth=0.01, b=0.98, star=star)
     result = tools.fit_transit(
         relative, inject(relative, flux, truth), period=3.0, t0=1.0, duration=truth.duration
     )
-    assert result["shape"] == "v_shaped" and result["impact_parameter"] > 0.9
+    assert result["shape"] in ("v_shaped", "grazing_uncertain") and result["impact_parameter"] > 0.9
 
 
 def test_fit_transit_on_noise_has_low_significance(lc):

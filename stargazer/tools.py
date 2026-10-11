@@ -453,11 +453,17 @@ FIT_LIMB_DARKENING_TEFF = 5500.0
 """Effective temperature, kelvin, whose TESS quadratic limb-darkening coefficients the
 transit fit uses. The tool sees only a light curve, so it takes a Sun-like star."""
 
-GRAZING_BOUND = 0.9
-"""Value of ``b + k`` (impact parameter plus radius ratio) at or above which the fitted
-geometry is reported as ``v_shaped``. At 1.0 the planet disc crosses the limb at
-mid-transit; the margin below it covers the fit's degeneracy between ``b`` and ``k``
-on a near-grazing dip."""
+SHAPE_VERDICTS: tuple[tuple[float, str], ...] = (
+    (0.9, "flat_bottom"),
+    (1.0, "grazing_uncertain"),
+    (np.inf, "v_shaped"),
+)
+"""Upper bound of ``b + k`` (impact parameter plus radius ratio) and the shape verdict
+for a value below it. The first row that exceeds the value wins. Below 0.9 the planet
+disc lies inside the stellar disc with a margin and the dip has a flat bottom. At 1.0
+and above the disc crosses the limb at mid-transit, a V shape. Between the two the
+fit cannot separate ``b`` from ``k`` on a short transit: a full run showed true
+planets with transits under two hours fitted there, beside grazing binaries."""
 
 DENSITY_VERDICTS: tuple[tuple[float, str], ...] = (
     (0.1, "too_low_for_a_dwarf"),
@@ -498,7 +504,8 @@ def fit_transit(
     dict
         ``depth_ppm`` and ``depth_err_ppm``, ``duration_hours``, ``t0`` (refined, days),
         ``rp_rs``, ``a_rs``, ``impact_parameter``, ``stellar_density_gcc`` and
-        ``density_verdict``, ``shape`` (``flat_bottom`` or ``v_shaped``),
+        ``density_verdict``, ``shape`` (``flat_bottom``, ``grazing_uncertain`` or
+        ``v_shaped``),
         ``significance_sigma``, ``n_bins`` and ``n_in_transit``.
 
     Notes
@@ -525,9 +532,10 @@ def fit_transit(
     20, so a value outside that range means the dip is not a transit of a dwarf at
     this period; :data:`DENSITY_VERDICTS` holds the bounds. The shape is
     ``flat_bottom`` if the planet disc lies well inside the stellar disc at
-    mid-transit, :math:`b + k < 0.9` (:data:`GRAZING_BOUND`), and ``v_shaped``
-    otherwise, a grazing geometry that a blended or grazing eclipsing binary produces
-    more often than a planet. The significance is
+    mid-transit, :math:`b + k < 0.9`, ``v_shaped`` if :math:`b + k \\geq 1`, a grazing
+    geometry that a blended or grazing eclipsing binary produces more often than a
+    planet, and ``grazing_uncertain`` between the two, where the fit of a short
+    transit cannot tell; :data:`SHAPE_VERDICTS` holds the bounds. The significance is
     :math:`\sqrt{\chi^2_\mathrm{flat} - \chi^2_\mathrm{fit}}`, the improvement of
     the transit model over a flat line, in sigma. The depth error is the square root
     of the diagonal of the covariance :math:`(J^T J)^{-1}` at the solution, scaled by
@@ -613,7 +621,7 @@ def fit_transit(
         "impact_parameter": round(float(fitted.b), 3),
         "stellar_density_gcc": round(density_gcc, 3),
         "density_verdict": verdict,
-        "shape": "flat_bottom" if fitted.b + rp_rs < GRAZING_BOUND else "v_shaped",
+        "shape": next(name for bound, name in SHAPE_VERDICTS if fitted.b + rp_rs < bound),
         "significance_sigma": round(float(np.sqrt(max(chi2_flat - chi2_fit, 0.0))), 1),
         "n_bins": len(bin_flux),
         "n_in_transit": int(np.sum(np.abs(bin_phase) < 0.5 * fitted_duration)),
@@ -1111,7 +1119,9 @@ TOOLS: tuple[ToolSpec, ...] = (
             "depth_ppm with depth_err_ppm, duration_hours, a refined t0, impact_parameter, "
             "stellar_density_gcc with density_verdict (plausible for a dwarf star between 0.1 and 20; "
             "too_low_for_a_dwarf or too_high means the dip does not fit a planet at this period), shape "
-            "(flat_bottom is planet-like; v_shaped is grazing, as eclipsing binaries often are) and "
+            "(flat_bottom is planet-like; v_shaped is grazing, as eclipsing binaries often are; "
+            "grazing_uncertain means a short transit the fit cannot settle, so decide by the other "
+            "checks) and "
             "significance_sigma (the improvement over a flat line). Use after the fold and before "
             "odd_even on every candidate you consider submitting."
         ),

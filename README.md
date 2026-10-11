@@ -181,10 +181,13 @@ cost and the reading of each run.
 | single-event submission form, edge guard | 12% | 28% | 34% | 0.515 | 2 of 18 |
 | search_signals, single-event rules | 11% | 32% | 35% | 0.538 | 2 of 18 |
 | fit_transit, secondary_eclipse | 3% | 35% | 37% | 0.583 | 1 of 18 |
+| event count by points in transit | 5% | 33% | 35% | 0.558 | 3 of 18 |
 
 The two vetting tools cut the false-alarm rate to 3 percent and the wrong periods
-from 10 to 4. The one-transit hits moved with the event count of the search, which
-now counts only epochs with data; the run with that change is in LOGBOOK.md.
+from 10 to 4. The event count by points in transit returned the lone transits to the
+single-event form, at the cost of five short-transit planets that the shape verdict
+called v-shaped; the verdict now has a middle word for that case, and the run with
+it is in LOGBOOK.md.
 
 ## Toolbox
 

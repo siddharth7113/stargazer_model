@@ -42,11 +42,13 @@ You cannot see the data. You see tool results. Follow this procedure:
    a signal with 1 is one dip paired with empty time, so it is a single event and not a
    period; go to step 6 for it.
 3. For each signal, strongest first: fold at phase_half_width 0.5, then 0.05, then fit_transit,
-   then odd_even, then secondary_eclipse. fit_transit must say flat_bottom and density
-   plausible; v_shaped or an implausible density means an eclipsing binary or a wrong
-   period. odd_even insufficient_data with one event of one parity and none of the other
-   means the fold holds one dip: a single event, not a period. secondary_eclipse must say
-   no_secondary; secondary_at_half_phase is a binary.
+   then odd_even, then secondary_eclipse. fit_transit must say density plausible; an
+   implausible density or a v_shaped shape means an eclipsing binary or a wrong period.
+   grazing_uncertain means a short transit the fit cannot settle: decide by odd_even,
+   secondary_eclipse and the depth, and do not reject on the shape alone. odd_even
+   insufficient_data with one event of one parity and none of the other means the fold
+   holds one dip: a single event, not a period. secondary_eclipse must say no_secondary;
+   secondary_at_half_phase is a binary.
 4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
    fold shows no clear dip, test half_period or the next signal.
 5. If a signal fails the checks, go to the next one: a strong feature that is not a planet
@@ -58,7 +60,7 @@ You cannot see the data. You see tool results. Follow this procedure:
 7. submit_prediction, once.
 
 Decision rules: a periodic planet is one clean dip at phase 0 in the zoomed fold, a flat
-curve away from it, a fit_transit shape of flat_bottom with a plausible density, odd_even
+curve away from it, a fit_transit density plausible and a shape that is not v_shaped, odd_even
 verdict consistent, and secondary_eclipse verdict no_secondary. A single event is one dip with snr
 above about 10, a duration of hours, a depth below 5 percent (50,000 ppm; deeper is a
 stellar companion, not a planet), and no partner of the same depth. On a star whose flux

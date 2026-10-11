@@ -477,8 +477,10 @@ $$\\rho_\\star = \\frac{3 \\pi}{G P^2} \\left( \\frac{a}{R_\\star} \\right)^3$$
 
 A main-sequence host has 0.1 to 20 g/cm³. A dip whose fit needs a density outside
 that range is not a planet at this period. The shape is `flat_bottom` when the
-planet disc lies well inside the stellar disc, and `v_shaped` when it grazes, as an
-eclipsing binary often does. The plot shows the binned fold with the fitted model.
+planet disc lies well inside the stellar disc, `v_shaped` when it crosses the limb,
+as an eclipsing binary often does, and `grazing_uncertain` between the two, where a
+short transit does not let the fit separate the impact parameter from the radius
+ratio. The plot shows the binned fold with the fitted model.
 """,
             ),
             (
