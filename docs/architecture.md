@@ -111,8 +111,8 @@ flowchart LR
     res --> file[results/*.json]
 ```
 
-The detector sees only the episode file. The scorer sees the prediction and the truth.
-Nothing else crosses that line.
+The detector sees only the episode file. The scorer sees only the prediction and the
+truth.
 
 ## An evaluation run
 

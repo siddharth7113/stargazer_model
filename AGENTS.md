@@ -1,30 +1,33 @@
 # AGENTS.md
 
-Guidance for a coding agent that works in this repository. The owner reviews every
-change closely. Read this file, then STYLE.md, then the Handoff section at the end of
-PLAN.md, then the last entries of LOGBOOK.md, before you change anything.
+This file gives guidance to a coding agent that works in this repository. The owner
+reviews every change closely. Before a change, read this file, then STYLE.md if it is
+present, then the Handoff section at the end of PLAN.md, then the last entries of
+LOGBOOK.md. STYLE.md is the owner's personal style file. It is not tracked by git, so
+a clone does not have it. The rules below are the parts of it that apply to code.
 
-## What this project is
+## Project
 
 Star Gazer is a verifiable benchmark and reinforcement-learning environment for
-exoplanet detection. The goal, in the owner's words: the model acts as an astronomer
-with the field's classical detection and vetting tools, at machine speed, and makes
-discoveries. PLAN.md states the goal, the principles and the roadmap. LOGBOOK.md has
-every number produced so far with the command that produced it.
+exoplanet detection. The owner states the goal as follows. The model acts as an
+astronomer with the classical detection and vetting tools of the field, works at
+machine speed and makes discoveries. PLAN.md states the goal, the principles and the
+roadmap. LOGBOOK.md has every number produced so far with the command that produced it.
 
-## Rules that are not negotiable
+## Fixed rules
 
-- Follow STYLE.md: Simplified Technical English in docs and docstrings; numpydoc with
-  `Notes` for every equation and numbered `References` with DOIs; absolute imports
-  only; no single-letter variable names; lookup tables instead of `if` chains; one
-  class with one responsibility rather than loose helper functions; maintained
-  standard packages only (numpy, scipy, astropy, lightkurve, batman, textual).
+- Follow STYLE.md. It requires Simplified Technical English in docs and docstrings;
+  numpydoc with `Notes` for every equation and numbered `References` with DOIs;
+  absolute imports only; no single-letter variable names; a lookup table for a chain
+  of `if` statements; one class for one responsibility, with no loose helper
+  functions; maintained standard packages only (numpy, scipy, astropy, lightkurve,
+  batman, textual).
 - Every docstring must stand alone for a first-time reader. Define "episode",
   "detector", "truth" where they appear.
 - Tests: one file for each module under `tests/`, one behaviour for each test, a
   docstring on every test saying what it checks and why, no tautological asserts.
   Cross-module tests go in `tests/integration/`. Style rules are pre-commit hooks in
-  `scripts/`, never tests.
+  `scripts/`. Do not write a test for a style rule.
 - Do not add a spend cap, a budget or a cost guard in code. The owner controls spend
   through API keys. Report cost only when the backend knows it; never print a zero
   as a placeholder.
@@ -54,15 +57,15 @@ model on an episode set; start with `--limit 3` and read the trajectory with
 `stargazer view` before a full run. Full runs use `--workers 8` and one process for
 each model.
 
-## How to work
+## Working method
 
-- Before an expensive run, fix every harness defect you can see in a three-episode
-  run. A parsed-but-unused flag or a cap that cuts a model off makes the results
+- Before an expensive run, do a three-episode run and fix every harness defect that it
+  shows. A parsed-but-unused flag or a cap that cuts a model off makes the results
   file lie about what ran. The results file's `config` is the only truth about a run.
 - Record every run in LOGBOOK.md: date, exact command, results file, numbers, what
   they mean. Tick a PLAN.md box only with a LOGBOOK entry as evidence.
-- When you change the tools or the prompt, the comparison with earlier runs breaks;
-  say so in the LOGBOOK and rerun the baseline comparison.
+- A change to the tools or the prompt breaks the comparison with earlier runs. Record
+  the break in the LOGBOOK and rerun the baseline comparison.
 - Prefer a tool that gives the model a verdict word over one that makes the model
   apply a threshold. Prefer derived fields (alias periods, event counts) over asking
   the model to do arithmetic.

@@ -64,8 +64,7 @@ results.save("results/my_detector_s98_v1.json")
 ## Run a language-model agent
 
 Put the provider key in a `.env` file. Copy `.env.example` to `.env` and fill in the
-values. The CLI loads it at start; git ignores it; the key is never written into a
-results file. An exported variable works as well.
+values.
 
 ```bash
 cp .env.example .env   # then edit
@@ -75,12 +74,12 @@ stargazer agent --episodes data/episodes/s98_v1 --model qwen/qwen3-32b --limit 3
 
 Sampling uses the model-card values for the renderer: temperature 0.7, top_p 0.8 and
 top_k 20 in non-thinking mode, 0.6, 0.95 and 20 in thinking mode. Temperature 0 is not
-the default: model cards discourage greedy decoding, and it does not make a hosted
-model deterministic. A run records its seed. To measure run-to-run variance, repeat the
+the default. Model cards discourage greedy decoding, and greedy decoding does not make a
+hosted model deterministic. A run records its seed. To measure run-to-run variance, repeat the
 run with `--seed 1`, `--seed 2` and report the mean and spread.
 
 The default `--limit 3` runs three episodes. Read the transcript in the results file
-before you run more. For Tinker:
+before a larger run. Install the `tinker` extra to use the Tinker backend.
 
 ```bash
 uv pip install -e ".[tinker]"
@@ -94,9 +93,23 @@ stargazer view --results results/full/agent_qwen38_27b_s98_v1.json   # terminal 
 stargazer show --results results/full/agent_qwen38_27b_s98_v1.json --episode ep_0001
 ```
 
-The viewer lists every episode with its truth, outcome and score. The right pane shows
-the model's thinking, each tool call, a shortened result and any nudge. Press `t` to
-hide thinking and `r` to see full tool results.
+The viewer has three panes. The left pane lists every episode with its expected
+signal-to-noise ratio (SNR), outcome and score. The centre pane shows the trajectory turn by turn: a header with the tool calls,
+the thinking, the model's text, one summary line per tool result and any nudge. The
+right pane shows the truth next to the prediction, and the stop reason, tokens and cost.
+
+| Key                        | Action                                                              |
+| -------------------------- | ------------------------------------------------------------------- |
+| `j`, `k` or the arrow keys | next or previous episode                                            |
+| `n`, `p`                   | next or previous turn, or search match                              |
+| `enter`                    | expand or collapse the results of the current turn                  |
+| `r`                        | expand or collapse all results as tables                            |
+| `t`                        | expand or collapse all thinking                                     |
+| `f`                        | cycle the filter: all, hit, miss, false_alarm, wrong_period, errors |
+| `/`, `escape`              | search the trajectory, clear the search                             |
+| `q`                        | quit                                                                |
+
+`stargazer show` prints the same turns to the console. Add `--full` to expand each result.
 
 ## Compare systems
 

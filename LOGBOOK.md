@@ -6,7 +6,8 @@ Newest entry at the bottom. Each entry has: date, what was done, exact command, 
 
 **Context.** Project started after reading about an independent researcher's AI-assisted
 candidate around TIC 4206066 (3.18 day, about 500 ppm, Zenodo preprint, not confirmed).
-Decision: build a general injection-recovery benchmark rather than chase one result.
+Decision: build a general injection-recovery benchmark. The project does not follow up
+that one candidate.
 
 **Environment.** Linux, Python 3.13.9 via uv venv, RTX 4050 6 GB, 12 cores, 15 GB RAM.
 MAST and PyPI reachable.
@@ -45,7 +46,7 @@ sees in the code.
   `hashlib.file_digest` from the standard library. `GitState` exists so a results file
   names the exact code behind its numbers; a version string cannot do that between
   releases.
-- Limb darkening is a replaceable table with a binary search, not an `if` chain.
+- Limb darkening is a replaceable table with a binary search. It replaces an `if` chain.
 
 **Episode set s98_v1, first build, discarded.** Built from all 41 hosts at 100 ppm to
 1 percent depth. The baseline run crashed at episode 88 with a NaN light curve. Cause:
@@ -67,8 +68,8 @@ Episode set hash `1ed1abbb5f8656816aab907021837eddba7d883acb3bb9978b02c23590779e
 39 hosts, 2 skipped for missing parameters. Depth range 100 ppm to 1 percent. Composition:
 57 null, 1 injected with no transit in the data (scored as null), 142 with at least one
 transit. Expected SNR percentiles 10/25/50/75/90: 1.7, 4.7, 19.2, 80.5, 189. Every episode
-file is finite. Size 62 MB, not in git; the hash is the reference. Note: sector 98 light
-curves span 57 days, not 27. TESS now observes longer sectors. The injection period
+file is finite. Size 62 MB, not in git; the hash is the reference. Sector 98 light
+curves span 57 days. Earlier TESS sectors span 27 days; TESS now observes longer sectors. The injection period
 range 0.5 to 20 days therefore gives at least two transits in nearly every episode.
 A later set should extend the period range to 60 days to exercise single transits.
 
@@ -123,8 +124,8 @@ calibrate file): 0-5: 0.00 (38 episodes); 5-7: 0.00 (6); 7-10: 0.22 (9); 10-20: 
 20-50: 0.48 (25); above 50: 0.86 (43). By transit count: one transit 0.20 (5), two 0.00
 (3), three to five 0.31 (26), six or more 0.48 (108).
 
-**Reading.** The baseline is weak exactly where a reasoning system can gain: SNR 7 to
-50 with few transits. Nearly every episode has six or more transits because sector 98 is
+**Reading.** The baseline is weak at SNR 7 to 50 with few transits, and a reasoning
+system can gain in that regime. Nearly every episode has six or more transits because sector 98 is
 57 days long and the period range stops at 20 days. Set s98_v2 should extend periods to
 60 days so single and double transits are common.
 
@@ -163,7 +164,8 @@ real model. The run also exposed three defects, listed by severity.
    17 percent peak to peak. The tool reported a 16 sigma odd-even difference for a real
    injected planet, because its standard error uses the point scatter divided by
    sqrt(n), which ignores residual variability after detrending. The error must come
-   from the scatter of the per-event depths. This is a tool bug, not a model error.
+   from the scatter of the per-event depths. This is a tool bug. The model did not
+   cause it.
 2. *The model inverted the odd_even rule.* Its reasoning on ep_0000 reads "15.97 sigma,
    suggesting the signal is not due to an eclipsing binary". The tool description says
    the opposite. An 8B model at temperature 0 misreads a numeric rule; the tool should
@@ -190,15 +192,16 @@ limitation of the shared tool, to be addressed by a detrend-window argument on
 
 Run 1, before the fixes (`results/agent_tinker_qwen3_8_27b_s98_v1_first3.json`): all
 three episodes ended at the tool-call cap of 12 with no submission, 55,000 tokens each.
-The transcripts show correct tool use and a careful alias check; the model simply had
-no room to finish. The cap was a CLI default of 12 that overrode the class default.
+The transcripts show correct tool use and a careful alias check; the model had no
+room to finish. The cap was a CLI default of 12 that overrode the class default.
 
 Fixes applied (commit after this entry): every tool result carries `calls_remaining`;
 the system prompt states the scoring rules, a procedure and a stop rule; `odd_even` uses
 the scatter of per-event depths for its error and returns a `verdict` word; `fold`
 returns 40 integer-ppm bins instead of 50 float bins with per-bin counts; each BLS peak
 carries `half_period`, `double_period` and `n_events_in_data`; validation errors return
-the expected arguments; the call cap is a safety stop of 40, not a budget.
+the expected arguments; the call cap is now a safety stop of 40. It does not act as a
+budget.
 
 Run 2, after the fixes, renderer `qwen3_8_disable_thinking`
 (`results/agent_tinker_qwen3_8_27b_s98_v1_first3_v2.json`):
@@ -209,13 +212,13 @@ Run 2, after the fixes, renderer `qwen3_8_disable_thinking`
 | ep_0001 | transit, P = 2.262 d | 8.7 | detected=false | miss, 0.0 | 9 | 28,075 |
 | ep_0002 | transit, P = 9.164 d | 4.7 | detected=false | miss, 0.0 | 9 | 28,177 |
 
-The two misses are reasoned refusals, not failures of the loop. On ep_0001 the model
+The two misses are reasoned refusals. The loop did not fail. On ep_0001 the model
 rejected the 14.4-day peak because its odd and even events disagree and the full-orbit
 fold shows a second dip; that is the right call for that peak. The injected 2.26-day,
 1,257 ppm signal never appears among the five BLS peaks at any detrend window from
 0.75 down to 0.15 days, because a single deep 1.5 percent dip at day 9.65 dominates the
-power spectrum at every window. A tool that masks the strongest feature and searches
-again, as the SPOC pipeline does, is the missing piece. Added to PLAN 1e.
+power spectrum at every window. The toolbox needs a tool that masks the strongest
+feature and searches again, as the SPOC pipeline does. Added to PLAN 1e.
 
 Run 3, renderer `qwen3_8_medium_reasoning`
 (`results/agent_tinker_qwen3_8_27b_reasoning_s98_v1_first3.json`): identical answers
@@ -253,16 +256,17 @@ but never passed it to the backend, so both ran with the default
 `qwen3_disable_thinking` template. The conclusion "Qwen3.8 emits no thinking on tool
 turns" is withdrawn. Fixed in the next commit, with a CLI test that checks the flags
 reach the backend. Lesson: a parsed-but-unused flag is the worst kind of bug in an
-experiment harness, because the results file records the intended setting, not the
-real one. From now on the backend config in the results file is the only source of
-truth for what ran: for those two files it says `renderer: qwen3_disable_thinking`.
+experiment harness. The results file records the intended setting, and the real
+setting stays hidden. From now on the backend config in the results file is the only
+source of truth for what ran. For those two files it says
+`renderer: qwen3_disable_thinking`.
 
 **Sampling defaults.** Temperature 0 was my choice for determinism; it was wrong on
 two counts. The Qwen3 model cards discourage greedy decoding because it degrades
 quality and can loop, and recommend temperature 0.7, top_p 0.8, top_k 20 in
 non-thinking mode and 0.6, 0.95, 20 in thinking mode. The Tinker cookbook uses 0.7
-for its tool-use benchmark. And temperature 0 does not make a hosted model
-deterministic anyway. New defaults: the model-card values keyed on the renderer's mode,
+for its tool-use benchmark. Also, temperature 0 does not make a hosted model
+deterministic. New defaults: the model-card values keyed on the renderer's mode,
 a recorded seed (default 0), and the rule that variance is measured by repeating a run
 with other seeds. Earlier runs in this logbook used temperature 0 and are not
 comparable with later ones.
@@ -273,7 +277,7 @@ three workers, in parallel (`results/smoke/`). Nemotron ended every episode as
 `model_stopped`: its transcripts show a correct `submit_prediction` written three times
 in a `<tool_call>` block without the closing tag, which my regex required. Inkling
 wrote its own tool-call tokens (`<|content_invoke_tool_json|>`) as text, because the
-prompt demanded Qwen's `<tool_call>` format from every model. Both were my fault: the
+prompt demanded Qwen's `<tool_call>` format from every model. Both were my fault. The
 backend parsed text by hand and imposed one family's wire format on all families.
 
 Fix (commit `6bb361e`): the Tinker backend now declares tools through the cookbook
@@ -282,8 +286,8 @@ cookbook `Message` type with `ToolCall` objects and tool results carrying both t
 id and the function name, and parses replies with the renderer's `parse_response`,
 which returns parsed `tool_calls`, the text and any thinking part. The system prompt
 no longer mentions a tool-call syntax. The plain-text `<tool_call>` parser remains
-only as a fallback. This is also what the RL phase needs: a policy is trained and
-evaluated in its own template.
+only as a fallback. The RL phase needs the same design, because a policy is trained
+and evaluated in its own template.
 
 **Parallel evaluation.** `evaluate` takes `workers`; episodes run in a thread pool and
 results keep episode order. The Tinker and OpenAI backends guard their lazy setup
@@ -349,7 +353,7 @@ Completeness by expected SNR (7-10 / 10-20 / 20-50 / 50+): BLS at SDE 11: 11 / 4
 86 percent; Inkling-Small: 11 / 33 / 44 / 91; Qwen3.8-27B: 22 / 38 / 52 / 91.
 
 Reading: at a matched false-alarm rate the agents are level with the thresholded BLS
-baseline, not above it. Qwen3.8-27B answered a wrong period 37 times out of 142
+baseline. Qwen3.8-27B answered a wrong period 37 times out of 142
 injections, Inkling 22 times. Both models used the same BLS tool the baseline uses, so
 they could only choose among the peaks it offered; the result measures the tool, as
 predicted. Qwen hit the turn cap on 6 episodes. Estimated cost: Inkling about $6,
@@ -363,22 +367,23 @@ of whether the tools were the ceiling.
 s98_v1, only one is within 2 percent of a simple ratio (1.5x, 2/3x, 4x, 1/4x) of the
 truth; the ratio of predicted to true period spans 0.07 to 8.5 with a median of 0.67.
 The median expected SNR of these episodes is 7.6, and 15 of the 37 have five or fewer
-transits. So the model picked an unrelated BLS peak on a faint injection: these are
-false alarms that happen to fall on transit episodes, and the real false-alarm
-behaviour of the agents is worse than the 19 to 24 percent measured on nulls alone.
-No extra alias credit is warranted. The fix is on the tool and decision side: the
-masked re-search, the single-event search, and a stricter rule in the prompt that a
-peak with SDE near the noise level and no second line of evidence is "none".
+transits. So the model picked an unrelated BLS peak on a faint injection. These
+answers are false alarms that happen to fall on transit episodes. The real false-alarm
+behaviour of the agents is therefore worse than the 19 to 24 percent measured on nulls
+alone. No extra alias credit is warranted. The fix belongs in the tools and the
+decision rule: the masked re-search, the single-event search, and a stricter rule in
+the prompt that a peak with SDE near the noise level and no second line of evidence is
+"none".
 
 **Nemotron-3.5-Lightning-30B-A3B, full s98_v1 run, old tools**
 (`results/full/agent_nemotron35_lightning_s98_v1.json`, renderer
 `nemotron3_disable_thinking`, temperature 0.7, seed 0): completeness 0.11 at a
 false-alarm rate of 0.26, mean score 0.29, 239,000 tokens an episode, 73 seconds an
 episode. It reached the 30-turn cap on most episodes and so never submitted; the few
-submissions it made were often right. This is a behaviour problem, not a capability
-problem: the model keeps folding and re-folding instead of deciding. Cheap at $0.50 per
-million tokens, but a quarter of a million tokens for a non-answer is not cheap. To
-try next: a stricter stop rule in the prompt and a lower safety cap for this model, or
+submissions it made were often right. The problem is behaviour. A lack of capability
+does not explain the result. The model keeps folding and re-folding and does not
+decide. The price is low at $0.50 per million tokens, but a quarter of a million
+tokens for a non-answer is a high cost. To try next: a stricter stop rule in the prompt and a lower safety cap for this model, or
 the thinking renderer so it plans before acting.
 
 Three-family comparison on s98_v1 with the old tools, at the agents' own false-alarm
@@ -393,8 +398,8 @@ five, 73 with six or more. BLS baseline (`results/baseline_bls_s98_v2_sde7.json`
 sweep in `results/calibrate_bls_s98_v2.json`): completeness 0.25 at the 5 percent
 false-alarm threshold of 18.63, 0.29 at threshold 13 (false alarm 0.21). By transit
 count at the default threshold: one transit 0 percent, two 14 percent, three to five
-27 percent, six or more 51 percent. This is the set where `single_events` has to earn
-its place; BLS cannot find a single transit by construction.
+27 percent, six or more 51 percent. On this set `single_events` must show its value,
+because BLS cannot find a single transit by construction.
 
 **New tools on s98_v1: masked re-search and single_events** (runs launched 08:06,
 commit `c673f8d` tools and prompt, `results/full_v2tools/`).
@@ -408,15 +413,15 @@ commit `c673f8d` tools and prompt, `results/full_v2tools/`).
 | BLS at 5% false alarm (SDE 18.6) | - | 3% | 32% | 0.505 | - | - | - | - |
 | BLS at SDE 11 | - | 28% | 41% | 0.502 | - | - | - | - |
 
-Reading. The new tools bought precision, not completeness. Inkling-Small's wrong
-periods fell from 22 to 9 and its false alarms from 11 to 3, so at a 5 percent
-false-alarm rate it now finds 36 percent against the baseline's 32 percent at the same
-rate: the first agent result above the thresholded BLS at a matched false-alarm rate.
+Reading. The new tools raised precision. Inkling-Small's wrong periods fell from 22
+to 9 and its false alarms from 11 to 3, so at a 5 percent false-alarm rate it now finds
+36 percent against the baseline's 32 percent at the same rate. This is the first agent
+result above the thresholded BLS at a matched false-alarm rate.
 Qwen3.8-27B moved less and hit the 30-turn cap on 16 episodes, up from 6; more tools
 gave it more to explore. Both models used the masks heavily (177 and 352 masked
-searches) and called single_events on most episodes. Completeness in the SNR 7 to 20
-bins did not improve: the masked search removes wrong answers but does not surface the
-faint true signal, so the faint regime stays open.
+searches) and called single_events on most episodes. Completeness did not improve,
+in the SNR 7 to 20 bins or overall. The masked search removes wrong answers, but it does
+not surface the faint true signal. The faint regime therefore stays open.
 
 **Inkling-Small on s98_v2 with the new tools**
 (`results/full_v2tools/agent_inkling_small_s98_v2.json`): completeness 0.32 at a
@@ -426,7 +431,7 @@ false-alarm rate of 0.11, mean score 0.53, $9. The BLS baseline on the same set 
 
 **Benchmark finding.** single_events was called on 169 of 200 episodes and found the
 lone events, but no single-transit episode scored, because a submission needs a period
-and a lone event has none. The scorer cannot reward the very thing the tool finds. A
+and a lone event has none. The scorer cannot reward the result that the tool finds. A
 single-transit candidate is a real astronomical result (the mission pipelines publish
 them as such), so the scorer needs a second submission form: `detected=true` with an
 event time, duration and depth and no period, credited when the event time falls on an

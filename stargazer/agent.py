@@ -88,8 +88,8 @@ class AssistantTurn:
         The model's reasoning trace when the backend exposes one, else empty. It is
         stored in the trajectory and never sent back to the model.
     truncated : bool
-        True when the backend cut the output at its token cap, so a missing tool call
-        may be an unfinished turn rather than a decision to stop.
+        True when the backend cut the output at its token cap. In such a turn, a
+        missing tool call can mean an unfinished turn. It is then not a decision to stop.
     """
 
     content: str = ""
@@ -122,8 +122,8 @@ class ChatBackend(Protocol):
 class ToolAgentDetector:
     """Run a chat model with analysis tools on one light curve and return its prediction.
 
-    It implements the :class:`~stargazer.types.Detector` protocol. The loop is:
-    ask the backend for a turn, run each tool call, append the results, repeat. It
+    It implements the :class:`~stargazer.types.Detector` protocol. In each step, the
+    loop asks the backend for a turn, runs each tool call and appends the results. It
     ends when the model calls ``submit_prediction``, stops calling tools, or hits a
     cap. ``Prediction.extra`` keeps the whole trajectory: ``conversation`` is the
     message list as the backend saw it, with the model's text and tool calls;
@@ -135,7 +135,7 @@ class ToolAgentDetector:
     ----------
     backend : ChatBackend
     max_tool_calls : int, optional
-        Safety stop, not a budget: it exists so a model that loops cannot run forever.
+        Safety stop, so that a model that loops cannot run forever. It is not a budget.
         Reaching it ends the episode as "none". Each tool result carries
         ``calls_remaining`` so the model can pace itself; a careful run uses 6 to 12.
         None means the class default of 40.

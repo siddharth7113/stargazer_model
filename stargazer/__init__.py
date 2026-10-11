@@ -5,8 +5,9 @@ Terms
 These terms have one meaning throughout the package.
 
 light curve
-    A time series of a star's brightness. Here: TESS 2-minute data with arrays
-    ``time`` (days), ``flux`` (normalised to a median of one) and ``flux_err``.
+    A time series of a star's brightness. In this package, a light curve is TESS
+    2-minute data with arrays ``time`` (days), ``flux`` (normalised to a median of
+    one) and ``flux_err``.
 transit
     A periodic dip in a light curve when a planet crosses the star. Its parameters
     are period, epoch (time of one dip centre), depth and duration.

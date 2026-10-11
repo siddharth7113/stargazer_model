@@ -2,8 +2,8 @@
 
 :class:`OpenAICompatibleBackend` speaks the chat-completions API with function calling.
 OpenRouter, vLLM, Ollama and many hosted providers accept it. :class:`TinkerBackend`
-samples from a base model or a trained LoRA checkpoint on Tinker, which is also the
-path the reinforcement-learning phase uses, so a policy is evaluated with the same
+samples from a base model or a trained LoRA checkpoint on Tinker. The
+reinforcement-learning phase uses the same path, so a policy is evaluated with the same
 tools it was trained on.
 
 Neither backend is imported until it is constructed, so the core package has no
@@ -207,11 +207,11 @@ class TinkerBackend:
         None means the value from :func:`recommended_sampling` for the renderer.
     seed : int
         Sampling seed, recorded in config. Repeat a run with other seeds to measure
-        variance; one seed is one sample, not a result.
+        variance. A run with one seed gives one sample of the result.
 
     Notes
     -----
-    Tinker exposes sampling, not a chat-completions API. The cookbook renderer for
+    Tinker exposes sampling and has no chat-completions API. The cookbook renderer for
     each model family knows that family's wire format: how tools are declared, how a
     tool call is written and how a tool result is fed back. This backend therefore
     does three things through the renderer and nothing by hand:

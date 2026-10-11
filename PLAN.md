@@ -2,28 +2,30 @@
 
 ## Goal
 
-Build a model that works like an exoplanet astronomer: it has the classical tools the
-field already trusts for detection and vetting, it runs them in the right order on a
-light curve, it weighs the evidence, and it reports a candidate or says "none". The
-model does this at machine speed over thousands of stars, so that stars the mission
-pipelines left under-vetted get the same scrutiny a careful human gives one target.
+Build a model that works like an exoplanet astronomer. The model has the classical
+detection and vetting tools that the field trusts. It runs them in the right order on a
+light curve, weighs the evidence and reports a candidate or "none". The model does this
+at machine speed over thousands of stars. Stars that the mission pipelines left
+under-vetted then get the same scrutiny that a careful human gives one target.
 
-The model is trained with reinforcement learning against a verifiable reward, saved as
-a checkpoint on Tinker, and run on light curves from any survey through one interface:
-time, flux, error. The release is the checkpoint, the toolbox, the benchmark with its
-baseline, and the logbook that shows how each number was produced.
+Reinforcement learning trains the model against a verifiable reward. The trained model
+is saved as a checkpoint on Tinker. It runs on light curves from any survey through one
+interface of three arrays: time, flux and flux error. The release contains the
+checkpoint, the toolbox, the benchmark with its baseline, and the logbook that shows how
+each number was produced.
 
-Discovery is the measure. Not "beats BLS on a benchmark", but a candidate with a
-vetting report and preregistered predictions that a follow-up observation confirms.
+Discovery is the measure of success. A discovery is a candidate with a vetting report
+and preregistered predictions that a follow-up observation confirms. A higher benchmark
+score than BLS is not a discovery.
 
 ## Principles
 
 - The toolbox does the signal processing; the model does the judgement. A model that
   tries to be the detector is worse than BLS at the easy part and no better at the
-  hard part. Every tool result we read so far says the same thing.
+  hard part. Every tool result read so far agrees with this.
 - One interface for every survey. A tool takes three arrays. A survey adds a loader.
-- Every number is reproducible: seeds, manifests, episode-set hashes, results with
-  provenance, a logbook entry with the command.
+- Every number is reproducible through seeds, manifests, episode-set hashes, results
+  with provenance and a logbook entry with the command.
 - Do not overfit to one model family. The comparison set stays at three families, and
   tools are judged across them.
 
@@ -33,7 +35,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 ## Phase 0: Scaffold (done 2026-10-11)
 
 - [x] Repository, `pyproject.toml` only, pre-commit with ruff, name check and the test suite
-- [x] README, PLAN, LOGBOOK, STYLE; Sphinx docs with Mermaid diagrams
+- [x] README, PLAN, LOGBOOK; Sphinx docs with Mermaid diagrams
 - [x] SDK design: `Detector` protocol, `EpisodeSet`, `evaluate`, `Results`; thin CLI
 - [x] Test suite: one file for each module, one behaviour for each test, integration tests apart
 
@@ -67,8 +69,8 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 
 ## Phase 3: The toolbox, in the order an astronomer uses it
 
-Each tool is a function on three arrays with a JSON Schema, a numpydoc Notes section
-with its equation and a reference, a unit test on synthetic data, and a tool
+Each tool is a function of three arrays. Each tool has a JSON Schema, a numpydoc Notes
+section with its equation and a reference, a unit test on synthetic data, and a tool
 description written for the model. The agent gets the tool only when the test passes.
 
 ### 3a Detection

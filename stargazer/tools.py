@@ -1,8 +1,8 @@
 """Analysis tools that a language-model agent can call on one light curve.
 
 Each function takes plain arrays and returns a small, JSON-serialisable dictionary.
-The outputs are short on purpose: an agent reads them as text, so a tool returns
-summary numbers and binned curves, never raw arrays. The same functions serve tier 1
+The outputs are short on purpose. An agent reads them as text, so a tool returns
+summary numbers and binned curves. A tool does not return raw arrays. The same functions serve tier 1
 (detection), tier 2 (vetting) and tier 3 (the reinforcement-learning environment).
 """
 

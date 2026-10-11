@@ -1,14 +1,11 @@
-"""Choose a detection threshold from recorded data instead of by guess.
+"""Choose a detection threshold from recorded data.
 
 A detector such as the BLS baseline computes a statistic for each light curve and
 reports a detection when the statistic passes a threshold. The right threshold
-depends on the false-alarm rate one accepts. This module takes a results file in
-which each prediction records the statistic, and re-scores it at other thresholds,
-so the choice is a function of data that the LOGBOOK can cite.
-
-The baseline records the signal detection efficiency (SDE) of each episode. This module
-re-scores the same predictions at other thresholds without a new run. The choice of
-threshold is then a function of the results file, which the LOGBOOK records.
+depends on the accepted false-alarm rate. The baseline records the signal detection
+efficiency (SDE) of each episode in each prediction. This module takes such a results
+file and re-scores the same predictions at other thresholds without a new run. The
+choice of threshold is then a function of the results file, which the LOGBOOK cites.
 """
 
 from __future__ import annotations

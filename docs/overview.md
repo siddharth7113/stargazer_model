@@ -9,9 +9,9 @@ benchmark for discovery needs a truth source that does not depend on past discov
 ## The method
 
 Star Gazer uses injection and recovery. It takes a real TESS light curve of a star with
-no known signal. It injects a synthetic transit with known parameters. The detector
-then has to find the transit. The truth is exact. The difficulty is adjustable. The
-number of episodes has no limit.
+no known signal and injects a synthetic transit with known parameters. The detector
+then has to find the transit. The truth is therefore exact. The build configuration
+sets the difficulty, and the number of episodes has no limit.
 
 ## The tiers
 

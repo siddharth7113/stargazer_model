@@ -1,8 +1,9 @@
 # Star Gazer
 
 Star Gazer is a benchmark and a reinforcement-learning environment for exoplanet
-detection in light curves. The model acts as an astronomer with the field's classical
-tools; the benchmark says how well it does. Every number it produces is reproducible.
+detection in light curves. A language model uses the classical tools of an astronomer,
+and the benchmark scores its answers against an exact answer key. Every number that the
+benchmark produces is reproducible.
 
 ::::{grid} 1 2 2 3
 :gutter: 3
@@ -10,25 +11,25 @@ tools; the benchmark says how well it does. Every number it produces is reproduc
 :::{grid-item-card} Overview
 :link: overview
 :link-type: doc
-The problem, the injection-and-recovery method, and the three task tiers.
+The problem, the injection-and-recovery method and the task tiers.
 :::
 
 :::{grid-item-card} Architecture
 :link: architecture
 :link-type: doc
-The SDK, the agent loop, the backends, and the diagrams that tie them together.
+The software development kit (SDK), the agent loop and the backends, with class, flow and sequence diagrams.
 :::
 
 :::{grid-item-card} Scoring
 :link: scoring
 :link-type: doc
-The exact rules, the alias credit, and how a threshold is chosen from data.
+The scoring rules, the alias credit and the threshold choice from recorded data.
 :::
 
 :::{grid-item-card} Usage
 :link: usage
 :link-type: doc
-Build a set, run the baseline, run an agent, read a trajectory, compare systems.
+Commands to build an episode set, run the baseline and an agent, read a trajectory and compare systems.
 :::
 
 :::{grid-item-card} Logbook
@@ -62,7 +63,6 @@ usage
 
 plan
 logbook
-style
 api
 references
 ```

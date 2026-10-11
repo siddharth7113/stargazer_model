@@ -3,7 +3,8 @@
 A fair comparison between a thresholded detector and an agent needs two things: the
 same episodes, checked by the episode set hash, and the false-alarm rate reported next
 to the completeness, because an agent has no threshold to sweep. This module builds
-that table and a per-SNR-bin breakdown from results files.
+that table from results files, with completeness in each expected signal-to-noise
+ratio (SNR) bin.
 """
 
 from __future__ import annotations

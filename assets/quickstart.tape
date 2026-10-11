@@ -8,7 +8,7 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 40ms
 Set Padding 16
 
-Type "source .venv/bin/activate"
+Type "source .venv/bin/activate && export PYTHONWARNINGS=ignore && clear"
 Enter
 Sleep 500ms
 

@@ -1,7 +1,6 @@
 # Verifiability
 
-Each number in this project must be reproducible by another person. These are the
-mechanisms.
+The project is reporducible, follow the section guidelines to reproduce the numbers:
 
 ## Seeds
 
@@ -48,12 +47,12 @@ dictionaries. `tests/test_episodes.py` checks that an episode file holds only `t
 with the same cadence and gap structure as TESS, so each test knows the exact noise
 level and gap position.
 
-The suite follows one rule: one test checks one behaviour of one function, and its
-docstring states the behaviour and why it matters. There is one test file for each
+In the suite, one test checks one behaviour of one function. The docstring of the test
+states the behaviour and the reason for the check. There is one test file for each
 module in `tests/`. Tests that cross module boundaries live in `tests/integration/`
-with the `integration` marker; they check that the parts fit, and a unit test must fail
-first on a unit-level bug. Style rules such as "no single-letter names" are pre-commit
-hooks in `scripts/`, not tests. The pre-commit hook runs the suite before each commit.
+with the `integration` marker. They check that the parts fit, and a unit test must fail
+first on a unit-level bug. Pre-commit hooks in `scripts/` check style rules such as "no
+single-letter names". The pre-commit hook also runs the suite before each commit.
 
 ## Logbook
 
