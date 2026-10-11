@@ -38,12 +38,16 @@ def rescore_at_threshold(results: Results, truth: dict, threshold: float, stat: 
         The summary from :func:`stargazer.score.summarize`.
     """
     preds = {}
-    for k, p in results.preds.items():
-        q = dict(p)
-        q["detected"] = bool(q.get(stat, -np.inf) >= threshold)
-        preds[k] = q
-    tol = {k: results.config[k] for k in ("period_rtol", "epoch_frac") if k in results.config}
-    _, summary = score_set(preds, {k: truth[k] for k in preds}, **tol)
+    for episode_id, pred in results.preds.items():
+        rescored = dict(pred)
+        rescored["detected"] = bool(rescored.get(stat, -np.inf) >= threshold)
+        preds[episode_id] = rescored
+    tol = {
+        episode_id: results.config[episode_id]
+        for episode_id in ("period_rtol", "epoch_frac")
+        if episode_id in results.config
+    }
+    _, summary = score_set(preds, {episode_id: truth[episode_id] for episode_id in preds}, **tol)
     return summary
 
 
@@ -54,15 +58,15 @@ def threshold_sweep(results: Results, truth: dict, thresholds: list[float], stat
     ``completeness_with_aliases``.
     """
     rows = []
-    for thr in thresholds:
-        s = rescore_at_threshold(results, truth, thr, stat)
+    for threshold in thresholds:
+        summary = rescore_at_threshold(results, truth, threshold, stat)
         rows.append(
             {
-                "threshold": float(thr),
-                "false_alarm_rate": s["false_alarm_rate"],
-                "completeness_exact": s["completeness_exact"],
-                "completeness_with_aliases": s["completeness_with_aliases"],
-                "mean_score": s["mean_score"],
+                "threshold": float(threshold),
+                "false_alarm_rate": summary["false_alarm_rate"],
+                "completeness_exact": summary["completeness_exact"],
+                "completeness_with_aliases": summary["completeness_with_aliases"],
+                "mean_score": summary["mean_score"],
             }
         )
     return rows
@@ -88,13 +92,15 @@ def choose_threshold(
     ``1 / n``. A target of 0.05 needs at least 20 null episodes to mean anything.
     """
     null_stats = sorted(
-        float(p.get(stat, -np.inf)) for k, p in results.preds.items() if truth[k]["kind"] == "null"
+        float(pred.get(stat, -np.inf))
+        for episode_id, pred in results.preds.items()
+        if truth[episode_id]["kind"] == "null"
     )
     if not null_stats:
         return float("inf")
-    n = len(null_stats)
-    for i, thr in enumerate(null_stats):
-        false_alarms = n - i  # nulls with stat >= thr
-        if false_alarms / n <= max_false_alarm:
-            return thr
+    n_null = len(null_stats)
+    for index, threshold in enumerate(null_stats):
+        false_alarms = n_null - index  # nulls with stat >= thr
+        if false_alarms / n_null <= max_false_alarm:
+            return threshold
     return float(null_stats[-1]) + 1e-9

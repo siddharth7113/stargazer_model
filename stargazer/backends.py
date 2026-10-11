@@ -193,19 +193,19 @@ class TinkerBackend:
         list of dict
             ``system``, ``user`` and ``assistant`` messages with string content only.
         """
-        tool_block = "\n".join(json.dumps(t["function"]) for t in tools)
+        tool_block = "\n".join(json.dumps(tool["function"]) for tool in tools)
         protocol = (
             "\n\n# Tools\n\nYou may call these functions. For each call, output exactly:\n"
             '<tool_call>\n{"name": "<function-name>", "arguments": {...}}\n</tool_call>\n'
             "Results come back inside <tool_response> tags.\n\n" + tool_block
         )
         out: list[dict] = []
-        for m in messages:
-            if m["role"] == "system":
-                out.append({"role": "system", "content": m["content"] + protocol})
-            elif m["role"] == "assistant":
-                text = m.get("content") or ""
-                for tc in m.get("tool_calls", []):
+        for message in messages:
+            if message["role"] == "system":
+                out.append({"role": "system", "content": message["content"] + protocol})
+            elif message["role"] == "assistant":
+                text = message.get("content") or ""
+                for tc in message.get("tool_calls", []):
                     fn = tc["function"]
                     args = (
                         fn["arguments"] if isinstance(fn["arguments"], dict) else json.loads(fn["arguments"])
@@ -216,14 +216,14 @@ class TinkerBackend:
                         + "\n</tool_call>"
                     )
                 out.append({"role": "assistant", "content": text})
-            elif m["role"] == "tool":
-                content = "<tool_response>\n" + m["content"] + "\n</tool_response>"
+            elif message["role"] == "tool":
+                content = "<tool_response>\n" + message["content"] + "\n</tool_response>"
                 if out and out[-1]["role"] == "user":
                     out[-1]["content"] += "\n" + content
                 else:
                     out.append({"role": "user", "content": content})
             else:
-                out.append({"role": m["role"], "content": m["content"]})
+                out.append({"role": message["role"], "content": message["content"]})
         return out
 
     @staticmethod
@@ -232,10 +232,12 @@ class TinkerBackend:
         calls = []
         for raw in TOOL_CALL_RE.findall(text):
             try:
-                d = json.loads(raw)
+                parsed = json.loads(raw)
                 calls.append(
                     ToolCall(
-                        id=uuid.uuid4().hex[:8], name=str(d["name"]), arguments=dict(d.get("arguments", {}))
+                        id=uuid.uuid4().hex[:8],
+                        name=str(parsed["name"]),
+                        arguments=dict(parsed.get("arguments", {})),
                     )
                 )
             except (json.JSONDecodeError, KeyError, TypeError):

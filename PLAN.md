@@ -34,6 +34,7 @@ Acceptance: `stargazer verify data/cache` passes. The targets file lists the TOI
 - [x] Episode mix: 30 percent null, 70 percent injected. Periods 0.5 to 20 days. Depths 100 ppm to 1 percent
 - [x] An injected episode with no transit in the data is scored as null
 - [ ] One small episode set (20 episodes) committed to git
+- [ ] Set s98_v2 with periods to 60 days, so single and double transits are common
 
 Acceptance: `tests/test_inject.py` and `tests/test_episodes.py` pass.
 
@@ -50,16 +51,17 @@ Acceptance: `tests/test_score.py` has one case for each rule and passes.
 - [x] Savitzky-Golay detrend with a recorded window
 - [x] astropy BLS over a recorded period grid
 - [x] Test: the baseline recovers a 1 percent, 3-day injection on synthetic white noise
-- [ ] SDE threshold chosen on null episodes. The false-alarm rate is below 5 percent
-- [ ] Baseline run on the real episode set. The completeness table is in the LOGBOOK
+- [x] SDE threshold chosen on null episodes. The false-alarm rate is below 5 percent (18.63 on s98_v1)
+- [x] Baseline run on the real episode set. The completeness table is in the LOGBOOK
 
 Acceptance: a results file in `results/` with the completeness table. The LOGBOOK points to it.
 
 ### 1e LLM harness
-- [ ] An episode is presented to a model as a tool-using task with masked identity
-- [ ] Tools: load, detrend, BLS, fold, text summary of a plot
-- [ ] The harness runs against Claude through the API and against a local open model
-- [ ] The harness uses the same scorer and the same results format
+- [x] An episode is presented to a model as a tool-using task with masked identity
+- [x] Tools: summarize, bls_peaks, fold, odd_even, submit_prediction, with JSON Schemas
+- [x] Provider-agnostic backend: OpenAI-compatible (OpenRouter, vLLM, Ollama) and Tinker
+- [x] The harness uses the same scorer and the same results format
+- [ ] One real run: three episodes on an open model through OpenRouter or Tinker, transcript reviewed
 
 Acceptance: a results file for one model on the same episode set as the baseline.
 

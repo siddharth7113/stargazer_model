@@ -29,7 +29,7 @@ def _fake_cache(tmp_path, star, n_stars=3):
 
 def test_build_is_deterministic_and_truth_is_separated(tmp_path, star):
     cache, targets, tp = _fake_cache(tmp_path, star)
-    cfg = BuildConfig(n=12, seed=7)
+    cfg = BuildConfig(n_episodes=12, seed=7)
     a = EpisodeSet.build(targets, cache, tmp_path / "a", cfg, tp)
     b = EpisodeSet.build(targets, cache, tmp_path / "b", cfg, tp)
     ma = json.loads((a.root / "manifest.json").read_text())["files"]
@@ -53,14 +53,14 @@ def test_build_is_deterministic_and_truth_is_separated(tmp_path, star):
 
 def test_different_seed_changes_set(tmp_path, star):
     cache, targets, _ = _fake_cache(tmp_path, star)
-    a = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=6, seed=1))
-    b = EpisodeSet.build(targets, cache, tmp_path / "b", BuildConfig(n=6, seed=2))
+    a = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n_episodes=6, seed=1))
+    b = EpisodeSet.build(targets, cache, tmp_path / "b", BuildConfig(n_episodes=6, seed=2))
     assert a.truth != b.truth
 
 
 def test_tampering_is_detected(tmp_path, star):
     cache, targets, _ = _fake_cache(tmp_path, star)
-    a = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=4, seed=1))
+    a = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n_episodes=4, seed=1))
     h = a.hash
     t, f, fe = a.load("ep_0001")
     np.savez_compressed(a.root / "episodes" / "ep_0001.npz", time=t, flux=f * 1.0001, flux_err=fe)
@@ -73,7 +73,9 @@ def test_evaluate_round_trip(tmp_path, star):
     from stargazer.evaluate import Results, evaluate
 
     cache, targets, _ = _fake_cache(tmp_path, star)
-    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=3, seed=3, depth_range=(0.01, 0.02)))
+    es = EpisodeSet.build(
+        targets, cache, tmp_path / "a", BuildConfig(n_episodes=3, seed=3, depth_range=(0.01, 0.02))
+    )
     res = evaluate(BLSDetector(), es)
     p = res.save(tmp_path / "r.json")
     back = Results.load(p)
@@ -99,7 +101,7 @@ def test_evaluate_records_detector_errors(tmp_path, star):
             return Prediction(detected=False)
 
     cache, targets, _ = _fake_cache(tmp_path, star)
-    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=4, seed=5))
+    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n_episodes=4, seed=5))
     res = evaluate(Flaky(), es)
     assert set(res.preds) == set(es.ids)
     assert len(res.config["errors"]) == 2
@@ -113,7 +115,7 @@ def test_evaluate_records_detector_errors(tmp_path, star):
 def test_build_skips_hosts_with_nan_parameters(tmp_path, star):
     cache, targets, _ = _fake_cache(tmp_path, star)
     targets["targets"][0]["logg"] = float("nan")
-    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n=6, seed=1))
+    es = EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n_episodes=6, seed=1))
     assert es.config["hosts_skipped_missing_params"] == [1000]
     assert all(v["tic"] != 1000 for v in es.truth.values())
     assert all(np.isfinite(v["transit"]["a_rs"]) for v in es.truth.values() if v["kind"] == "transit")

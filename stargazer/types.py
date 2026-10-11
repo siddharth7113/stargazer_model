@@ -50,12 +50,12 @@ class Prediction:
 
     def to_dict(self) -> dict[str, Any]:
         """Return a dictionary for JSON. The keys of ``extra`` are at the top level."""
-        d = asdict(self)
-        extra = d.pop("extra")
-        return {**extra, **d}
+        data = asdict(self)
+        extra = data.pop("extra")
+        return {**extra, **data}
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> Prediction:
+    def from_dict(cls, data: dict[str, Any]) -> Prediction:
         """Build a prediction from a dictionary. Unknown keys go into ``extra``.
 
         Parameters
@@ -63,9 +63,9 @@ class Prediction:
         d : dict
             Must contain ``detected``. Other known fields are optional.
         """
-        known = {k: d.get(k) for k in ("period", "t0", "duration", "depth")}
-        extra = {k: v for k, v in d.items() if k not in known and k != "detected"}
-        return cls(detected=bool(d.get("detected", False)), extra=extra, **known)
+        known = {key: data.get(key) for key in ("period", "t0", "duration", "depth")}
+        extra = {key: value for key, value in data.items() if key not in known and key != "detected"}
+        return cls(detected=bool(data.get("detected", False)), extra=extra, **known)
 
 
 @runtime_checkable

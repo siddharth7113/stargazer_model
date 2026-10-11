@@ -60,7 +60,10 @@ class Results:
             "episode_set": self.episode_set,
             "episode_set_hash": self.episode_set_hash,
             "summary": self.summary,
-            "episodes": {k: {"pred": self.preds.get(k), "score": self.rows[k]} for k in sorted(self.rows)},
+            "episodes": {
+                episode_id: {"pred": self.preds.get(episode_id), "score": self.rows[episode_id]}
+                for episode_id in sorted(self.rows)
+            },
         }
 
     def save(self, path: Path) -> Path:
@@ -73,17 +76,17 @@ class Results:
     @classmethod
     def load(cls, path: Path) -> Results:
         """Read a results JSON written by :meth:`save`."""
-        d = json.loads(Path(path).read_text())
+        doc = json.loads(Path(path).read_text())
         return cls(
-            system=d["system"],
-            config=d["config"],
-            episode_set=d["episode_set"],
-            episode_set_hash=d["episode_set_hash"],
-            preds={k: v["pred"] for k, v in d["episodes"].items()},
-            rows={k: v["score"] for k, v in d["episodes"].items()},
-            summary=d["summary"],
-            created=d["created"],
-            git_commit=d["git_commit"],
+            system=doc["system"],
+            config=doc["config"],
+            episode_set=doc["episode_set"],
+            episode_set_hash=doc["episode_set_hash"],
+            preds={episode_id: entry["pred"] for episode_id, entry in doc["episodes"].items()},
+            rows={episode_id: entry["score"] for episode_id, entry in doc["episodes"].items()},
+            summary=doc["summary"],
+            created=doc["created"],
+            git_commit=doc["git_commit"],
         )
 
 
@@ -124,21 +127,21 @@ def evaluate(
     preds: dict[str, dict] = {}
     errors: list[str] = []
     t_start = _time.time()
-    for k in ids:
-        t, f, fe = episodes.load(k)
+    for episode_id in ids:
+        time, flux, flux_err = episodes.load(episode_id)
         t1 = _time.time()
         try:
-            p = detector.detect(t, f, fe)
-        except Exception as e:  # a detector failure is a recorded miss, not a lost run
+            prediction = detector.detect(time, flux, flux_err)
+        except Exception as error:  # a detector failure is a recorded miss, not a lost run
             if not record_errors:
                 raise
-            p = Prediction(detected=False, extra={"error": f"{type(e).__name__}: {e}"[:500]})
-            errors.append(k)
-        p.extra["seconds"] = round(_time.time() - t1, 2)
-        preds[k] = p.to_dict()
+            prediction = Prediction(detected=False, extra={"error": f"{type(error).__name__}: {error}"[:500]})
+            errors.append(episode_id)
+        prediction.extra["seconds"] = round(_time.time() - t1, 2)
+        preds[episode_id] = prediction.to_dict()
         if progress:
-            progress(k, p, truth[k])
-    truth_sub = {k: truth[k] for k in ids}
+            progress(episode_id, prediction, truth[episode_id])
+    truth_sub = {episode_id: truth[episode_id] for episode_id in ids}
     rows, summary = score_set(preds, truth_sub, period_rtol=period_rtol, epoch_frac=epoch_frac)
     config = {
         **detector.config,
@@ -159,11 +162,11 @@ def evaluate(
     )
 
 
-def _json_default(o):
-    if isinstance(o, np.floating | np.integer):
-        return o.item()
-    if isinstance(o, np.bool_):
-        return bool(o)
-    if isinstance(o, np.ndarray):
-        return o.tolist()
-    raise TypeError(str(type(o)))
+def _json_default(obj):
+    if isinstance(obj, np.floating | np.integer):
+        return obj.item()
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    raise TypeError(str(type(obj)))

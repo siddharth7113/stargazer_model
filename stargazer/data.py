@@ -87,9 +87,9 @@ class LightCurveCache:
         FileNotFoundError
             If the target has not been fetched.
         """
-        with np.load(self.path(tic, sector)) as z:
-            meta = json.loads(str(z["meta"])) if "meta" in z else {}
-            return LightCurve(z["time"], z["flux"], z["flux_err"], meta)
+        with np.load(self.path(tic, sector)) as archive:
+            meta = json.loads(str(archive["meta"])) if "meta" in archive else {}
+            return LightCurve(archive["time"], archive["flux"], archive["flux_err"], meta)
 
     def fetch(self, tic: int, sector: int, overwrite: bool = False) -> Path:
         """Download one SPOC 120 s light curve from MAST and cache it.
@@ -124,9 +124,9 @@ class LightCurveCache:
             lc = sr[0].download(flux_column="pdcsap_flux", quality_bitmask="default")
         lc = lc.remove_nans().normalize()
         meta = {"tic": int(tic), "sector": int(sector), "author": "SPOC", "exptime_s": 120}
-        for k, name in META_KEYS.items():
-            v = lc.meta.get(k)
-            meta[name] = None if v is None else float(v)
+        for header_key, name in META_KEYS.items():
+            value = lc.meta.get(header_key)
+            meta[name] = None if value is None else float(value)
         out.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(
             out,

@@ -98,13 +98,13 @@ class TransitTruth:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict) -> TransitTruth:
+    def from_dict(cls, data: dict) -> TransitTruth:
         """Build from a dictionary. Ignore unknown keys."""
-        return cls(**{k: d[k] for k in cls.__dataclass_fields__})
+        return cls(**{key: data[key] for key in cls.__dataclass_fields__})
 
 
-def _finite(x: object) -> bool:
-    return x is not None and np.isfinite(float(x))
+def _finite(value: object) -> bool:
+    return value is not None and np.isfinite(float(value))
 
 
 def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> float:
@@ -143,12 +143,12 @@ def a_rs_from_star(period_days: float, logg_cgs: float, radius_rsun: float) -> f
     Example: the Sun with ``logg = 4.438`` and ``P = 365.25`` days gives ``a / R = 215``,
     which is one astronomical unit in solar radii.
     """
-    g = 10.0**logg_cgs * 1e-2  # m s^-2
-    r = radius_rsun * R_SUN  # m
-    mass = g * r**2 / G_SI  # kg
-    p = period_days * DAY  # s
-    a = (G_SI * mass * p**2 / (4 * np.pi**2)) ** (1.0 / 3.0)  # m
-    return float(a / r)
+    gravity = 10.0**logg_cgs * 1e-2  # m s^-2
+    radius_m = radius_rsun * R_SUN  # m
+    mass = gravity * radius_m**2 / G_SI  # kg
+    period_s = period_days * DAY  # s
+    semi_major_axis_m = (G_SI * mass * period_s**2 / (4 * np.pi**2)) ** (1.0 / 3.0)  # m
+    return float(semi_major_axis_m / radius_m)
 
 
 def transit_duration(period: float, a_rs: float, inc_deg: float, rp_rs: float, b: float) -> float:
@@ -303,17 +303,17 @@ def transit_model(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
     """
     import batman
 
-    p = batman.TransitParams()
-    p.t0 = truth.t0
-    p.per = truth.period
-    p.rp = truth.rp_rs
-    p.a = truth.a_rs
-    p.inc = truth.inc_deg
-    p.ecc = 0.0
-    p.w = 90.0
-    p.limb_dark = "quadratic"
-    p.u = [truth.u1, truth.u2]
-    return batman.TransitModel(p, np.asarray(time, dtype=np.float64)).light_curve(p)
+    params = batman.TransitParams()
+    params.t0 = truth.t0
+    params.per = truth.period
+    params.rp = truth.rp_rs
+    params.a = truth.a_rs
+    params.inc = truth.inc_deg
+    params.ecc = 0.0
+    params.w = 90.0
+    params.limb_dark = "quadratic"
+    params.u = [truth.u1, truth.u2]
+    return batman.TransitModel(params, np.asarray(time, dtype=np.float64)).light_curve(params)
 
 
 def inject(time: np.ndarray, flux: np.ndarray, truth: TransitTruth) -> np.ndarray:
@@ -395,8 +395,8 @@ def point_scatter(flux: np.ndarray) -> float:
     - ``sqrt(2)`` corrects for the fact that a difference of two independent values
       has twice the variance of one value.
     """
-    d = np.diff(flux)
-    return float(1.4826 * np.median(np.abs(d - np.median(d))) / np.sqrt(2.0))
+    differences = np.diff(flux)
+    return float(1.4826 * np.median(np.abs(differences - np.median(differences))) / np.sqrt(2.0))
 
 
 def in_transit_mask(time: np.ndarray, truth: TransitTruth) -> np.ndarray:
@@ -424,10 +424,10 @@ def transit_count(time: np.ndarray, truth: TransitTruth, min_points: int = 3) ->
     A transit that falls in a data gap has no points and is not counted. A transit at
     the edge of a gap with fewer than ``min_points`` points is not counted either.
     """
-    m = in_transit_mask(time, truth)
-    if not m.any():
+    mask = in_transit_mask(time, truth)
+    if not mask.any():
         return 0
-    epochs = np.round((time[m] - truth.t0) / truth.period).astype(int)
+    epochs = np.round((time[mask] - truth.t0) / truth.period).astype(int)
     _, counts = np.unique(epochs, return_counts=True)
     return int((counts >= min_points).sum())
 

@@ -31,7 +31,7 @@ class BuildConfig:
 
     Parameters
     ----------
-    n : int
+    n_episodes : int
         Number of episodes.
     seed : int
         Seed for the one random generator that the build uses.
@@ -41,15 +41,15 @@ class BuildConfig:
         Log-uniform sampling bounds, days and fractional depth.
     """
 
-    n: int
+    n_episodes: int
     seed: int
     null_frac: float = 0.3
     period_range: tuple[float, float] = (0.5, 20.0)
     depth_range: tuple[float, float] = (1e-4, 1e-2)
 
 
-def _has_finite(d: dict, *keys: str) -> bool:
-    return all(d.get(k) is not None and np.isfinite(float(d[k])) for k in keys)
+def _has_finite(record: dict, *keys: str) -> bool:
+    return all(record.get(key) is not None and np.isfinite(float(record[key])) for key in keys)
 
 
 class EpisodeSet:
@@ -83,7 +83,7 @@ class EpisodeSet:
     @property
     def ids(self) -> list[str]:
         """Sorted episode identifiers."""
-        return sorted(p.stem for p in (self.root / "episodes").glob("ep_*.npz"))
+        return sorted(path.stem for path in (self.root / "episodes").glob("ep_*.npz"))
 
     @property
     def truth(self) -> dict:
@@ -102,8 +102,8 @@ class EpisodeSet:
 
     def load(self, ep_id: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Return ``(time, flux, flux_err)`` for one episode."""
-        with np.load(self.root / "episodes" / f"{ep_id}.npz") as z:
-            return z["time"], z["flux"], z["flux_err"]
+        with np.load(self.root / "episodes" / f"{ep_id}.npz") as archive:
+            return archive["time"], archive["flux"], archive["flux_err"]
 
     def __iter__(self) -> Iterator[str]:
         return iter(self.ids)
@@ -148,14 +148,14 @@ class EpisodeSet:
         ep_dir = out_dir / "episodes"
         ep_dir.mkdir(parents=True, exist_ok=True)
 
-        cached = [t for t in targets["targets"] if cache.has(t["tic"], t["sector"])]
-        hosts = [t for t in cached if _has_finite(t, "logg", "radius_rsun")]
-        skipped = [t["tic"] for t in cached if t not in hosts]
+        cached = [target for target in targets["targets"] if cache.has(target["tic"], target["sector"])]
+        hosts = [target for target in cached if _has_finite(target, "logg", "radius_rsun")]
+        skipped = [target["tic"] for target in cached if target not in hosts]
         if not hosts:
             raise RuntimeError("no cached light curves with finite stellar parameters; run fetch first")
 
         truth = {}
-        for i in range(cfg.n):
+        for index in range(cfg.n_episodes):
             star = hosts[int(rng.integers(len(hosts)))]
             lc = cache.load(star["tic"], star["sector"])
             t_offset = float(lc.time.min())
@@ -167,7 +167,7 @@ class EpisodeSet:
                 "sector": star["sector"],
                 "t_offset": t_offset,
                 "n_points": len(lc.time),
-                "star": {k: star.get(k) for k in ("teff", "logg", "radius_rsun", "tmag", "mass_msun")},
+                "star": {key: star.get(key) for key in ("teff", "logg", "radius_rsun", "tmag", "mass_msun")},
                 "point_scatter": point_scatter(flux),
             }
             if not is_null:
@@ -177,10 +177,10 @@ class EpisodeSet:
                 rec["snr"] = expected_snr(lc.time, flux, tr)
                 rec["n_transits"] = transit_count(lc.time, tr)
                 flux = inject(lc.time, flux, tr)
-                d = tr.to_dict()
-                d["t0"] = tr.t0 - t_offset
-                rec["transit"] = d
-            ep_id = f"ep_{i:04d}"
+                transit_record = tr.to_dict()
+                transit_record["t0"] = tr.t0 - t_offset
+                rec["transit"] = transit_record
+            ep_id = f"ep_{index:04d}"
             np.savez_compressed(
                 ep_dir / f"{ep_id}.npz",
                 time=(lc.time - t_offset).astype(np.float64),

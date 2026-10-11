@@ -83,9 +83,9 @@ def detrend(
     window_length = max(window_length + (1 - window_length % 2), polyorder + 2)  # odd and valid
     lc = lk.LightCurve(time=time, flux=flux)
     flat = lc.flatten(window_length=window_length, polyorder=polyorder, sigma=sigma, break_tolerance=5)
-    f = np.asarray(flat.flux.value, dtype=np.float64)
-    ok = np.isfinite(f)
-    return time[ok], f[ok]
+    flattened = np.asarray(flat.flux.value, dtype=np.float64)
+    ok = np.isfinite(flattened)
+    return time[ok], flattened[ok]
 
 
 def bin_lc(
@@ -117,12 +117,12 @@ def bin_lc(
     """
     if bin_minutes <= 0:
         return time, flux, np.full_like(flux, np.std(flux))
-    w = bin_minutes / 1440.0
-    idx = np.floor((time - time.min()) / w).astype(int)
+    width_days = bin_minutes / 1440.0
+    idx = np.floor((time - time.min()) / width_days).astype(int)
     _, inv, counts = np.unique(idx, return_inverse=True, return_counts=True)
-    t = np.bincount(inv, weights=time) / counts
-    f = np.bincount(inv, weights=flux) / counts
-    return t, f, np.std(flux) / np.sqrt(counts)
+    binned_time = np.bincount(inv, weights=time) / counts
+    binned_flux = np.bincount(inv, weights=flux) / counts
+    return binned_time, binned_flux, np.std(flux) / np.sqrt(counts)
 
 
 class BLSDetector:
@@ -185,11 +185,11 @@ class BLSDetector:
         from astropy.timeseries import BoxLeastSquares
 
         cfg = self._config
-        t, f = detrend(time, flux, cfg["detrend_window_days"])
-        t, f, dy = bin_lc(t, f, cfg["bin_minutes"])
-        span = t.max() - t.min()
+        work_time, work_flux = detrend(time, flux, cfg["detrend_window_days"])
+        work_time, work_flux, work_err = bin_lc(work_time, work_flux, cfg["bin_minutes"])
+        span = work_time.max() - work_time.min()
         max_period = max(cfg["min_period_days"] * 1.5, span * cfg["max_period_frac_of_span"])
-        bls = BoxLeastSquares(t, f, dy)
+        bls = BoxLeastSquares(work_time, work_flux, work_err)
         durations = np.array(cfg["durations_days"])
         periods = bls.autoperiod(
             durations,
@@ -199,13 +199,13 @@ class BLSDetector:
         )
         res = bls.power(periods, durations)
         power = np.asarray(res.power)
-        i = int(np.nanargmax(power))
-        sde = float((power[i] - np.nanmean(power)) / np.nanstd(power))
+        best = int(np.nanargmax(power))
+        sde = float((power[best] - np.nanmean(power)) / np.nanstd(power))
         return Prediction(
             detected=bool(sde >= cfg["sde_threshold"]),
-            period=float(res.period[i]),
-            t0=float(res.transit_time[i]),
-            duration=float(res.duration[i]),
-            depth=float(res.depth[i]),
-            extra={"sde": sde, "n_periods": len(periods), "n_points_binned": len(t)},
+            period=float(res.period[best]),
+            t0=float(res.transit_time[best]),
+            duration=float(res.duration[best]),
+            depth=float(res.depth[best]),
+            extra={"sde": sde, "n_periods": len(periods), "n_points_binned": len(work_time)},
         )

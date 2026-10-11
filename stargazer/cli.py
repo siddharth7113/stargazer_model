@@ -13,185 +13,193 @@ import time as _time
 from pathlib import Path
 
 
-def cmd_targets(a: argparse.Namespace) -> None:
+def cmd_targets(args: argparse.Namespace) -> None:
     """Select host stars for a sector and save the targets file."""
     from stargazer.targets import save_targets, select_targets
 
-    d = select_targets(a.sector, a.n, a.seed, tmag_max=a.tmag_max)
-    save_targets(d, a.out)
-    print(f"selected {d['n_selected']} / {d['n_requested']} targets -> {a.out}")
-    print(f"sector 2-min stars: {d['n_two_minute_in_sector']}, excluded by TOI: {d['n_excluded_by_toi']}")
-    print(f"rejected by cuts: {d['rejected']}")
+    selection = select_targets(args.sector, args.n_episodes, args.seed, tmag_max=args.tmag_max)
+    save_targets(selection, args.out)
+    print(f"selected {selection['n_selected']} / {selection['n_requested']} targets -> {args.out}")
+    print(f"sector 2-min stars: {selection['n_two_minute_in_sector']}")
+    print(f"excluded by TOI: {selection['n_excluded_by_toi']}")
+    print(f"rejected by cuts: {selection['rejected']}")
 
 
-def cmd_fetch(a: argparse.Namespace) -> None:
+def cmd_fetch(args: argparse.Namespace) -> None:
     """Download light curves for each target. Record failures."""
     from stargazer.data import LightCurveCache
     from stargazer.provenance import Manifest
     from stargazer.targets import load_targets
 
-    cache = LightCurveCache(a.cache)
+    cache = LightCurveCache(args.cache)
     ok, failed = 0, []
-    for t in load_targets(a.targets)["targets"]:
+    for target in load_targets(args.targets)["targets"]:
         try:
-            cache.fetch(t["tic"], t["sector"])
+            cache.fetch(target["tic"], target["sector"])
             ok += 1
-            print(f"cached TIC {t['tic']} s{t['sector']}", flush=True)
+            print(f"cached TIC {target['tic']} s{target['sector']}", flush=True)
         except Exception as e:
-            failed.append({"tic": t["tic"], "error": str(e)[:200]})
-            print(f"FAILED TIC {t['tic']}: {e}", file=sys.stderr, flush=True)
-    m = Manifest.of_directory(cache.root, pattern="*.npz").write(cache.root)
-    print(f"cached {ok}, failed {len(failed)}, manifest {m}")
+            failed.append({"tic": target["tic"], "error": str(e)[:200]})
+            print(f"FAILED TIC {target['tic']}: {e}", file=sys.stderr, flush=True)
+    manifest_path = Manifest.of_directory(cache.root, pattern="*.npz").write(cache.root)
+    print(f"cached {ok}, failed {len(failed)}, manifest {manifest_path}")
     if failed:
         (cache.root / "fetch_failures.json").write_text(json.dumps(failed, indent=2))
 
 
-def cmd_build(a: argparse.Namespace) -> None:
+def cmd_build(args: argparse.Namespace) -> None:
     """Build an episode set."""
     from stargazer.data import LightCurveCache
     from stargazer.episodes import BuildConfig, EpisodeSet
     from stargazer.targets import load_targets
 
     cfg = BuildConfig(
-        n=a.n,
-        seed=a.seed,
-        null_frac=a.null_frac,
-        period_range=(a.min_period, a.max_period),
-        depth_range=(a.min_depth, a.max_depth),
+        n=args.n_episodes,
+        seed=args.seed,
+        null_frac=args.null_frac,
+        period_range=(args.min_period, args.max_period),
+        depth_range=(args.min_depth, args.max_depth),
     )
     es = EpisodeSet.build(
-        load_targets(a.targets), LightCurveCache(a.cache), Path(a.out), cfg, Path(a.targets)
+        load_targets(args.targets), LightCurveCache(args.cache), Path(args.out), cfg, Path(args.targets)
     )
     print(f"built {len(es)} episodes -> {es.root}\nepisode set hash {es.hash}")
 
 
-def _progress(k, p, tr):
+def _progress(episode_id, prediction, truth_record):
     print(
-        f"{k} {tr['kind']:8s} det={p.detected!s:5s} P={p.period:.4f} "
-        f"sde={p.extra.get('sde', float('nan')):.1f} ({p.extra.get('seconds')}s)",
+        f"{episode_id} {truth_record['kind']:8s} det={prediction.detected!s:5s} P={prediction.period:.4f} "
+        f"sde={prediction.extra.get('sde', float('nan')):.1f} ({prediction.extra.get('seconds')}s)",
         flush=True,
     )
 
 
-def cmd_baseline(a: argparse.Namespace) -> None:
+def cmd_baseline(args: argparse.Namespace) -> None:
     """Run the BLS baseline on an episode set and write results."""
     from stargazer.baseline import BLSDetector
     from stargazer.episodes import EpisodeSet
     from stargazer.evaluate import evaluate
 
-    es = EpisodeSet(a.episodes)
-    det = BLSDetector(**(json.loads(a.config) if a.config else {}))
-    ids = es.ids[: a.limit] if a.limit else None
-    res = evaluate(det, es, ids=ids, period_rtol=a.period_rtol, progress=_progress)
-    out = a.out or Path("results") / f"{det.name}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
+    es = EpisodeSet(args.episodes)
+    det = BLSDetector(**(json.loads(args.config) if args.config else {}))
+    ids = es.ids[: args.limit] if args.limit else None
+    res = evaluate(det, es, ids=ids, period_rtol=args.period_rtol, progress=_progress)
+    out = args.out or Path("results") / f"{det.name}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
     res.save(out)
     print(json.dumps(res.summary, indent=1))
     print(f"results -> {out}")
 
 
-def cmd_score(a: argparse.Namespace) -> None:
+def cmd_score(args: argparse.Namespace) -> None:
     """Score an external predictions JSON against an episode set."""
     from stargazer.episodes import EpisodeSet
     from stargazer.evaluate import Results
     from stargazer.score import score_set
 
-    es = EpisodeSet(a.episodes)
-    preds = json.loads(Path(a.preds).read_text())
-    rows, summary = score_set(preds, es.truth, period_rtol=a.period_rtol)
-    res = Results(a.system, {"period_rtol": a.period_rtol}, str(es.root), es.hash, preds, rows, summary)
-    out = a.out or Path("results") / f"{a.system}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
+    es = EpisodeSet(args.episodes)
+    preds = json.loads(Path(args.preds).read_text())
+    rows, summary = score_set(preds, es.truth, period_rtol=args.period_rtol)
+    res = Results(args.system, {"period_rtol": args.period_rtol}, str(es.root), es.hash, preds, rows, summary)
+    out = args.out or Path("results") / f"{args.system}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
     res.save(out)
     print(json.dumps(summary, indent=1))
     print(f"results -> {out}")
 
 
-def cmd_agent(a: argparse.Namespace) -> None:
+def cmd_agent(args: argparse.Namespace) -> None:
     """Run the tool-using agent with a model backend on a few episodes and score it."""
     from stargazer.agent import ToolAgentDetector
     from stargazer.episodes import EpisodeSet
     from stargazer.evaluate import evaluate
 
-    if a.backend == "openai":
+    if args.backend == "openai":
         from stargazer.backends import OpenAICompatibleBackend
 
         backend = OpenAICompatibleBackend(
-            model=a.model, base_url=a.base_url, api_key_env=a.api_key_env, temperature=a.temperature
+            model=args.model,
+            base_url=args.base_url,
+            api_key_env=args.api_key_env,
+            temperature=args.temperature,
         )
     else:
         from stargazer.backends import TinkerBackend
 
-        backend = TinkerBackend(base_model=a.model, model_path=a.model_path, temperature=a.temperature)
-    es = EpisodeSet(a.episodes)
-    det = ToolAgentDetector(backend, max_tool_calls=a.max_tool_calls)
-    ids = es.ids[: a.limit] if a.limit else None
+        backend = TinkerBackend(
+            base_model=args.model, model_path=args.model_path, temperature=args.temperature
+        )
+    es = EpisodeSet(args.episodes)
+    det = ToolAgentDetector(backend, max_tool_calls=args.max_tool_calls)
+    ids = es.ids[: args.limit] if args.limit else None
 
-    def progress(k, p, tr):
-        u = p.extra.get("usage", {})
-        tokens = int(u.get("input_tokens", 0) + u.get("output_tokens", 0))
+    def progress(episode_id, prediction, truth_record):
+        usage = prediction.extra.get("usage", {})
+        tokens = int(usage.get("input_tokens", 0) + usage.get("output_tokens", 0))
+        extra = prediction.extra
         print(
-            f"{k} {tr['kind']:8s} det={p.detected!s:5s} stop={p.extra.get('stop')} "
-            f"calls={p.extra.get('n_tool_calls')} tokens={tokens} usd={u.get('usd', 0):.4f}",
+            f"{episode_id} {truth_record['kind']:8s} det={prediction.detected!s:5s} stop={extra.get('stop')} "
+            f"calls={extra.get('n_tool_calls')} tokens={tokens} usd={usage.get('usd', 0):.4f}",
             flush=True,
         )
 
-    res = evaluate(det, es, ids=ids, period_rtol=a.period_rtol, progress=progress)
-    tag = a.model.replace("/", "_")
+    res = evaluate(det, es, ids=ids, period_rtol=args.period_rtol, progress=progress)
+    tag = args.model.replace("/", "_")
     out = (
-        a.out
-        or Path("results") / f"agent_{a.backend}_{tag}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
+        args.out
+        or Path("results")
+        / f"agent_{args.backend}_{tag}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
     )
     res.save(out)
-    total_usd = sum(p.get("usage", {}).get("usd", 0) for p in res.preds.values())
+    total_usd = sum(prediction.get("usage", {}).get("usd", 0) for prediction in res.preds.values())
     print(json.dumps(res.summary, indent=1))
     print(f"total reported cost usd={total_usd:.4f}\nresults -> {out}")
 
 
-def cmd_calibrate(a: argparse.Namespace) -> None:
+def cmd_calibrate(args: argparse.Namespace) -> None:
     """Sweep the detection threshold on a results file and print the table."""
     from stargazer.calibrate import choose_threshold, threshold_sweep
     from stargazer.episodes import EpisodeSet
     from stargazer.evaluate import Results
 
-    res = Results.load(a.results)
+    res = Results.load(args.results)
     truth = EpisodeSet(res.episode_set).truth
-    thresholds = [float(x) for x in a.thresholds.split(",")]
-    rows = threshold_sweep(res, truth, thresholds, stat=a.stat)
+    thresholds = [float(value) for value in args.thresholds.split(",")]
+    rows = threshold_sweep(res, truth, thresholds, stat=args.stat)
     print(f"{'threshold':>9} {'false_alarm':>11} {'compl_exact':>11} {'compl_alias':>11} {'mean_score':>10}")
-    for r in rows:
+    for row in rows:
         print(
-            f"{r['threshold']:9.2f} {r['false_alarm_rate']:11.3f} {r['completeness_exact']:11.3f} "
-            f"{r['completeness_with_aliases']:11.3f} {r['mean_score']:10.3f}"
+            f"{row['threshold']:9.2f} {row['false_alarm_rate']:11.3f} {row['completeness_exact']:11.3f} "
+            f"{row['completeness_with_aliases']:11.3f} {row['mean_score']:10.3f}"
         )
-    chosen = choose_threshold(res, truth, max_false_alarm=a.max_false_alarm, stat=a.stat)
-    print(f"lowest threshold with false-alarm rate <= {a.max_false_alarm}: {chosen:.3f}")
-    if a.out:
-        Path(a.out).write_text(
+    chosen = choose_threshold(res, truth, max_false_alarm=args.max_false_alarm, stat=args.stat)
+    print(f"lowest threshold with false-alarm rate <= {args.max_false_alarm}: {chosen:.3f}")
+    if args.out:
+        Path(args.out).write_text(
             json.dumps(
                 {
-                    "results": a.results,
+                    "results": args.results,
                     "episode_set_hash": res.episode_set_hash,
-                    "stat": a.stat,
+                    "stat": args.stat,
                     "sweep": rows,
-                    "max_false_alarm": a.max_false_alarm,
+                    "max_false_alarm": args.max_false_alarm,
                     "chosen_threshold": chosen,
                 },
                 indent=1,
             )
         )
-        print(f"sweep -> {a.out}")
+        print(f"sweep -> {args.out}")
 
 
-def cmd_verify(a: argparse.Namespace) -> None:
+def cmd_verify(args: argparse.Namespace) -> None:
     """Recompute manifests. Exit with code 1 if a mismatch exists."""
     from stargazer.provenance import Manifest
 
     problems = []
-    for d in a.dirs:
-        p = Manifest.read(Path(d)).verify(Path(d))
-        print(f"{d}: {'OK' if not p else f'{len(p)} problems'}")
-        problems += p
-    for p in problems:
-        print("  " + p)
+    for directory in args.dirs:
+        problems_here = Manifest.read(Path(directory)).verify(Path(directory))
+        print(f"{directory}: {'OK' if not problems_here else f'{len(problems_here)} problems'}")
+        problems += problems_here
+    for problems_here in problems:
+        print("  " + problems_here)
     sys.exit(1 if problems else 0)
 
 
@@ -200,82 +208,82 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="stargazer")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("targets", help="select host stars with no TOI for a sector")
-    p.add_argument("--sector", type=int, required=True)
-    p.add_argument("--n", type=int, default=60)
-    p.add_argument("--seed", type=int, default=1)
-    p.add_argument("--tmag-max", type=float, default=12.0)
-    p.add_argument("--out", default=None)
-    p.set_defaults(func=cmd_targets)
+    parser = sub.add_parser("targets", help="select host stars with no TOI for a sector")
+    parser.add_argument("--sector", type=int, required=True)
+    parser.add_argument("--n", type=int, default=60)
+    parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--tmag-max", type=float, default=12.0)
+    parser.add_argument("--out", default=None)
+    parser.set_defaults(func=cmd_targets)
 
-    p = sub.add_parser("fetch", help="download and cache light curves for a targets file")
-    p.add_argument("--targets", required=True)
-    p.add_argument("--cache", default="data/cache")
-    p.set_defaults(func=cmd_fetch)
+    parser = sub.add_parser("fetch", help="download and cache light curves for a targets file")
+    parser.add_argument("--targets", required=True)
+    parser.add_argument("--cache", default="data/cache")
+    parser.set_defaults(func=cmd_fetch)
 
-    p = sub.add_parser("build", help="build an injection-recovery episode set")
-    p.add_argument("--targets", required=True)
-    p.add_argument("--cache", default="data/cache")
-    p.add_argument("--out", required=True)
-    p.add_argument("--n", type=int, default=200)
-    p.add_argument("--seed", type=int, default=1)
-    p.add_argument("--null-frac", type=float, default=0.3)
-    p.add_argument("--min-period", type=float, default=0.5)
-    p.add_argument("--max-period", type=float, default=20.0)
-    p.add_argument("--min-depth", type=float, default=1e-4)
-    p.add_argument("--max-depth", type=float, default=1e-2)
-    p.set_defaults(func=cmd_build)
+    parser = sub.add_parser("build", help="build an injection-recovery episode set")
+    parser.add_argument("--targets", required=True)
+    parser.add_argument("--cache", default="data/cache")
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--n", type=int, default=200)
+    parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--null-frac", type=float, default=0.3)
+    parser.add_argument("--min-period", type=float, default=0.5)
+    parser.add_argument("--max-period", type=float, default=20.0)
+    parser.add_argument("--min-depth", type=float, default=1e-4)
+    parser.add_argument("--max-depth", type=float, default=1e-2)
+    parser.set_defaults(func=cmd_build)
 
-    p = sub.add_parser("baseline", help="run the BLS baseline on an episode set and score it")
-    p.add_argument("--episodes", required=True)
-    p.add_argument("--config", default=None, help="JSON overrides for BLSDetector")
-    p.add_argument("--limit", type=int, default=0)
-    p.add_argument("--period-rtol", type=float, default=0.01)
-    p.add_argument("--out", default=None)
-    p.set_defaults(func=cmd_baseline)
+    parser = sub.add_parser("baseline", help="run the BLS baseline on an episode set and score it")
+    parser.add_argument("--episodes", required=True)
+    parser.add_argument("--config", default=None, help="JSON overrides for BLSDetector")
+    parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--period-rtol", type=float, default=0.01)
+    parser.add_argument("--out", default=None)
+    parser.set_defaults(func=cmd_baseline)
 
-    p = sub.add_parser("score", help="score a predictions JSON against an episode set")
-    p.add_argument("--episodes", required=True)
-    p.add_argument("--preds", required=True)
-    p.add_argument("--system", required=True)
-    p.add_argument("--period-rtol", type=float, default=0.01)
-    p.add_argument("--out", default=None)
-    p.set_defaults(func=cmd_score)
+    parser = sub.add_parser("score", help="score a predictions JSON against an episode set")
+    parser.add_argument("--episodes", required=True)
+    parser.add_argument("--preds", required=True)
+    parser.add_argument("--system", required=True)
+    parser.add_argument("--period-rtol", type=float, default=0.01)
+    parser.add_argument("--out", default=None)
+    parser.set_defaults(func=cmd_score)
 
-    p = sub.add_parser("agent", help="run the tool-using agent with a model backend")
-    p.add_argument("--episodes", required=True)
-    p.add_argument("--backend", choices=["openai", "tinker"], default="openai")
-    p.add_argument("--model", required=True, help="provider model id, or Tinker base model")
-    p.add_argument("--base-url", default="https://openrouter.ai/api/v1")
-    p.add_argument("--api-key-env", default="OPENROUTER_API_KEY")
-    p.add_argument("--model-path", default=None, help="tinker:// checkpoint path")
-    p.add_argument("--temperature", type=float, default=0.0)
-    p.add_argument("--max-tool-calls", type=int, default=12)
-    p.add_argument("--limit", type=int, default=3, help="episodes to run; 0 means all")
-    p.add_argument("--period-rtol", type=float, default=0.01)
-    p.add_argument("--out", default=None)
-    p.set_defaults(func=cmd_agent)
+    parser = sub.add_parser("agent", help="run the tool-using agent with a model backend")
+    parser.add_argument("--episodes", required=True)
+    parser.add_argument("--backend", choices=["openai", "tinker"], default="openai")
+    parser.add_argument("--model", required=True, help="provider model id, or Tinker base model")
+    parser.add_argument("--base-url", default="https://openrouter.ai/api/v1")
+    parser.add_argument("--api-key-env", default="OPENROUTER_API_KEY")
+    parser.add_argument("--model-path", default=None, help="tinker:// checkpoint path")
+    parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument("--max-tool-calls", type=int, default=12)
+    parser.add_argument("--limit", type=int, default=3, help="episodes to run; 0 means all")
+    parser.add_argument("--period-rtol", type=float, default=0.01)
+    parser.add_argument("--out", default=None)
+    parser.set_defaults(func=cmd_agent)
 
-    p = sub.add_parser("calibrate", help="sweep the detection threshold on a results file")
-    p.add_argument("--results", required=True)
-    p.add_argument("--stat", default="sde")
-    p.add_argument("--thresholds", default="5,6,7,8,9,10,12,15")
-    p.add_argument("--max-false-alarm", type=float, default=0.05)
-    p.add_argument("--out", default=None)
-    p.set_defaults(func=cmd_calibrate)
+    parser = sub.add_parser("calibrate", help="sweep the detection threshold on a results file")
+    parser.add_argument("--results", required=True)
+    parser.add_argument("--stat", default="sde")
+    parser.add_argument("--thresholds", default="5,6,7,8,9,10,12,15")
+    parser.add_argument("--max-false-alarm", type=float, default=0.05)
+    parser.add_argument("--out", default=None)
+    parser.set_defaults(func=cmd_calibrate)
 
-    p = sub.add_parser("verify", help="recompute SHA-256 manifests")
-    p.add_argument("dirs", nargs="+")
-    p.set_defaults(func=cmd_verify)
+    parser = sub.add_parser("verify", help="recompute SHA-256 manifests")
+    parser.add_argument("dirs", nargs="+")
+    parser.set_defaults(func=cmd_verify)
     return ap
 
 
 def main(argv: list[str] | None = None) -> None:
     """Entry point."""
-    a = build_parser().parse_args(argv)
-    if a.cmd == "targets" and a.out is None:
-        a.out = f"data/targets_s{a.sector}.json"
-    a.func(a)
+    args = build_parser().parse_args(argv)
+    if args.cmd == "targets" and args.out is None:
+        args.out = f"data/targets_s{args.sector}.json"
+    args.func(args)
 
 
 if __name__ == "__main__":

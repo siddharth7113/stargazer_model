@@ -46,6 +46,10 @@ Technical English, adapted for code. Apply these rules.
 - Define a physical constant once, as a named module constant. State its value and
   source in the module docstring.
 - Replace a chain of `if` statements on a value with a lookup table and a search.
+- Do not use a single-letter variable name. Write `episode_id`, not `k`; `prediction`,
+  not `p`. The exceptions are `_` for an unused value and the physics symbols `b`, `t0`,
+  `u1`, `u2`, `rp_rs`, `a_rs`, which the docstrings define. `tests/test_style.py`
+  enforces this.
 - Make a table of parameters a module constant with a docstring, so a caller can
   replace it.
 

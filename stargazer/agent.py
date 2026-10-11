@@ -134,12 +134,12 @@ class ToolAgentDetector:
         """Backend config plus the caps and a hash of the system prompt."""
         return {
             "backend": self._backend.name,
-            **{f"backend_{k}": v for k, v in self._backend.config.items()},
+            **{f"backend_{key}": value for key, value in self._backend.config.items()},
             "max_tool_calls": self._max_tool_calls,
             "max_turns": self._max_turns,
             "max_tokens_per_episode": self._max_tokens,
             "system_prompt_sha256": hashlib.sha256(self._system_prompt.encode()).hexdigest(),
-            "tools": [t["function"]["name"] for t in tool_definitions()],
+            "tools": [tool["function"]["name"] for tool in tool_definitions()],
         }
 
     def detect(self, time: np.ndarray, flux: np.ndarray, flux_err: np.ndarray) -> Prediction:
@@ -156,8 +156,8 @@ class ToolAgentDetector:
         n_calls = 0
         for _turn in range(self._max_turns):
             turn = self._backend.complete(messages, tools)
-            for k in usage:
-                usage[k] += float(turn.usage.get(k, 0.0))
+            for key in usage:
+                usage[key] += float(turn.usage.get(key, 0.0))
             messages.append(_assistant_message(turn))
             if not turn.tool_calls:
                 stop = "model_stopped"
@@ -169,7 +169,7 @@ class ToolAgentDetector:
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
                 if call.name == "submit_prediction" and "error" not in result:
                     prediction = Prediction.from_dict(
-                        {k: v for k, v in call.arguments.items() if k != "reasoning"}
+                        {key: value for key, value in call.arguments.items() if key != "reasoning"}
                     )
                     prediction.extra["reasoning"] = call.arguments.get("reasoning", "")
                     stop = "submitted"
@@ -188,7 +188,7 @@ class ToolAgentDetector:
             {
                 "stop": stop,
                 "n_tool_calls": n_calls,
-                "n_turns": len([m for m in messages if m["role"] == "assistant"]),
+                "n_turns": len([message for message in messages if message["role"] == "assistant"]),
                 "usage": usage,
                 "transcript": transcript,
             }
@@ -201,10 +201,10 @@ def _assistant_message(turn: AssistantTurn) -> dict:
     if turn.tool_calls:
         msg["tool_calls"] = [
             {
-                "id": c.id,
+                "id": call.id,
                 "type": "function",
-                "function": {"name": c.name, "arguments": json.dumps(c.arguments)},
+                "function": {"name": call.name, "arguments": json.dumps(call.arguments)},
             }
-            for c in turn.tool_calls
+            for call in turn.tool_calls
         ]
     return msg

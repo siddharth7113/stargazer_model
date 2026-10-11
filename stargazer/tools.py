@@ -43,7 +43,7 @@ def summarize(time: np.ndarray, flux: np.ndarray) -> dict:
         "point_scatter_ppm": round(point_scatter(flux) * 1e6, 1),
         "flux_min": round(float(flux.min()), 6),
         "flux_max": round(float(flux.max()), 6),
-        "gaps_days": [[round(float(time[i]), 3), round(float(dt[i]), 3)] for i in gap_idx],
+        "gaps_days": [[round(float(time[index]), 3), round(float(dt[index]), 3)] for index in gap_idx],
     }
 
 
@@ -84,11 +84,11 @@ def bls_peaks(
     """
     from astropy.timeseries import BoxLeastSquares
 
-    t, f = detrend(time, flux, detrend_window_days)
-    t, f, dy = bin_lc(t, f, bin_minutes)
-    span = t.max() - t.min()
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    work_time, work_flux, work_err = bin_lc(work_time, work_flux, bin_minutes)
+    span = work_time.max() - work_time.min()
     max_period = max_period or span * 0.5
-    bls = BoxLeastSquares(t, f, dy)
+    bls = BoxLeastSquares(work_time, work_flux, work_err)
     durations = np.array([0.03, 0.05, 0.08, 0.12, 0.18, 0.25])
     periods = bls.autoperiod(
         durations, minimum_period=min_period, maximum_period=max_period, frequency_factor=2.0
@@ -98,17 +98,17 @@ def bls_peaks(
     mean, std = float(np.nanmean(power)), float(np.nanstd(power))
     order = np.argsort(-power)
     peaks = []
-    for i in order:
-        p = float(res.period[i])
-        if any(abs(p / q["period"] - 1) < 0.02 for q in peaks):
+    for index in order:
+        period = float(res.period[index])
+        if any(abs(period / peak["period"] - 1) < 0.02 for peak in peaks):
             continue
         peaks.append(
             {
-                "period": round(p, 5),
-                "t0": round(float(res.transit_time[i]), 4),
-                "duration": round(float(res.duration[i]), 3),
-                "depth_ppm": round(float(res.depth[i]) * 1e6, 1),
-                "sde": round((float(power[i]) - mean) / std, 2),
+                "period": round(period, 5),
+                "t0": round(float(res.transit_time[index]), 4),
+                "duration": round(float(res.duration[index]), 3),
+                "depth_ppm": round(float(res.depth[index]) * 1e6, 1),
+                "sde": round((float(power[index]) - mean) / std, 2),
             }
         )
         if len(peaks) >= n_peaks:
@@ -150,22 +150,22 @@ def fold(
     Phase in days is ``((t - t0 + P/2) mod P) - P/2``. A transit at the right period
     and epoch shows as a single dip at phase zero. A wrong period smears it out.
     """
-    t, f = detrend(time, flux, detrend_window_days)
-    phase = ((t - t0 + 0.5 * period) % period) - 0.5 * period
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    phase = ((work_time - t0 + 0.5 * period) % period) - 0.5 * period
     lim = phase_half_width * period
-    m = np.abs(phase) <= lim
+    mask = np.abs(phase) <= lim
     edges = np.linspace(-lim, lim, n_bins + 1)
-    idx = np.clip(np.digitize(phase[m], edges) - 1, 0, n_bins - 1)
+    idx = np.clip(np.digitize(phase[mask], edges) - 1, 0, n_bins - 1)
     counts = np.bincount(idx, minlength=n_bins)
-    sums = np.bincount(idx, weights=f[m], minlength=n_bins)
+    sums = np.bincount(idx, weights=work_flux[mask], minlength=n_bins)
     with np.errstate(invalid="ignore", divide="ignore"):
         binned = np.where(counts > 0, sums / np.maximum(counts, 1), np.nan)
     centres = 0.5 * (edges[:-1] + edges[1:])
     flux_ppm = (binned - 1.0) * 1e6
     return {
-        "phase": [round(float(c), 4) for c in centres],
-        "flux_ppm": [None if np.isnan(v) else round(float(v), 1) for v in flux_ppm],
-        "n": [int(c) for c in counts],
+        "phase": [round(float(centre), 4) for centre in centres],
+        "flux_ppm": [None if np.isnan(value) else round(float(value), 1) for value in flux_ppm],
+        "n": [int(centre) for centre in counts],
         "depth_ppm": None if np.all(np.isnan(flux_ppm)) else round(float(-np.nanmin(flux_ppm)), 1),
     }
 
@@ -199,23 +199,23 @@ def odd_even(
     """
     from stargazer.inject import point_scatter
 
-    t, f = detrend(time, flux, detrend_window_days)
-    phase = ((t - t0 + 0.5 * period) % period) - 0.5 * period
-    epoch = np.round((t - t0) / period).astype(int)
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    phase = ((work_time - t0 + 0.5 * period) % period) - 0.5 * period
+    epoch = np.round((work_time - t0) / period).astype(int)
     in_tr = np.abs(phase) < 0.5 * duration
-    sigma = point_scatter(f)
+    sigma = point_scatter(work_flux)
     out = {}
     for name, parity in (("odd", 1), ("even", 0)):
-        m = in_tr & (epoch % 2 == parity)
-        n = int(m.sum())
-        depth = float(1.0 - f[m].mean()) if n else float("nan")
-        out[f"{name}_depth_ppm"] = None if n == 0 else round(depth * 1e6, 1)
-        out[f"{name}_n"] = n
-        out[f"_{name}_se"] = sigma / np.sqrt(n) if n else float("nan")
+        mask = in_tr & (epoch % 2 == parity)
+        n_points = int(mask.sum())
+        depth = float(1.0 - work_flux[mask].mean()) if n_points else float("nan")
+        out[f"{name}_depth_ppm"] = None if n_points == 0 else round(depth * 1e6, 1)
+        out[f"{name}_n"] = n_points
+        out[f"_{name}_se"] = sigma / np.sqrt(n_points) if n_points else float("nan")
         out[f"_{name}_depth"] = depth
     se = np.hypot(out.pop("_odd_se"), out.pop("_even_se"))
-    d = abs(out.pop("_odd_depth") - out.pop("_even_depth"))
-    out["difference_sigma"] = None if not np.isfinite(se) or se == 0 else round(float(d / se), 2)
+    difference = abs(out.pop("_odd_depth") - out.pop("_even_depth"))
+    out["difference_sigma"] = None if not np.isfinite(se) or se == 0 else round(float(difference / se), 2)
     return out
 
 
@@ -266,23 +266,23 @@ class ToolSpec:
         with ``"type": ["number", "null"]`` accepts null.
         """
         props = self.parameters.get("properties", {})
-        problems = [f"unknown argument: {k}" for k in arguments if k not in props]
+        problems = [f"unknown argument: {name}" for name in arguments if name not in props]
         problems += [
-            f"missing required argument: {k}"
-            for k in self.parameters.get("required", [])
-            if k not in arguments
+            f"missing required argument: {name}"
+            for name in self.parameters.get("required", [])
+            if name not in arguments
         ]
-        for k, v in arguments.items():
-            if k not in props:
+        for name, value in arguments.items():
+            if name not in props:
                 continue
-            allowed = props[k].get("type", "any")
+            allowed = props[name].get("type", "any")
             allowed = allowed if isinstance(allowed, list) else [allowed]
-            if not any(_json_type_ok(v, t) for t in allowed):
-                problems.append(f"argument {k} must be {' or '.join(allowed)}, got {type(v).__name__}")
-            elif isinstance(v, int | float) and not isinstance(v, bool):
-                lo = props[k].get("exclusiveMinimum")
-                if lo is not None and v <= lo:
-                    problems.append(f"argument {k} must be greater than {lo}, got {v}")
+            if not any(_json_type_ok(value, json_type) for json_type in allowed):
+                problems.append(f"argument {name} must be {' or '.join(allowed)}, got {type(value).__name__}")
+            elif isinstance(value, int | float) and not isinstance(value, bool):
+                lo = props[name].get("exclusiveMinimum")
+                if lo is not None and value <= lo:
+                    problems.append(f"argument {name} must be greater than {lo}, got {value}")
         return problems
 
 
@@ -304,12 +304,12 @@ def _json_type_ok(value: object, json_type: str) -> bool:
 
 def _number(desc: str, default: float | None = None, nullable: bool = False, positive: bool = False) -> dict:
     """Build a JSON Schema for a numeric argument."""
-    d: dict = {"type": ["number", "null"] if nullable else "number", "description": desc}
+    schema: dict = {"type": ["number", "null"] if nullable else "number", "description": desc}
     if default is not None:
-        d["default"] = default
+        schema["default"] = default
     if positive:
-        d["exclusiveMinimum"] = 0
-    return d
+        schema["exclusiveMinimum"] = 0
+    return schema
 
 
 def _submit(time: np.ndarray, flux: np.ndarray, **kwargs) -> dict:
@@ -416,12 +416,12 @@ TOOLS: tuple[ToolSpec, ...] = (
     ),
 )
 
-TOOLS_BY_NAME: dict[str, ToolSpec] = {t.name: t for t in TOOLS}
+TOOLS_BY_NAME: dict[str, ToolSpec] = {tool.name: tool for tool in TOOLS}
 
 
 def tool_definitions() -> list[dict]:
     """Return every tool in OpenAI function-calling format."""
-    return [t.definition() for t in TOOLS]
+    return [tool.definition() for tool in TOOLS]
 
 
 def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray) -> dict:
@@ -441,5 +441,5 @@ def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray) ->
         return {"error": "; ".join(problems)}
     try:
         return spec.function(time, flux, **arguments)
-    except Exception as e:  # a tool failure is reported to the model, not raised
-        return {"error": f"{type(e).__name__}: {e}"[:300]}
+    except Exception as error:  # a tool failure is reported to the model, not raised
+        return {"error": f"{type(error).__name__}: {error}"[:300]}

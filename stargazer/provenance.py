@@ -41,8 +41,8 @@ class Digest:
     @classmethod
     def of_file(cls, path: Path) -> Digest:
         """Hash a file with the standard library's streaming digest."""
-        with open(path, "rb") as f:
-            return cls(hashlib.file_digest(f, "sha256").hexdigest())
+        with open(path, "rb") as file:
+            return cls(hashlib.file_digest(file, "sha256").hexdigest())
 
     @classmethod
     def of_bytes(cls, data: bytes) -> Digest:
@@ -87,17 +87,17 @@ class Manifest:
         """
         directory = Path(directory)
         files = {
-            str(p.relative_to(directory)): Digest.of_file(p).hex
-            for p in sorted(directory.glob(pattern))
-            if p.is_file() and p.name != cls.FILENAME
+            str(path.relative_to(directory)): Digest.of_file(path).hex
+            for path in sorted(directory.glob(pattern))
+            if path.is_file() and path.name != cls.FILENAME
         }
         return cls(files=files, created=utc_timestamp())
 
     @classmethod
     def read(cls, directory: Path) -> Manifest:
         """Open the manifest saved in a directory."""
-        d = json.loads((Path(directory) / cls.FILENAME).read_text())
-        return cls(files=d["files"], created=d["created"])
+        data = json.loads((Path(directory) / cls.FILENAME).read_text())
+        return cls(files=data["files"], created=data["created"])
 
     def write(self, directory: Path) -> Path:
         """Save as ``manifest.json`` in the directory. Return the path."""
@@ -116,10 +116,10 @@ class Manifest:
         directory = Path(directory)
         problems = []
         for rel, digest in self.files.items():
-            p = directory / rel
-            if not p.exists():
+            path = directory / rel
+            if not path.exists():
                 problems.append(f"missing: {rel}")
-            elif Digest.of_file(p).hex != digest:
+            elif Digest.of_file(path).hex != digest:
                 problems.append(f"hash mismatch: {rel}")
         return problems
 

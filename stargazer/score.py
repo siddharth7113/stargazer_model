@@ -94,9 +94,9 @@ def score_episode(
     tr = truth["transit"]
     period, t0, dur = tr["period"], tr["t0"], tr["duration"]
     credit, ratio_hit = 0.0, None
-    for ratio, c in ALIASES:
+    for ratio, credit_value in ALIASES:
         if abs(float(pred.period) / (period * ratio) - 1.0) < period_rtol:
-            credit, ratio_hit = c, ratio
+            credit, ratio_hit = credit_value, ratio
             break
     row["period_credit"], row["alias"] = credit, ratio_hit
     if credit > 0:
@@ -116,7 +116,7 @@ def _label(lo, hi) -> str:
 
 
 def _completeness(rows: dict, keys: list[str]) -> float | None:
-    return float(np.mean([rows[k]["period_credit"] > 0 for k in keys])) if keys else None
+    return float(np.mean([rows[key]["period_credit"] > 0 for key in keys])) if keys else None
 
 
 def summarize(rows: dict[str, dict], truth: dict) -> dict:
@@ -129,34 +129,40 @@ def summarize(rows: dict[str, dict], truth: dict) -> dict:
         on injections, and completeness binned by expected SNR and by transit count.
     """
 
-    def _is_null(k: str) -> bool:
-        return truth[k]["kind"] == "null" or truth[k].get("n_transits", 1) == 0
+    def _is_null(episode_id: str) -> bool:
+        return truth[episode_id]["kind"] == "null" or truth[episode_id].get("n_transits", 1) == 0
 
-    nulls = [rows[k] for k in rows if _is_null(k)]
-    trans = {k: rows[k] for k in rows if not _is_null(k)}
+    nulls = [rows[episode_id] for episode_id in rows if _is_null(episode_id)]
+    trans = {episode_id: rows[episode_id] for episode_id in rows if not _is_null(episode_id)}
     summary = {
         "n_episodes": len(rows),
         "n_null": len(nulls),
         "n_transit": len(trans),
-        "mean_score": float(np.mean([r["score"] for r in rows.values()])) if rows else None,
-        "false_alarm_rate": float(np.mean([r["detected"] for r in nulls])) if nulls else None,
+        "mean_score": float(np.mean([row["score"] for row in rows.values()])) if rows else None,
+        "false_alarm_rate": float(np.mean([row["detected"] for row in nulls])) if nulls else None,
         "completeness_exact": (
-            float(np.mean([r["outcome"] == "hit" for r in trans.values()])) if trans else None
+            float(np.mean([row["outcome"] == "hit" for row in trans.values()])) if trans else None
         ),
         "completeness_with_aliases": _completeness(trans, list(trans)),
         "by_snr": {},
         "by_n_transits": {},
     }
     for lo, hi in SNR_BINS:
-        ks = [k for k in trans if lo <= truth[k]["snr"] < hi]
-        summary["by_snr"][_label(lo, hi)] = {"n": len(ks), "completeness": _completeness(trans, ks)}
+        keys = [episode_id for episode_id in trans if lo <= truth[episode_id]["snr"] < hi]
+        summary["by_snr"][_label(lo, hi)] = {"n": len(keys), "completeness": _completeness(trans, keys)}
     for lo, hi in NTR_BINS:
-        ks = [k for k in trans if lo <= truth[k]["n_transits"] <= hi]
-        summary["by_n_transits"][_label(lo, hi)] = {"n": len(ks), "completeness": _completeness(trans, ks)}
+        keys = [episode_id for episode_id in trans if lo <= truth[episode_id]["n_transits"] <= hi]
+        summary["by_n_transits"][_label(lo, hi)] = {
+            "n": len(keys),
+            "completeness": _completeness(trans, keys),
+        }
     return summary
 
 
 def score_set(preds: dict[str, Prediction | dict], truth: dict, **tol) -> tuple[dict, dict]:
     """Score each episode in ``truth``. A missing prediction counts as not detected."""
-    rows = {k: score_episode(preds.get(k, {"detected": False}), truth[k], **tol) for k in truth}
+    rows = {
+        episode_id: score_episode(preds.get(episode_id, {"detected": False}), truth[episode_id], **tol)
+        for episode_id in truth
+    }
     return rows, summarize(rows, truth)
