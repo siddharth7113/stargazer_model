@@ -149,7 +149,7 @@ def cmd_agent(args: argparse.Namespace) -> None:
             flush=True,
         )
 
-    res = evaluate(det, es, ids=ids, period_rtol=args.period_rtol, progress=progress)
+    res = evaluate(det, es, ids=ids, period_rtol=args.period_rtol, progress=progress, workers=args.workers)
     tag = args.model.replace("/", "_")
     out = (
         args.out
@@ -316,6 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-tool-calls", type=int, default=None, help="safety stop; default is the detector's (40)"
     )
     parser.add_argument("--limit", type=int, default=3, help="episodes to run; 0 means all")
+    parser.add_argument("--workers", type=int, default=8, help="episodes evaluated at the same time")
     parser.add_argument("--period-rtol", type=float, default=0.01)
     parser.add_argument("--out", default=None)
     parser.set_defaults(func=cmd_agent)

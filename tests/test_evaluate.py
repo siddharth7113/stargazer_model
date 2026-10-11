@@ -114,3 +114,29 @@ def test_results_to_dict_layout(episodes):
     }
     assert set(doc) == expected_keys
     assert set(doc["episodes"]["ep_0000"]) == {"pred", "score"}
+
+
+def test_evaluate_with_workers_matches_serial_order_and_values(episodes):
+    """A thread pool must give the same predictions in episode order and call progress once per episode."""
+    seen = []
+    serial = evaluate(AlwaysNone(), episodes)
+    parallel = evaluate(
+        AlwaysNone(), episodes, workers=4, progress=lambda episode_id, *_: seen.append(episode_id)
+    )
+    assert list(parallel.preds) == list(serial.preds) == episodes.ids
+    for episode_id in episodes.ids:
+        without_timing = {key: value for key, value in parallel.preds[episode_id].items() if key != "seconds"}
+        assert without_timing == {
+            key: value for key, value in serial.preds[episode_id].items() if key != "seconds"
+        }
+    assert seen == episodes.ids and parallel.config["workers"] == 4
+
+
+def test_evaluate_with_workers_records_errors(episodes):
+    """Error recording works the same inside the pool."""
+
+    class Broken(AlwaysNone):
+        def detect(self, time, flux, flux_err):
+            raise RuntimeError("boom")
+
+    assert evaluate(Broken(), episodes, workers=3).config["errors"] == episodes.ids

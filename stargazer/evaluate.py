@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time as _time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -98,6 +99,7 @@ def evaluate(
     epoch_frac: float = 0.5,
     progress: Callable[[str, Prediction, dict], None] | None = None,
     record_errors: bool = True,
+    workers: int = 1,
 ) -> Results:
     """Run a detector on each episode and score the predictions.
 
@@ -115,6 +117,12 @@ def evaluate(
         If True, an exception in ``detect`` becomes a prediction of "none" with the
         error text in ``extra["error"]``, and the episode id goes into
         ``config["errors"]``. If False, the exception propagates.
+    workers : int
+        Episodes evaluated at the same time in a thread pool. A detector that waits
+        on a remote model is idle most of the time, so 8 to 16 workers give a near
+        linear speed-up. The detector must be safe to call from several threads;
+        the baseline and the agent are. Results are in episode order whatever the
+        completion order. ``progress`` is called from the main thread.
 
     Notes
     -----
@@ -127,20 +135,33 @@ def evaluate(
     preds: dict[str, dict] = {}
     errors: list[str] = []
     t_start = _time.time()
-    for episode_id in ids:
+
+    def run_one(episode_id: str) -> Prediction:
         time, flux, flux_err = episodes.load(episode_id)
-        t1 = _time.time()
+        t_one = _time.time()
         try:
             prediction = detector.detect(time, flux, flux_err)
         except Exception as error:  # a detector failure is a recorded miss, not a lost run
             if not record_errors:
                 raise
             prediction = Prediction(detected=False, extra={"error": f"{type(error).__name__}: {error}"[:500]})
+        prediction.extra["seconds"] = round(_time.time() - t_one, 2)
+        return prediction
+
+    if workers <= 1:
+        outcomes = ((episode_id, run_one(episode_id)) for episode_id in ids)
+    else:
+        pool = ThreadPoolExecutor(max_workers=workers)
+        futures = {episode_id: pool.submit(run_one, episode_id) for episode_id in ids}
+        outcomes = ((episode_id, futures[episode_id].result()) for episode_id in ids)
+    for episode_id, prediction in outcomes:
+        if "error" in prediction.extra:
             errors.append(episode_id)
-        prediction.extra["seconds"] = round(_time.time() - t1, 2)
         preds[episode_id] = prediction.to_dict()
         if progress:
             progress(episode_id, prediction, truth[episode_id])
+    if workers > 1:
+        pool.shutdown(wait=True)
     truth_sub = {episode_id: truth[episode_id] for episode_id in ids}
     rows, summary = score_set(preds, truth_sub, period_rtol=period_rtol, epoch_frac=epoch_frac)
     config = {
@@ -150,6 +171,7 @@ def evaluate(
         "wall_seconds": round(_time.time() - t_start, 1),
         "n_requested": len(ids),
         "errors": errors,
+        "workers": workers,
     }
     return Results(
         system=detector.name,

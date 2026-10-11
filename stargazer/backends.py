@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import uuid
 from typing import Any
 
@@ -68,6 +69,7 @@ class OpenAICompatibleBackend:
         self._temperature = temperature
         self._seed = seed
         self._client = None
+        self._client_lock = threading.Lock()
 
     @property
     def config(self) -> dict[str, Any]:
@@ -82,7 +84,9 @@ class OpenAICompatibleBackend:
         }
 
     def _get_client(self):
-        if self._client is None:
+        with self._client_lock:
+            if self._client is not None:
+                return self._client
             from openai import OpenAI
 
             key = os.environ.get(self._api_key_env)
@@ -210,6 +214,7 @@ class TinkerBackend:
         self._sampler = None
         self._renderer = None
         self._tokenizer = None
+        self._setup_lock = threading.Lock()
 
     @property
     def config(self) -> dict[str, Any]:
@@ -226,7 +231,9 @@ class TinkerBackend:
         }
 
     def _setup(self):
-        if self._sampler is None:
+        with self._setup_lock:
+            if self._sampler is not None:
+                return
             import tinker
             from tinker_cookbook import renderers
             from tinker_cookbook.tokenizer_utils import get_tokenizer
