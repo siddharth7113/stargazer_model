@@ -63,10 +63,12 @@ results.save("results/my_detector_s98_v1.json")
 
 ## Run a language-model agent
 
-Set the provider key in the environment. The key is never written to a file.
+Put the provider key in a `.env` file. Copy `.env.example` to `.env` and fill in the
+values. The CLI loads it at start; git ignores it; the key is never written into a
+results file. An exported variable works as well.
 
 ```bash
-export OPENROUTER_API_KEY=...
+cp .env.example .env   # then edit
 uv pip install -e ".[openai]"
 stargazer agent --episodes data/episodes/s98_v1 --model qwen/qwen3-32b --limit 3
 ```
@@ -75,7 +77,6 @@ The default `--limit 3` runs three episodes. Read the transcript in the results 
 before you run more. For Tinker:
 
 ```bash
-export TINKER_API_KEY=...
 uv pip install -e ".[tinker]"
 stargazer agent --episodes data/episodes/s98_v1 --backend tinker --model Qwen/Qwen3-8B --limit 3
 ```

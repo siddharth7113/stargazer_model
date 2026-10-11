@@ -279,7 +279,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point."""
+    """Entry point. Loads ``.env`` from the current directory first, if one exists."""
+    from dotenv import load_dotenv
+
+    load_dotenv()
     args = build_parser().parse_args(argv)
     if args.cmd == "targets" and args.out is None:
         args.out = f"data/targets_s{args.sector}.json"

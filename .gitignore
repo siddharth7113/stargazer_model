@@ -9,3 +9,4 @@ uv.lock
 results/*.log
 docs/_build/
 docs/generated/
+.env
