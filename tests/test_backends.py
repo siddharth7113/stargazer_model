@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from stargazer.backends import OpenAICompatibleBackend, TinkerBackend
+from stargazer.backends import OpenAICompatibleBackend, TinkerBackend, recommended_sampling
 from stargazer.tools import tool_definitions
 
 
@@ -93,3 +93,28 @@ def test_tinker_split_thinking_with_implicit_open_tag():
 def test_tinker_split_thinking_without_tags():
     """Plain text has no trace."""
     assert TinkerBackend.split_thinking("answer") == ("", "answer")
+
+
+def test_recommended_sampling_by_mode():
+    """Non-thinking renderers get the 0.7/0.8/20 model-card values; thinking renderers get 0.6/0.95/20."""
+    assert recommended_sampling("qwen3_8_disable_thinking") == {"temperature": 0.7, "top_p": 0.8, "top_k": 20}
+    assert recommended_sampling("qwen3_instruct")["temperature"] == 0.7
+    assert recommended_sampling("qwen3_8_xhigh_reasoning") == {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
+
+
+def test_tinker_backend_uses_recommended_defaults_and_records_seed():
+    """Unset sampling values come from the renderer's mode, and the seed is in config for reproducibility."""
+    config = TinkerBackend(renderer="qwen3_8_disable_thinking", seed=7).config
+    assert config["temperature"] == 0.7 and config["top_p"] == 0.8 and config["top_k"] == 20
+    assert config["seed"] == 7
+
+
+def test_tinker_backend_explicit_values_override_defaults():
+    """An explicit temperature wins over the model-card default."""
+    assert TinkerBackend(renderer="qwen3", temperature=0.0).config["temperature"] == 0.0
+
+
+def test_openai_backend_default_temperature_and_seed():
+    """The OpenAI-compatible backend samples at 0.7 by default and records its seed."""
+    config = OpenAICompatibleBackend("m").config
+    assert config["temperature"] == 0.7 and config["seed"] == 0

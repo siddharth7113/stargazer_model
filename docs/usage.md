@@ -73,6 +73,12 @@ uv pip install -e ".[openai]"
 stargazer agent --episodes data/episodes/s98_v1 --model qwen/qwen3-32b --limit 3
 ```
 
+Sampling uses the model-card values for the renderer: temperature 0.7, top_p 0.8 and
+top_k 20 in non-thinking mode, 0.6, 0.95 and 20 in thinking mode. Temperature 0 is not
+the default: model cards discourage greedy decoding, and it does not make a hosted
+model deterministic. A run records its seed. To measure run-to-run variance, repeat the
+run with `--seed 1`, `--seed 2` and report the mean and spread.
+
 The default `--limit 3` runs three episodes. Read the transcript in the results file
 before you run more. For Tinker:
 

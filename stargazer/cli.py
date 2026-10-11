@@ -119,13 +119,18 @@ def cmd_agent(args: argparse.Namespace) -> None:
             model=args.model,
             base_url=args.base_url,
             api_key_env=args.api_key_env,
-            temperature=args.temperature,
+            temperature=0.7 if args.temperature is None else args.temperature,
+            seed=args.seed,
         )
     else:
         from stargazer.backends import TinkerBackend
 
         backend = TinkerBackend(
-            base_model=args.model, model_path=args.model_path, temperature=args.temperature
+            base_model=args.model,
+            model_path=args.model_path,
+            renderer=args.renderer,
+            temperature=args.temperature,
+            seed=args.seed,
         )
     es = EpisodeSet(args.episodes)
     det = ToolAgentDetector(backend, max_tool_calls=args.max_tool_calls)
@@ -303,7 +308,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="qwen3_disable_thinking",
         help="tinker_cookbook renderer name, for example qwen3_8_disable_thinking for Qwen3.8",
     )
-    parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument(
+        "--temperature", type=float, default=None, help="default: the model card value for the renderer"
+    )
+    parser.add_argument("--seed", type=int, default=0, help="sampling seed; vary it to measure variance")
     parser.add_argument(
         "--max-tool-calls", type=int, default=None, help="safety stop; default is the detector's (40)"
     )

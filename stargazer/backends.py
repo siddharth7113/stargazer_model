@@ -37,7 +37,10 @@ class OpenAICompatibleBackend:
     max_tokens : int
         Output cap per turn.
     temperature : float
-        Zero for reproducible evaluation.
+        Default 0.7, the value model cards and the Tinker cookbook use for tool use.
+        Temperature 0 does not make a hosted model deterministic and degrades quality.
+    seed : int
+        Sent to the provider when it supports seeded sampling; recorded in config.
 
     Notes
     -----
@@ -55,13 +58,15 @@ class OpenAICompatibleBackend:
         base_url: str = "https://openrouter.ai/api/v1",
         api_key_env: str = "OPENROUTER_API_KEY",
         max_tokens: int = 4000,
-        temperature: float = 0.0,
+        temperature: float = 0.7,
+        seed: int = 0,
     ):
         self._model = model
         self._base_url = base_url
         self._api_key_env = api_key_env
         self._max_tokens = max_tokens
         self._temperature = temperature
+        self._seed = seed
         self._client = None
 
     @property
@@ -73,6 +78,7 @@ class OpenAICompatibleBackend:
             "api_key_env": self._api_key_env,
             "max_tokens": self._max_tokens,
             "temperature": self._temperature,
+            "seed": self._seed,
         }
 
     def _get_client(self):
@@ -94,6 +100,7 @@ class OpenAICompatibleBackend:
             tool_choice="auto",
             max_tokens=self._max_tokens,
             temperature=self._temperature,
+            seed=self._seed,
             extra_body={"usage": {"include": True}},
         )
         choice = resp.choices[0]
@@ -112,6 +119,33 @@ class OpenAICompatibleBackend:
         return AssistantTurn(content=choice.message.content or "", tool_calls=calls, usage=usage)
 
 
+SAMPLING_DEFAULTS: dict[str, dict[str, float | int]] = {
+    "thinking": {"temperature": 0.6, "top_p": 0.95, "top_k": 20},
+    "non_thinking": {"temperature": 0.7, "top_p": 0.8, "top_k": 20},
+}
+"""Sampling parameters recommended by the Qwen3 model cards [1]_ for each mode.
+
+The cards discourage greedy decoding (temperature 0) because it degrades quality and can
+cause endless repetition. The Tinker cookbook uses 0.7 for its tool-use benchmark, which
+agrees with the non-thinking row.
+
+References
+----------
+.. [1] Qwen Team (2025). Qwen3 model cards, "Best Practices" section.
+   https://huggingface.co/Qwen/Qwen3-8B
+"""
+
+
+def recommended_sampling(renderer: str) -> dict[str, float | int]:
+    """Return the sampling defaults for a renderer name.
+
+    A renderer whose name contains ``disable_thinking`` or ``instruct`` runs the model in
+    non-thinking mode; every other renderer is treated as thinking mode.
+    """
+    mode = "non_thinking" if ("disable_thinking" in renderer or "instruct" in renderer) else "thinking"
+    return dict(SAMPLING_DEFAULTS[mode])
+
+
 TOOL_CALL_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
 THINK_RE = re.compile(r"<think>(.*?)</think>", re.DOTALL)
 
@@ -127,9 +161,13 @@ class TinkerBackend:
         A ``tinker://`` path to saved weights. None samples the base model.
     renderer : str
         Chat template name from ``tinker_cookbook.renderers``. ``qwen3_disable_thinking``
-        gives fast, deterministic tool use; ``qwen3`` enables the thinking mode.
+        runs without a thinking block; ``qwen3`` enables the thinking mode.
     max_tokens : int
-    temperature : float
+    temperature, top_p, top_k : float or int, optional
+        None means the value from :func:`recommended_sampling` for the renderer.
+    seed : int
+        Sampling seed, recorded in config. Repeat a run with other seeds to measure
+        variance; one seed is one sample, not a result.
 
     Notes
     -----
@@ -149,13 +187,20 @@ class TinkerBackend:
         model_path: str | None = None,
         renderer: str = "qwen3_disable_thinking",
         max_tokens: int = 2000,
-        temperature: float = 0.0,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
+        seed: int = 0,
     ):
         self._base_model = base_model
         self._model_path = model_path
         self._renderer_name = renderer
         self._max_tokens = max_tokens
-        self._temperature = temperature
+        defaults = recommended_sampling(renderer)
+        self._temperature = defaults["temperature"] if temperature is None else temperature
+        self._top_p = defaults["top_p"] if top_p is None else top_p
+        self._top_k = defaults["top_k"] if top_k is None else top_k
+        self._seed = seed
         self._sampler = None
         self._renderer = None
         self._tokenizer = None
@@ -169,6 +214,9 @@ class TinkerBackend:
             "renderer": self._renderer_name,
             "max_tokens": self._max_tokens,
             "temperature": self._temperature,
+            "top_p": self._top_p,
+            "top_k": self._top_k,
+            "seed": self._seed,
         }
 
     def _setup(self):
@@ -254,6 +302,9 @@ class TinkerBackend:
         params = types.SamplingParams(
             max_tokens=self._max_tokens,
             temperature=self._temperature,
+            top_p=self._top_p,
+            top_k=self._top_k,
+            seed=self._seed,
             stop=self._renderer.get_stop_sequences(),
         )
         result = self._sampler.sample(prompt=prompt, num_samples=1, sampling_params=params).result()
