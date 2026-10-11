@@ -1,14 +1,14 @@
-ep_0000 transit  det=False stop=submitted calls=7 tokens=24262 usd=0.0000
-ep_0001 transit  det=False stop=submitted calls=7 tokens=23930 usd=0.0000
-ep_0002 transit  det=False stop=submitted calls=7 tokens=24236 usd=0.0000
+ep_0000 transit  det=True  stop=submitted calls=7 tokens=17033 usd=0.0000
+ep_0001 transit  det=False stop=submitted calls=8 tokens=20517 usd=0.0000
+ep_0002 transit  det=False stop=submitted calls=8 tokens=20615 usd=0.0000
 {
  "n_episodes": 3,
  "n_null": 0,
  "n_transit": 3,
- "mean_score": 0.0,
+ "mean_score": 0.3333333333333333,
  "false_alarm_rate": null,
- "completeness_exact": 0.0,
- "completeness_with_aliases": 0.0,
+ "completeness_exact": 0.3333333333333333,
+ "completeness_with_aliases": 0.3333333333333333,
  "by_snr": {
   "0-5": {
    "n": 1,
@@ -32,7 +32,7 @@ ep_0002 transit  det=False stop=submitted calls=7 tokens=24236 usd=0.0000
   },
   "50-inf": {
    "n": 1,
-   "completeness": 0.0
+   "completeness": 1.0
   }
  },
  "by_n_transits": {
@@ -50,7 +50,7 @@ ep_0002 transit  det=False stop=submitted calls=7 tokens=24236 usd=0.0000
   },
   "6-inf": {
    "n": 2,
-   "completeness": 0.0
+   "completeness": 0.5
   }
  }
 }

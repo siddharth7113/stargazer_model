@@ -1,6 +1,6 @@
-ep_0000 transit  det=True  stop=submitted calls=6 tokens=16758 usd=0.0000
-ep_0001 transit  det=False stop=submitted calls=8 tokens=26518 usd=0.0000
-ep_0002 transit  det=False stop=submitted calls=15 tokens=76806 usd=0.0000
+ep_0000 transit  det=True  stop=submitted calls=6 tokens=17523 usd=0.0000
+ep_0001 transit  det=True  stop=submitted calls=13 tokens=39777 usd=0.0000
+ep_0002 transit  det=True  stop=submitted calls=20 tokens=86330 usd=0.0000
 {
  "n_episodes": 3,
  "n_null": 0,
