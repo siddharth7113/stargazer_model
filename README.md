@@ -198,6 +198,18 @@ on the 36 other stars with the same ranges, and host selection now excludes know
 eclipsing binaries as it excludes TOI hosts. The seed comparisons of the next phase
 run on `s98_v3`; the table above stays as the record of the toolbox on `s98_v2`.
 
+On `s98_v3`, Inkling-Small ran three times with each prompt, each run with its own
+sampling seed, so the table gives the mean over seeds and, in brackets, the standard
+deviation. The spread is the yardstick: a change counts when it moves a number by
+more than the spread. BLS on this set finds 34 percent at a 5 percent false-alarm
+rate, and no single transit.
+
+| system, s98_v3 | false alarm | completeness | with aliases | mean score | one-transit hits |
+|---|---|---|---|---|---|
+| Box Least Squares at 5 percent false alarm | 5% | 34% | 34% | - | 0 of 17 |
+| Inkling-Small, rules prompt, 3 seeds | 2% (2) | 39% (1) | 41% (1) | 0.573 (0.000) | 3 of 17 |
+| Inkling-Small, base prompt, 3 seeds | 31% (5) | 40% (3) | 42% (2) | 0.492 (0.034) | 3 of 17 |
+
 ## Toolbox
 
 | tool | what it does | status |

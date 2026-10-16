@@ -1013,3 +1013,46 @@ Harness clean; the six seed runs follow.
 1, 2, 3 with `--prompt base`, then seeds 1, 2, 3 with `--prompt rules`, one after
 another. Results land as `results/full_v8seeds/agent_inkling_small_s98_v3_<prompt>_seed<n>.json`,
 with `progress.log` beside them. The numbers go in the next entry.
+
+**Six seed runs of Inkling-Small on s98_v3** (`results/full_v8seeds/`, hash
+`745c6cb5...`, `tml_v0`, full toolbox, `--workers 8`, seeds 1, 2, 3 for each prompt,
+$12 to $13 a run, $73.64 in all). The chain `run_seeds.sh` ran base seed 1 alone in
+14 minutes; the owner asked for the rest side by side, so `run_parallel.sh` started
+base seed 3 and the three rules seeds while base seed 2 was still running, five
+processes at eight workers each. Tinker took it: 23 to 25 minutes a run, no errors,
+200 episodes each. Every results file records its seed, its prompt hash and the set
+hash; 22 of the 200 episodes differ in outcome between rules seeds 1 and 2, so the
+seeds did change the sampling.
+
+| prompt | seed | false alarm | completeness | with aliases | mean score | one-transit hits |
+|---|---|---|---|---|---|---|
+| base | 1 | 25.4% | 43.3% | 44.0% | 0.525 | 4 of 17 |
+| base | 2 | 32.2% | 41.1% | 42.6% | 0.494 | 1 of 17 |
+| base | 3 | 35.6% | 36.9% | 39.7% | 0.457 | 3 of 17 |
+| base | mean (sd) | 31.1% (5.2) | 40.4% (3.3) | 42.1% (2.2) | 0.492 (0.034) | |
+| rules | 1 | 3.4% | 39.7% | 41.8% | 0.573 | 2 of 17 |
+| rules | 2 | 3.4% | 39.7% | 41.8% | 0.573 | 3 of 17 |
+| rules | 3 | 0.0% | 38.3% | 40.4% | 0.573 | 3 of 17 |
+| rules | mean (sd) | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | |
+
+The three rules runs share the mean score 0.5725 by coincidence of totals: seed 3
+has two more true nulls and two fewer hits than seed 1, and the partial credits add
+to the same 114.5 points; the outcome counts differ (54, 53, 51 hits; 2, 2, 0 false
+alarms; 3, 9, 10 wrong periods).
+
+Reading. The spread of one run is now known. With the base prompt the mean score
+moves by 0.07 between seeds and the false-alarm rate by 10 points; with the rules
+prompt the score does not move and the false-alarm rate stays within 3.4 points. A
+later change on this model has to move the base-prompt score by more than about 0.07,
+or the rules-prompt false-alarm rate by more than 3 points, before it counts. The gap
+between the prompts is 0.08 of mean score, the same as on s98_v2 (0.558 against
+0.476), and again it is restraint: completeness is level at 39 to 40 percent while
+the false-alarm rate is 31 percent against 2 percent. The base prompt submits ten
+times as many wrong periods (30, 34, 27 against 3, 9, 10). The base-prompt wobble is
+larger because the model with no procedure decides on its own when to stop, and that
+decision varies with the sample. Against BLS on this set (completeness 0.34 at 5
+percent false alarm, 0.38 at the default threshold with 61 percent), the rules
+prompt finds more planets at a lower false-alarm rate than any BLS threshold, and
+the base prompt finds as many as BLS at the default threshold with half its false
+alarms. Both prompts find three of the 17 one-transit injections on average, where
+BLS finds none.

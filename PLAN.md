@@ -49,7 +49,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Baseline on s98_v2 recorded in the LOGBOOK
 - [x] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; s98_v3 built on the 36 clean hosts, BLS baseline recorded (LOGBOOK 2026-10-16)
 - [ ] One small episode set committed to git for tests and demonstrations
-- [ ] Repeat each comparison run with three seeds and report mean and spread
+- [x] Repeat each comparison run with three seeds and report mean and spread: Inkling-Small on s98_v3, both prompts (LOGBOOK 2026-10-16); the larger models are still single runs
 
 ## Phase 2: The agent harness (done, being measured)
 
@@ -139,29 +139,24 @@ Read LOGBOOK.md first; it has every number and the command that produced it.
 The session added the binary cut to host selection (`CatalogueFetcher.binary_evidence`,
 the last cut in `select_targets`, and `stargazer remove-binaries` for an existing
 targets file), built `data/episodes/s98_v3` from the 36 hosts that are in neither the
-TESS eclipsing-binary catalogue nor the Gaia ECL class, wrote its `context.json`, and
-ran the BLS baseline. Hash with context
-`745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79`. The 5 percent
-false-alarm threshold fell from 18.63 to 14.39 and completeness there rose from 0.25
-to 0.34, because the deep false alarms of s98_v2 were the binaries. The three-episode
-check of Inkling-Small on s98_v3 was clean. The Inkling-Small series in the README is
-on s98_v2 and is not comparable with s98_v3 numbers.
-
-Running: `results/full_v8seeds/run_seeds.sh`, six full runs of Inkling-Small on
-s98_v3 one after another, seeds 1, 2, 3 of the base prompt then of the rules prompt,
-about one hour each. Results land in `results/full_v8seeds/`, one JSON and one log for
-each run, and `progress.log` gains a line as each run finishes and `ALL_RUNS_DONE` at
-the end.
+TESS eclipsing-binary catalogue nor the Gaia ECL class, wrote its `context.json`, ran
+the BLS baseline, and ran Inkling-Small three times with each prompt. Hash with context
+`745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79`. Results in
+`results/full_v8seeds/`; the README table has the means and spreads. Rules prompt:
+mean score 0.573 with no spread, 2 percent false alarms, 39 percent completeness.
+Base prompt: 0.492 with a spread of 0.034, 31 percent false alarms, 40 percent
+completeness. The 0.08 gap is restraint, as on s98_v2. Tinker ran five processes at
+eight workers each without trouble, 25 minutes for 200 episodes, about $12 a run.
+Nothing is running. The s98_v2 series in the README is not comparable with s98_v3.
 
 First steps for the next session:
-1. Read `progress.log`. For each finished run, record false-alarm rate, completeness,
-   mean score and cost in the LOGBOOK; `stargazer compare` on the six files gives one
-   table. Report the mean and the spread over seeds for each prompt; the spread is the
-   yardstick for every later change.
-2. Commit the six results files with the LOGBOOK entry; update the README table with
-   the s98_v3 rows.
-3. The larger models with the base prompt, three seeds each, on s98_v3.
-4. The pixel tools (centroid motion, difference imaging) need the target pixel files,
+1. The larger models with the base prompt on s98_v3, three seeds each, in parallel
+   processes: Qwen3.8-27B first, then the models listed in Phase 2. Each needs a
+   three-episode check and its own renderer name.
+2. A second sector with `stargazer targets --sector N`, so the model sees stars it has
+   not seen; same build settings as s98_v3. This is the first step toward Phase 4 and
+   the held-out set that Phase 5 needs.
+3. The pixel tools (centroid motion, difference imaging) need the target pixel files,
    several gigabytes for 36 stars; the owner decides whether to download them.
 
 ## Open questions
