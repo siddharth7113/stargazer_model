@@ -136,28 +136,34 @@ curve as three arrays, so each survey needs only a loader and a target list.
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The session added the binary cut to host selection (`CatalogueFetcher.binary_evidence`,
-the last cut in `select_targets`, and `stargazer remove-binaries` for an existing
-targets file), built `data/episodes/s98_v3` from the 36 hosts that are in neither the
-TESS eclipsing-binary catalogue nor the Gaia ECL class, wrote its `context.json`, ran
-the BLS baseline, and ran Inkling-Small three times with each prompt. Hash with context
-`745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79`. Results in
-`results/full_v8seeds/`; the README table has the means and spreads. Rules prompt:
-mean score 0.573 with no spread, 2 percent false alarms, 39 percent completeness.
-Base prompt: 0.492 with a spread of 0.034, 31 percent false alarms, 40 percent
-completeness. The 0.08 gap is restraint, as on s98_v2. Tinker ran five processes at
-eight workers each without trouble, 25 minutes for 200 episodes, about $12 a run.
-Nothing is running. The s98_v2 series in the README is not comparable with s98_v3.
+The day: host selection excludes known eclipsing binaries; `data/episodes/s98_v3` (36
+hosts, hash with context `745c6cb5...`) with its BLS baseline; Inkling-Small three seeds
+of each prompt on it (`results/full_v8seeds/`, README table); the first seed of four
+large models with the base prompt (`results/full_v9large/`, LOGBOOK table); `--max-tokens`
+and `--max-turns` on `stargazer agent`; argument coercion of boolean and number text.
+Findings: the prompt gap is restraint; wrong periods are false alarms on unfindable
+planets; every model misses the same planets on two spotted rotators; Kimi K2.6 is the
+only large model outside the small model's seed spread. GLM-5.3 still fails on its
+tokenizer.
+
+Running at close: `results/full_v9large/run_seeds_large.sh`, twenty runs as eight
+parallel chains, for each of Inkling, Kimi K2.6, Qwen3.5-397B and Nemotron 3 Ultra:
+base seeds 2 and 3, then rules seeds 1, 2, 3. `progress.log` gains one line for each
+finished run and `SEEDS_LARGE_DONE` at the end; expect it around 01:00 UTC on
+2026-10-17. These runs loaded the code before the two fixes, so Qwen loses a turn on
+most submits and Kimi hits the caps in about 4 percent of episodes; both are in the
+LOGBOOK.
 
 First steps for the next session:
-1. The larger models with the base prompt on s98_v3, three seeds each, in parallel
-   processes: Qwen3.8-27B first, then the models listed in Phase 2. Each needs a
-   three-episode check and its own renderer name.
-2. A second sector with `stargazer targets --sector N`, so the model sees stars it has
-   not seen; same build settings as s98_v3. This is the first step toward Phase 4 and
-   the held-out set that Phase 5 needs.
-3. The pixel tools (centroid motion, difference imaging) need the target pixel files,
-   several gigabytes for 36 stars; the owner decides whether to download them.
+1. Read `progress.log`; put the 24 large-model runs into one table with the mean and
+   spread for each model and prompt, beside Inkling-Small; LOGBOOK entry, README table,
+   commit the results files.
+2. Kimi K2.6 rerun with `--max-turns 60 --max-tokens 32768`, three-episode check first,
+   then base and rules at one seed, to see what the caps cost it. Qwen3.5 with the
+   coercion fix, one seed, to see whether the lost turn mattered.
+3. The spotted-rotator misses (ep_0042, ep_0043, ep_0049, ep_0059 of s98_v3): what a
+   rotation-aware detrending or a `stellar_variability` tool would show. Phase 3 item.
+4. A second sector with `stargazer targets --sector N`, same build settings as s98_v3.
 
 ## Open questions
 
