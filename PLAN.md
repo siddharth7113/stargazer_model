@@ -146,18 +146,21 @@ planets; every model misses the same planets on two spotted rotators; Kimi K2.6 
 only large model outside the small model's seed spread. GLM-5.3 still fails on its
 tokenizer.
 
-Running at close: `results/full_v9large/run_seeds_large.sh`, twenty runs as eight
-parallel chains, for each of Inkling, Kimi K2.6, Qwen3.5-397B and Nemotron 3 Ultra:
-base seeds 2 and 3, then rules seeds 1, 2, 3. `progress.log` gains one line for each
-finished run and `SEEDS_LARGE_DONE` at the end; expect it around 01:00 UTC on
-2026-10-17. These runs loaded the code before the two fixes, so Qwen loses a turn on
-most submits and Kimi hits the caps in about 4 percent of episodes; both are in the
-LOGBOOK.
+Running at close: eight runs of `results/full_v9large/run_seeds_large.sh`, left to
+finish after the owner stopped the queue at 21:58 UTC to cap the day's spend: base
+seeds 2 and 3 of Kimi K2.6 and Qwen3.5-397B, rules seeds 1 and 2 of Inkling and
+Nemotron 3 Ultra. Their results files appear in `results/full_v9large/` when each ends;
+the chain that wrote `progress.log` was killed, so no line is written for them. Not
+run: rules seed 3 of Inkling and Nemotron 3 Ultra, rules seeds 1, 2, 3 of Kimi K2.6 and
+Qwen3.5-397B (eight runs, about $700). These runs loaded the code before the two
+fixes, so Qwen loses a turn on most submits and Kimi hits the caps in about 4 percent
+of episodes; both are in the LOGBOOK. Spend rule from today: an explicit yes from the
+owner before any batch above about $300.
 
 First steps for the next session:
-1. Read `progress.log`; put the 24 large-model runs into one table with the mean and
-   spread for each model and prompt, beside Inkling-Small; LOGBOOK entry, README table,
-   commit the results files.
+1. Put the finished large-model runs into one table with the mean and spread for each
+   model and prompt, beside Inkling-Small; LOGBOOK entry, README table, commit the
+   results files. Ask the owner before launching the eight missing rules runs.
 2. Kimi K2.6 rerun with `--max-turns 60 --max-tokens 32768`, three-episode check first,
    then base and rules at one seed, to see what the caps cost it. Qwen3.5 with the
    coercion fix, one seed, to see whether the lost turn mattered.
