@@ -11,3 +11,4 @@ docs/_build/
 docs/generated/
 .env
 data/episodes/
+.ipynb_checkpoints/
