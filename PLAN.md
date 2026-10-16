@@ -143,17 +143,23 @@ TESS eclipsing-binary catalogue nor the Gaia ECL class, wrote its `context.json`
 ran the BLS baseline. Hash with context
 `745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79`. The 5 percent
 false-alarm threshold fell from 18.63 to 14.39 and completeness there rose from 0.25
-to 0.34, because the deep false alarms of s98_v2 were the binaries. Nothing is
-running. No agent has run on s98_v3 yet. The Inkling-Small series in the README is on
-s98_v2 and is not comparable with s98_v3 numbers; the first s98_v3 agent run is a new
-baseline for the model.
+to 0.34, because the deep false alarms of s98_v2 were the binaries. The three-episode
+check of Inkling-Small on s98_v3 was clean. The Inkling-Small series in the README is
+on s98_v2 and is not comparable with s98_v3 numbers.
+
+Running: `results/full_v8seeds/run_seeds.sh`, six full runs of Inkling-Small on
+s98_v3 one after another, seeds 1, 2, 3 of the base prompt then of the rules prompt,
+about one hour each. Results land in `results/full_v8seeds/`, one JSON and one log for
+each run, and `progress.log` gains a line as each run finishes and `ALL_RUNS_DONE` at
+the end.
 
 First steps for the next session:
-1. Three-episode check of Inkling-Small on s98_v3 with the base prompt and the full
-   toolbox (`--renderer tml_v0 --prompt base --limit 3`), read with `stargazer view`.
-2. Three seeds of the base prompt and of the rules prompt on s98_v3, full toolbox,
-   `--workers 8`, results in `results/full_v8seeds/`, so the spread of one seed is
-   known before any further change is judged.
+1. Read `progress.log`. For each finished run, record false-alarm rate, completeness,
+   mean score and cost in the LOGBOOK; `stargazer compare` on the six files gives one
+   table. Report the mean and the spread over seeds for each prompt; the spread is the
+   yardstick for every later change.
+2. Commit the six results files with the LOGBOOK entry; update the README table with
+   the s98_v3 rows.
 3. The larger models with the base prompt, three seeds each, on s98_v3.
 4. The pixel tools (centroid motion, difference imaging) need the target pixel files,
    several gigabytes for 36 stars; the owner decides whether to download them.

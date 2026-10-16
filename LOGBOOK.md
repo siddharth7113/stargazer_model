@@ -998,3 +998,18 @@ percent false alarm rises from 0.25 to 0.34, while the six-or-more bin at the de
 threshold rises from 51 to 58 percent, in part because 79 instead of 73 injections fall
 in it. This set is the reference for the seed runs; the Inkling-Small series on s98_v2
 stays as the record of the toolbox and is not comparable with s98_v3 numbers.
+
+**Three-episode check of Inkling-Small on s98_v3**
+(`results/smoke/agent_inkling_small_s98_v3_base3.json`, `tml_v0`, base prompt, seed
+0, $0.21, 43 seconds). The recorded config lists all eleven tools, the base prompt
+hash and no errors. ep_0000 true null. ep_0002 hit on a 0.862-day planet with 46
+transits. ep_0001 miss: the injected 8.1-day planet has an expected signal-to-noise
+ratio of 1.6 at 154 ppm on a star with 2,234 ppm scatter, so it is unfindable; the
+model ran eleven tools, saw a 16.7-day peak with two events fail vetting, and declined.
+Harness clean; the six seed runs follow.
+
+**Six seed runs launched** (`results/full_v8seeds/run_seeds.sh`, started
+2026-10-16 about 19:40 UTC): Inkling-Small on s98_v3, `tml_v0`, `--workers 8`, seeds
+1, 2, 3 with `--prompt base`, then seeds 1, 2, 3 with `--prompt rules`, one after
+another. Results land as `results/full_v8seeds/agent_inkling_small_s98_v3_<prompt>_seed<n>.json`,
+with `progress.log` beside them. The numbers go in the next entry.
