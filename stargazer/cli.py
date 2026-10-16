@@ -148,6 +148,7 @@ def cmd_agent(args: argparse.Namespace) -> None:
             base_url=args.base_url,
             api_key_env=args.api_key_env,
             temperature=0.7 if args.temperature is None else args.temperature,
+            max_tokens=4000 if args.max_tokens is None else args.max_tokens,
             seed=args.seed,
         )
     else:
@@ -158,6 +159,7 @@ def cmd_agent(args: argparse.Namespace) -> None:
             model_path=args.model_path,
             renderer=args.renderer,
             temperature=args.temperature,
+            max_tokens=args.max_tokens,
             seed=args.seed,
         )
     es = EpisodeSet(args.episodes)
@@ -356,6 +358,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--temperature", type=float, default=None, help="default: the model card value for the renderer"
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="output cap for each turn, thinking included; default: the model card value for the renderer",
     )
     parser.add_argument("--seed", type=int, default=0, help="sampling seed; vary it to measure variance")
     parser.add_argument(

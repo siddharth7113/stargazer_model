@@ -66,6 +66,8 @@ def test_agent_command_forwards_renderer_temperature_and_seed(monkeypatch):
             "qwen3_8_xhigh_reasoning",
             "--temperature",
             "0.5",
+            "--max-tokens",
+            "32768",
             "--seed",
             "3",
         ]
@@ -74,6 +76,35 @@ def test_agent_command_forwards_renderer_temperature_and_seed(monkeypatch):
         cli_module.cmd_agent(args)
     assert captured["renderer"] == "qwen3_8_xhigh_reasoning"
     assert captured["temperature"] == 0.5 and captured["seed"] == 3 and captured["base_model"] == "m"
+    assert captured["max_tokens"] == 32768
+
+
+def test_agent_command_leaves_max_tokens_to_the_model_card_by_default(monkeypatch):
+    """Without --max-tokens the Tinker backend receives None, so the model card value applies."""
+    import stargazer.backends as backends_module
+    import stargazer.cli as cli_module
+    import stargazer.episodes as episodes_module
+
+    captured = {}
+
+    class RecordingBackend:
+        name = "recording"
+        config = {}
+
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    def stop(path):
+        raise StopHereError
+
+    monkeypatch.setattr(backends_module, "TinkerBackend", RecordingBackend)
+    monkeypatch.setattr(episodes_module, "EpisodeSet", stop)
+    args = cli_module.build_parser().parse_args(
+        ["agent", "--episodes", "x", "--backend", "tinker", "--model", "m"]
+    )
+    with pytest.raises(StopHereError):
+        cli_module.cmd_agent(args)
+    assert captured["max_tokens"] is None
 
 
 def test_build_command_forwards_arguments(monkeypatch, tmp_path):

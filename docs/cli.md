@@ -92,6 +92,7 @@ Run {class}`~stargazer.agent.ToolAgentDetector`. See {doc}`agent`.
 | `--model-path` | | `tinker://` path of a trained checkpoint |
 | `--renderer` | | Tinker cookbook renderer |
 | `--temperature` | model card value | sampling temperature |
+| `--max-tokens` | model card value | output cap for each turn, thinking included; 8192 for a thinking renderer |
 | `--seed` | 0 | sampling seed |
 | `--max-tool-calls` | 40 | tool-call limit for each episode |
 | `--limit` | 3 | number of episodes; 0 runs all |

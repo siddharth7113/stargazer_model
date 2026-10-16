@@ -1056,3 +1056,41 @@ prompt finds more planets at a lower false-alarm rate than any BLS threshold, an
 the base prompt finds as many as BLS at the default threshold with half its false
 alarms. Both prompts find three of the 17 one-transit injections on average, where
 BLS finds none.
+
+**Three-episode checks of the large models on s98_v3** (`results/smoke/check_large.sh`,
+base prompt, thinking renderers, five models side by side, 20:28 to 20:34 UTC).
+Inkling (`tml_v0`, $0.77), Kimi K2.6 (`kimi_k26`, $1.11), Qwen3.5-397B-A17B
+(`qwen3_5`, $1.54) and Nemotron 3 Ultra (`nemotron3_ultra`, $1.36): no errors, every
+episode ended in a submission, no turn truncated. All four hit ep_0002 and declared
+ep_0000 a true null. On ep_0001 (signal-to-noise ratio 1.6, unfindable) Inkling, Kimi
+and Qwen submitted the 14.7-day, 16.7-day or 28.9-day noise peak with two events as a
+planet; Nemotron and Inkling-Small declined. Kimi makes several tool calls in one turn
+(9 calls in 4 turns); the loop handled it. GLM-5.3 (`glm5_3_high_reasoning`) failed on
+every episode with `Tokenizer class TokenizersBackend does not exist`, the same
+tokenizer failure as on 2026-10-11; it needs a newer transformers than the cookbook
+pins. Full runs of the four working models launched at 20:36 UTC
+(`results/full_v9large/run_large.sh`, seed 1, `--workers 8`, four processes at once).
+
+**How much the models think.** `--max-tokens` added to `stargazer agent`: the output
+cap for each turn, thinking included, None by default so the model-card value (8192
+for a thinking renderer) applies and is recorded as `backend_max_tokens`. Inkling-Small
+on the same three episodes with `--max-tokens 32768`
+(`results/smoke/agent_inkling_small_s98_v3_base3_think32k.json`, $0.19): identical
+outcomes and the same 500 output tokens an episode, because the cap never binds.
+Measured over the checks, thinking text for each turn:
+
+| model | output tokens an episode | turns with thinking | mean chars a turn | longest turn |
+|---|---|---|---|---|
+| Inkling-Small | about 500 | 1 of 11 | 6 | 71 |
+| Inkling | 400 to 685 | 0 | 0 | 0 |
+| Kimi K2.6 | 1,600 to 14,900 | all | 370 to 5,900 | 22,656 |
+| Qwen3.5-397B | 2,000 to 7,300 | all | 320 to 1,450 | 10,014 |
+| Nemotron 3 Ultra | 3,200 to 4,100 | all | 690 to 740 | 2,777 |
+
+The longest thinking turn, 22,656 characters, is about 6,000 tokens, under the 8,192
+cap. No model is cut off; the two Inkling models write no thinking at all in `tml_v0`
+and act from the tool results alone. The cap is therefore not the lever for more
+reasoning. The renderers in use are already the full-thinking variant of each family
+(the cookbook offers `_disable_thinking` and, for Nemotron Ultra, a `_medium_thinking`
+variant below them). What remains is the prompt, which would break the comparison and
+would be a third prompt variant, or the reward.
