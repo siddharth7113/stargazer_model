@@ -90,3 +90,34 @@ def test_toi_list_skips_rows_without_a_valid_tic():
     """A row whose TIC cell is empty or text does not land under any star."""
     toi_list = ToiList("TIC ID,TOI,Period (days)\n,1.01,2.0\nabc,1.02,3.0\n9,1.03,4.0\n")
     assert toi_list.entries(9)[0]["period"] == 4.0 and sum(len(toi_list.entries(t)) for t in (9,)) == 1
+
+
+class _QueryCountingFetcher(CatalogueFetcher):
+    """Answers the two catalogue queries from fixed tables, so the evidence rule is tested without Vizier."""
+
+    def __init__(self, eclipsing_binaries, gaia_classes):
+        super().__init__(toi_list=ToiList(TOI_CSV))
+        self._fixed_binaries = eclipsing_binaries
+        self._fixed_classes = gaia_classes
+
+    def _eclipsing_binaries(self, tic):
+        return list(self._fixed_binaries)
+
+    def _gaia_classes(self, ra, dec):
+        return list(self._fixed_classes)
+
+
+def test_binary_evidence_names_each_catalogue_that_flags_the_star():
+    """A TESS catalogue entry gives tess_eb, a Gaia ECL class gives gaia_ECL, both give both in that order."""
+    star = {"tic": 5, "ra": 1.0, "dec": 2.0}
+    assert _QueryCountingFetcher([{"period": 2.0}], ["ECL"]).binary_evidence(star) == ["tess_eb", "gaia_ECL"]
+    assert _QueryCountingFetcher([], ["ECL"]).binary_evidence(star) == ["gaia_ECL"]
+    assert _QueryCountingFetcher([{"period": 2.0}], []).binary_evidence(star) == ["tess_eb"]
+
+
+def test_binary_evidence_is_empty_for_a_rotational_variable():
+    """A Gaia class other than ECL, such as a spotted rotator, is not a reason to exclude a host."""
+    assert (
+        _QueryCountingFetcher([], ["RS", "SOLAR_LIKE"]).binary_evidence({"tic": 5, "ra": 1.0, "dec": 2.0})
+        == []
+    )

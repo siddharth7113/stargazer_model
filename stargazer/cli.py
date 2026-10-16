@@ -25,6 +25,19 @@ def cmd_targets(args: argparse.Namespace) -> None:
     print(f"rejected by cuts: {selection['rejected']}")
 
 
+def cmd_remove_binaries(args: argparse.Namespace) -> None:
+    """Remove the known eclipsing binaries from a targets file and save the result."""
+    from stargazer.targets import load_targets, remove_binaries, save_targets
+
+    selection = remove_binaries(load_targets(args.targets))
+    save_targets(selection, args.out)
+    removed = ", ".join(
+        f"{entry['tic']} ({' '.join(entry['evidence'])})" for entry in selection["removed_binaries"]
+    )
+    print(f"kept {selection['n_selected']} targets -> {args.out}")
+    print(f"removed {len(selection['removed_binaries'])}: {removed}")
+
+
 def cmd_fetch(args: argparse.Namespace) -> None:
     """Download light curves for each target. Record failures."""
     from stargazer.data import LightCurveCache
@@ -269,13 +282,20 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="stargazer")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    parser = sub.add_parser("targets", help="select host stars with no TOI for a sector")
+    parser = sub.add_parser(
+        "targets", help="select host stars with no TOI and no known eclipses for a sector"
+    )
     parser.add_argument("--sector", type=int, required=True)
     parser.add_argument("--n", type=int, default=60)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--tmag-max", type=float, default=12.0)
     parser.add_argument("--out", default=None)
     parser.set_defaults(func=cmd_targets)
+
+    parser = sub.add_parser("remove-binaries", help="drop the known eclipsing binaries from a targets file")
+    parser.add_argument("--targets", required=True)
+    parser.add_argument("--out", required=True)
+    parser.set_defaults(func=cmd_remove_binaries)
 
     parser = sub.add_parser("fetch", help="download and cache light curves for a targets file")
     parser.add_argument("--targets", required=True)

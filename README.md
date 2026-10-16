@@ -93,6 +93,7 @@ stargazer compare  results/baseline_bls_s98_v1_sde7.json results/full/agent_*.js
 flowchart LR
     MAST[(MAST)] -->|SPOC 2-min| cache[LightCurveCache]
     TOI[(ExoFOP TOI)] -->|exclude| targets[select_targets]
+    EB[(TESS EB, Gaia DR3)] -->|exclude| targets
     targets --> cache
     cache --> build[EpisodeSet.build]
     build --> ep[episodes/*.npz<br/>time, flux, flux_err]
@@ -190,6 +191,12 @@ single-event form. The last row uses a system prompt that states the task, the
 scoring and the units and nothing else: the model finds more and submits seven
 times as many false alarms. The difference between the two prompts is the policy
 that the reinforcement-learning phase has to learn.
+
+Three of the 39 hosts are in the TESS eclipsing-binary catalogue, and their own
+eclipses were the deepest false alarms of the series. Episode set `s98_v3` is built
+on the 36 other stars with the same ranges, and host selection now excludes known
+eclipsing binaries as it excludes TOI hosts. The seed comparisons of the next phase
+run on `s98_v3`; the table above stays as the record of the toolbox on `s98_v2`.
 
 ## Toolbox
 

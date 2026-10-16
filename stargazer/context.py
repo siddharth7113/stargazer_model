@@ -64,6 +64,9 @@ TARGET_MATCH_ARCSEC = 3.0
 NEIGHBOUR_RADIUS_ARCSEC = 63.0
 """Radius in arcseconds of the neighbour search: three TESS pixels of 21 arcseconds."""
 
+GAIA_ECLIPSING_CLASS = "ECL"
+"""The Gaia DR3 variability class of an eclipsing binary [3]_."""
+
 
 def tic_id(value: object) -> int | None:
     """Return the value as a TESS Input Catalog identifier, or None if it is not one.
@@ -262,6 +265,38 @@ class CatalogueFetcher:
             },
         )
 
+    def binary_evidence(self, star: dict) -> list[str]:
+        """Return the catalogue reasons to call a star a known eclipsing binary.
+
+        Parameters
+        ----------
+        star : dict
+            A target record with ``tic, ra, dec``.
+
+        Returns
+        -------
+        list of str
+            Empty for a star in neither catalogue. Otherwise ``"tess_eb"`` when the
+            TIC has an entry in the TESS eclipsing-binary catalogue, and
+            ``"gaia_ECL"`` when the Gaia DR3 variability class of the source within
+            :data:`TARGET_MATCH_ARCSEC` is ECL (eclipsing binary).
+
+        Notes
+        -----
+        Host selection uses this list as a cut. A star with its own eclipses is a
+        false alarm for every detector, and an injection on such a star is unfindable
+        by design, so the benchmark excludes these stars as it excludes TOI hosts.
+        """
+        tic = tic_id(star.get("tic"))
+        if tic is None:
+            raise ValueError(f"target record has no valid TIC identifier: {star.get('tic')!r}")
+        evidence = []
+        if self._eclipsing_binaries(tic):
+            evidence.append("tess_eb")
+        if GAIA_ECLIPSING_CLASS in self._gaia_classes(float(star["ra"]), float(star["dec"])):
+            evidence.append("gaia_" + GAIA_ECLIPSING_CLASS)
+        return evidence
+
     def _eclipsing_binaries(self, tic: int) -> list[dict]:
         from astroquery.vizier import Vizier
 
@@ -279,17 +314,27 @@ class CatalogueFetcher:
                 )
         return entries
 
+    def _gaia_classes(self, ra: float, dec: float) -> list[str]:
+        import astropy.units as units
+        from astropy.coordinates import SkyCoord
+        from astroquery.vizier import Vizier
+
+        classes = []
+        for table in Vizier(columns=["Class"], row_limit=5).query_region(
+            SkyCoord(ra, dec, unit="deg"),
+            radius=TARGET_MATCH_ARCSEC * units.arcsec,
+            catalog=GAIA_CLASS_CATALOGUE,
+        ):
+            classes += [str(row["Class"]) for row in table]
+        return classes
+
     def _gaia(self, ra: float, dec: float) -> tuple[list[str], list[dict], float | None]:
         import astropy.units as units
         from astropy.coordinates import SkyCoord
         from astroquery.vizier import Vizier
 
         coord = SkyCoord(ra, dec, unit="deg")
-        classes = []
-        for table in Vizier(columns=["Class"], row_limit=5).query_region(
-            coord, radius=TARGET_MATCH_ARCSEC * units.arcsec, catalog=GAIA_CLASS_CATALOGUE
-        ):
-            classes += [str(row["Class"]) for row in table]
+        classes = self._gaia_classes(ra, dec)
         sources = Vizier(columns=["Source", "RAJ2000", "DEJ2000", "Gmag"], row_limit=200).query_region(
             coord, radius=NEIGHBOUR_RADIUS_ARCSEC * units.arcsec, catalog=GAIA_SOURCE_CATALOGUE
         )

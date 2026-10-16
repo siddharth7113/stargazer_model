@@ -5,6 +5,7 @@ An episode set is built in three steps, each with its own command:
 | Step | Command | Function | Output |
 |---|---|---|---|
 | Select host stars | `stargazer targets` | {func}`~stargazer.targets.select_targets` | `data/targets_sNN.json` |
+| Remove known binaries from an older targets file | `stargazer remove-binaries` | {func}`~stargazer.targets.remove_binaries` | `data/targets_sNN_vM.json` |
 | Download light curves | `stargazer fetch` | {meth}`~stargazer.data.LightCurveCache.fetch` | `data/cache/*.npz` |
 | Inject and write | `stargazer build` | {meth}`~stargazer.episodes.EpisodeSet.build` | `data/episodes/<name>/` |
 
@@ -25,6 +26,10 @@ An episode set is built in three steps, each with its own command:
 3. Get their TESS Input Catalog (TIC) parameters {cite:p}`stassun2019`.
 4. Apply the cuts below.
 5. Remove each star on the ExoFOP TOI list {cite:p}`guerrero2021`.
+6. Remove each star in the TESS eclipsing-binary catalogue {cite:p}`prsa2022` and each
+   star whose Gaia DR3 variability class {cite:p}`eyer2023` is ECL. A star with its own
+   eclipses is a false alarm for every detector, and a transit injected on it cannot be
+   told from the eclipses, so the set would score an unfindable episode.
 
 | Parameter | Cut | Reason |
 |---|---|---|
@@ -35,7 +40,13 @@ An episode set is built in three steps, each with its own command:
 | Surface gravity and radius | finite | needed for $a/R_\star$ |
 
 The targets file records the count after each step, the seed, the cuts, the hash of the
-TOI table and its download time.
+TOI table and its download time, the identifiers of the two binary catalogues and each
+removed binary with its evidence.
+
+The binary step was added after `s98_v1` and `s98_v2` were built. `stargazer
+remove-binaries` applies it to an existing targets file and writes a new one, so the
+other hosts stay the same stars. A new draw would also follow the TOI list and the MAST
+sector list, which change over time.
 
 ## Injected parameters
 
@@ -157,6 +168,7 @@ cannot look up the star.
 |---|---|---|---|---|
 | `s98_v1` | 1 | 0.5 to 20 days | 39 | nearly always six or more |
 | `s98_v2` | 2 | 0.5 to 60 days | 39 | single and double transits are common |
+| `s98_v3` | 3 | 0.5 to 60 days | 36 | as `s98_v2`, without the three known eclipsing binaries |
 
 The hash of each set is in its manifest and in every results file scored on it. The
 LOGBOOK has the build command of each set.

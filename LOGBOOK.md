@@ -934,3 +934,67 @@ the hosts' own eclipses are the deep false alarms seen all day (TIC 287841093,
 121711742, 55270064) have no catalogue entry and no bright neighbour within two
 pixels, so their signals are either unknown or systematics; the pixel tools would
 say which. PLAN gains the exclusion as a Phase 1 item for s98_v3.
+
+## 2026-10-16
+
+**Host selection excludes known eclipsing binaries.** The 2026-10-11 check found three
+of the 39 hosts of s98_v2 in the TESS eclipsing-binary catalogue (TIC 9380768,
+231822771, 287841093; the second also carries the Gaia DR3 class ECL). Their eclipses
+were the deep false alarms of every run, and an injection on one of them cannot be told
+from the star's own signal. `CatalogueFetcher.binary_evidence` in `stargazer/context.py`
+asks the two catalogues for one star and returns the reasons (`tess_eb`, `gaia_ECL`).
+`select_targets` applies it as the last cut, after the dwarf cuts, so the pool draw of a
+seed is unchanged and the Vizier query runs only for stars that pass; the targets file
+gains `rejected.binary`, `removed_binaries` and `binary_catalogues`. `remove_binaries`
+applies the cut alone to an existing targets file and `stargazer remove-binaries` wraps
+it. A new draw with `stargazer targets` would also follow the TOI list and the MAST
+sector list, which have moved since 2026-10-11, so the kept hosts would not be the same
+stars; the filter keeps them identical.
+
+```
+stargazer remove-binaries --targets data/targets_s98.json --out data/targets_s98_v3.json
+```
+
+Kept 38 of 41, removed the three TICs above with the evidence named, 11 seconds. The
+targets file records `derived_from` (the input's creation time) and the catalogue
+identifiers.
+
+**Episode set s98_v3 and its baseline.** Built with
+
+```
+stargazer build --targets data/targets_s98_v3.json --n 200 --seed 3 --max-period 60 --out data/episodes/s98_v3
+stargazer verify data/episodes/s98_v3
+stargazer context --episodes data/episodes/s98_v3 --targets data/targets_s98_v3.json
+```
+
+36 hosts (two of the 38 lack TIC parameters, as before). Hash
+`cf66edd19511d9f3a9782b8c4cf68bc98c4a40b0240c929e08267eac719621c1` after the build,
+`745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79` with
+`context.json`; verify OK. The context of every episode has no TOI, no eclipsing-binary
+entry and no ECL class. 58 null episodes and 142 injections, of which one has no
+transit in the data and is scored as null; 141 with at least one transit: 17 with one,
+15 with two, 30 with three to five, 79 with six or more. The null share is lower than
+the 73 of s98_v2 by the seed, so false-alarm rates on this set carry wider error bars.
+
+BLS baseline (`results/baseline_bls_s98_v3_sde7.json`, sweep in
+`results/calibrate_bls_s98_v3.json`, same commands as for s98_v2 with the set name
+changed): completeness 0.383 at the default threshold 7 with a 0.61 false-alarm rate;
+at the 5 percent false-alarm threshold of 14.39, completeness 0.34. By transit count at
+the default threshold: one transit 0 percent, two 0 percent, three to five 27 percent,
+six or more 58 percent.
+
+| SDE threshold | false-alarm rate | completeness exact | mean score |
+|---|---|---|---|
+| 11 | 0.254 | 0.355 | 0.470 |
+| 13 | 0.085 | 0.348 | 0.515 |
+| 15 | 0.000 | 0.333 | 0.530 |
+| 18 | 0.000 | 0.291 | 0.500 |
+
+Reading. On s98_v2 the false-alarm rate was still 0.07 at threshold 18 and the 5
+percent threshold was 18.63; on s98_v3 it is zero from threshold 15 and the 5 percent
+threshold is 14.39. The deep false alarms of s98_v2 were the binaries, as the check
+said. With the lower threshold BLS keeps more of the real signals: completeness at 5
+percent false alarm rises from 0.25 to 0.34, while the six-or-more bin at the default
+threshold rises from 51 to 58 percent, in part because 79 instead of 73 injections fall
+in it. This set is the reference for the seed runs; the Inkling-Small series on s98_v2
+stays as the record of the toolbox and is not comparable with s98_v3 numbers.

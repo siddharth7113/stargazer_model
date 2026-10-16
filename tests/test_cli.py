@@ -1,5 +1,7 @@
 """Unit tests for stargazer.cli: argument defaults and the wiring into the SDK, without network or models."""
 
+import json
+
 import pytest
 
 from stargazer.cli import build_parser
@@ -130,6 +132,30 @@ def test_targets_command_forwards_arguments(monkeypatch):
     with pytest.raises(StopHereError):
         cli_module.cmd_targets(args)
     assert captured == {"sector": 98, "n_targets": 12, "seed": 4, "tmag_max": 12.0}
+
+
+def test_remove_binaries_command_reads_one_targets_file_and_writes_another(monkeypatch, tmp_path):
+    """The command filters the --targets file and saves to --out; the input file is not overwritten."""
+    import stargazer.cli as cli_module
+    import stargazer.targets as targets_module
+
+    source = tmp_path / "in.json"
+    source.write_text(json.dumps({"created": "t", "targets": [{"tic": 1}, {"tic": 2}]}))
+    monkeypatch.setattr(
+        targets_module,
+        "remove_binaries",
+        lambda targets: {
+            **targets,
+            "n_selected": 1,
+            "removed_binaries": [{"tic": 2, "evidence": ["tess_eb"]}],
+        },
+    )
+    args = cli_module.build_parser().parse_args(
+        ["remove-binaries", "--targets", str(source), "--out", str(tmp_path / "out.json")]
+    )
+    cli_module.cmd_remove_binaries(args)
+    assert json.loads((tmp_path / "out.json").read_text())["removed_binaries"][0]["tic"] == 2
+    assert json.loads(source.read_text())["targets"] == [{"tic": 1}, {"tic": 2}]
 
 
 def test_context_command_takes_an_episode_set_and_a_targets_file():

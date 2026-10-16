@@ -21,6 +21,17 @@ Select host stars in one sector. See {func}`~stargazer.targets.select_targets`.
 | `--tmag-max` | 12.0 | faintest TESS magnitude |
 | `--out` | `data/targets_sNN.json` | output file |
 
+### `stargazer remove-binaries`
+
+Remove the known eclipsing binaries from a targets file that was selected before the
+binary cut existed, and write a new file. See
+{func}`~stargazer.targets.remove_binaries`.
+
+| Option | Meaning |
+|---|---|
+| `--targets` | input targets file, left unchanged |
+| `--out` | output targets file |
+
 ### `stargazer fetch`
 
 Download and cache the light curves of a targets file.

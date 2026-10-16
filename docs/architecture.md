@@ -94,7 +94,7 @@ classDiagram
 stargazer/
   types.py       Prediction and the Detector protocol
   data.py        LightCurveCache: download and cache TESS 2-minute light curves
-  targets.py     select_targets: host stars with no TOI, with TIC parameters
+  targets.py     select_targets and remove_binaries: host stars with no TOI and no known eclipses
   inject.py      batman transit injection and the truth record
   episodes.py    EpisodeSet and BuildConfig
   score.py       scoring rules and set-level metrics
@@ -120,6 +120,7 @@ flowchart LR
     MAST[(MAST)] -->|SPOC 120 s| cache[LightCurveCache]
     TIC[(TIC)] --> targets[select_targets]
     TOI[(ExoFOP TOI)] -->|exclude| targets
+    EB[(TESS EB, Gaia DR3)] -->|exclude| targets
     targets --> tfile[targets_sNN.json]
     tfile --> cache
     cache --> build[EpisodeSet.build]

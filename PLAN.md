@@ -47,7 +47,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] BLS baseline; threshold chosen from null episodes (18.6 on s98_v1 for a 5 percent false-alarm rate)
 - [x] Episode sets: s98_v1 (periods to 20 days) and s98_v2 (periods to 60 days, single transits common)
 - [x] Baseline on s98_v2 recorded in the LOGBOOK
-- [ ] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; 15 of 200 s98_v2 episodes sit on known binaries (LOGBOOK 2026-10-11)
+- [x] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; s98_v3 built on the 36 clean hosts, BLS baseline recorded (LOGBOOK 2026-10-16)
 - [ ] One small episode set committed to git for tests and demonstrations
 - [ ] Repeat each comparison run with three seeds and report mean and spread
 
@@ -132,30 +132,31 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] Independent re-analysis of each survivor from the public data with a different model
 - [ ] Submit as community TOIs on ExoFOP; request follow-up where warranted
 
-## Handoff: state at the end of 2026-10-11
+## Handoff: state at the end of 2026-10-16
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The day added the single-event submission form, six tools (search_signals,
-fit_transit, secondary_eclipse, ephemeris_match, nearby_stars, and the rebuilt
-single_events), the catalogue context of each episode (`stargazer context`), two
-system prompts (`base`, the default, and `rules`, frozen), seven course notebooks in
-`examples/`, and seven full Inkling-Small runs on s98_v2 that measure each step. The
-README table has the series. Best with the rules prompt: mean score 0.583 at a 3
-percent false-alarm rate (`full_v5fit`). With the base prompt: 0.476 at 40 percent,
-with more planets found; the 0.08 gap is the restraint the rules encode, which Phase
-5 must learn from the reward. Inkling-Small needs `--renderer tml_v0`. s98_v2 has
-`context.json`; its hash changed, the episode files did not.
+The session added the binary cut to host selection (`CatalogueFetcher.binary_evidence`,
+the last cut in `select_targets`, and `stargazer remove-binaries` for an existing
+targets file), built `data/episodes/s98_v3` from the 36 hosts that are in neither the
+TESS eclipsing-binary catalogue nor the Gaia ECL class, wrote its `context.json`, and
+ran the BLS baseline. Hash with context
+`745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79`. The 5 percent
+false-alarm threshold fell from 18.63 to 14.39 and completeness there rose from 0.25
+to 0.34, because the deep false alarms of s98_v2 were the binaries. Nothing is
+running. No agent has run on s98_v3 yet. The Inkling-Small series in the README is on
+s98_v2 and is not comparable with s98_v3 numbers; the first s98_v3 agent run is a new
+baseline for the model.
 
 First steps for the next session:
-1. Three seeds of the base prompt and of the rules prompt on s98_v2 with the full
-   toolbox including the catalogue tools, so the spread of one seed is known before
-   any further change is judged. Results in `results/full_v8seeds/`.
-2. Host selection: exclude catalogued eclipsing binaries, then rebuild s98_v3 and
-   rerun the BLS baseline, so the false-alarm hosts of today are not binaries.
-3. The larger models with the base prompt, three seeds each.
+1. Three-episode check of Inkling-Small on s98_v3 with the base prompt and the full
+   toolbox (`--renderer tml_v0 --prompt base --limit 3`), read with `stargazer view`.
+2. Three seeds of the base prompt and of the rules prompt on s98_v3, full toolbox,
+   `--workers 8`, results in `results/full_v8seeds/`, so the spread of one seed is
+   known before any further change is judged.
+3. The larger models with the base prompt, three seeds each, on s98_v3.
 4. The pixel tools (centroid motion, difference imaging) need the target pixel files,
-   several gigabytes for 39 stars; the owner decides whether to download them.
+   several gigabytes for 36 stars; the owner decides whether to download them.
 
 ## Open questions
 

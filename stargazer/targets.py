@@ -7,9 +7,13 @@ Steps:
 3. Get the TESS Input Catalog (TIC) [3]_ parameters of the subset.
 4. Apply brightness and dwarf cuts.
 5. Remove each star in the ExoFOP TESS Object of Interest (TOI) [4]_ list.
+6. Remove each star in the TESS eclipsing-binary catalogue [5]_ or with the Gaia DR3
+   variability class ECL [6]_.
 
-The output records the TOI CSV hash and download time. This makes the exclusion
-auditable.
+The output records the TOI CSV hash and download time, and the identifier of each
+binary catalogue. This makes the exclusion auditable. :func:`remove_binaries` applies
+step 6 alone to an existing targets file, so a host list selected before the step
+existed can be corrected without a new draw.
 
 References
 ----------
@@ -25,6 +29,13 @@ References
 .. [4] Guerrero, N. M., Seager, S., Huang, C. X., et al. (2021). The TESS Objects of
    Interest Catalog from the TESS Prime Mission. The Astrophysical Journal
    Supplement Series, 254, 39. https://doi.org/10.3847/1538-4365/abefe1
+.. [5] Prša, A., Kochoska, A., Conroy, K. E., et al. (2022). TESS eclipsing binary
+   stars. I. Short-cadence observations of 4584 eclipsing binaries in sectors 1-26.
+   The Astrophysical Journal Supplement Series, 258, 16.
+   https://doi.org/10.3847/1538-4365/ac324a
+.. [6] Eyer, L., Audard, M., Holl, B., et al. (2023). Gaia Data Release 3. Summary of
+   the variability processing and analysis. Astronomy and Astrophysics, 674, A13.
+   https://doi.org/10.1051/0004-6361/202244242
 """
 
 from __future__ import annotations
@@ -37,9 +48,13 @@ from pathlib import Path
 
 import numpy as np
 
+from stargazer.context import GAIA_CLASS_CATALOGUE, TESS_EB_CATALOGUE, CatalogueFetcher
 from stargazer.provenance import Digest, utc_timestamp
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
+BINARY_CATALOGUES = {"tess_eb": TESS_EB_CATALOGUE, "gaia_classes": GAIA_CLASS_CATALOGUE}
+"""The Vizier identifiers of the two catalogues behind the binary cut, recorded in each
+targets file."""
 TIC_COLUMNS = [
     ("Tmag", "tmag"),
     ("Teff", "teff"),
@@ -129,8 +144,9 @@ def select_targets(
     teff_range: tuple[float, float] = (3000.0, 6500.0),
     radius_max: float = 1.5,
     oversample: int = 4,
+    fetcher: CatalogueFetcher | None = None,
 ) -> dict:
-    """Pick up to ``n`` quiet dwarf hosts with no TOI in a sector.
+    """Pick up to ``n`` quiet dwarf hosts with no TOI and no known eclipses in a sector.
 
     Parameters
     ----------
@@ -147,6 +163,9 @@ def select_targets(
         Radius cut in solar radii, to keep dwarfs.
     oversample : int
         Number of stars to draw before the cuts, as a multiple of ``n``.
+    fetcher : CatalogueFetcher, optional
+        The catalogue client whose :meth:`~stargazer.context.CatalogueFetcher.binary_evidence`
+        decides the binary cut. None makes a new one.
 
     Returns
     -------
@@ -154,6 +173,7 @@ def select_targets(
         The selected targets, and each count and hash needed to audit the selection.
     """
     rng = np.random.default_rng(seed)
+    fetcher = fetcher or CatalogueFetcher()
     all_tics = sector_two_minute_tics(sector)
     toi_tics, toi_hash = download_toi_tics()
     toi_time = utc_timestamp()
@@ -164,7 +184,8 @@ def select_targets(
     ]
     params = tic_params(pool)
     chosen = []
-    rejected = {"no_params": 0, "tmag": 0, "teff": 0, "radius": 0, "lumclass": 0}
+    rejected = {"no_params": 0, "tmag": 0, "teff": 0, "radius": 0, "lumclass": 0, "binary": 0}
+    binaries = []
     for tic in pool:
         params_of = params.get(tic)
         if not params_of or any(
@@ -179,6 +200,9 @@ def select_targets(
             rejected["radius"] += 1
         elif params_of.get("lumclass") not in (None, "DWARF"):
             rejected["lumclass"] += 1
+        elif evidence := fetcher.binary_evidence({"tic": tic, **params_of}):
+            rejected["binary"] += 1
+            binaries.append({"tic": tic, "evidence": evidence})
         else:
             chosen.append({"tic": tic, "sector": sector, **params_of})
             if len(chosen) >= n_targets:
@@ -193,8 +217,55 @@ def select_targets(
         "n_two_minute_in_sector": len(all_tics),
         "n_excluded_by_toi": len(all_tics) - len(candidates),
         "toi_csv": {"url": TOI_URL, "sha256": toi_hash, "downloaded": toi_time, "n_tics": len(toi_tics)},
+        "binary_catalogues": BINARY_CATALOGUES,
         "rejected": rejected,
+        "removed_binaries": binaries,
         "targets": chosen,
+    }
+
+
+def remove_binaries(targets: dict, fetcher: CatalogueFetcher | None = None) -> dict:
+    """Return a copy of a targets dictionary without the known eclipsing binaries.
+
+    Parameters
+    ----------
+    targets : dict
+        A targets dictionary as :func:`select_targets` returns it or
+        :func:`load_targets` reads it.
+    fetcher : CatalogueFetcher, optional
+        The catalogue client. None makes a new one.
+
+    Returns
+    -------
+    dict
+        The same dictionary with a new ``created`` time, ``n_selected`` and
+        ``targets``, plus ``binary_catalogues``, ``removed_binaries`` with the TIC
+        and the evidence of each removed star, and ``derived_from`` with the
+        ``created`` time of the input. Every other field is copied.
+
+    Notes
+    -----
+    The function exists for a host list that was selected before the binary cut
+    existed. A new draw would also move with the TOI list and the MAST sector list,
+    which change over time, so the kept stars would not be the same stars. This
+    function changes nothing but the binary cut.
+    """
+    fetcher = fetcher or CatalogueFetcher()
+    kept, removed = [], []
+    for star in targets["targets"]:
+        evidence = fetcher.binary_evidence(star)
+        if evidence:
+            removed.append({"tic": star["tic"], "evidence": evidence})
+        else:
+            kept.append(dict(star))
+    return {
+        **targets,
+        "created": utc_timestamp(),
+        "derived_from": targets.get("created"),
+        "n_selected": len(kept),
+        "binary_catalogues": BINARY_CATALOGUES,
+        "removed_binaries": removed,
+        "targets": kept,
     }
 
 

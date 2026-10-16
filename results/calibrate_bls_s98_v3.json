@@ -1,0 +1,86 @@
+{
+ "results": "results/baseline_bls_s98_v3_sde7.json",
+ "episode_set_hash": "745c6cb5750307bcc440cb15dc76cab474a4c40a14407fae6842272ec7c6de79",
+ "stat": "sde",
+ "sweep": [
+  {
+   "threshold": 5.0,
+   "false_alarm_rate": 0.8983050847457628,
+   "completeness_exact": 0.3829787234042553,
+   "completeness_with_aliases": 0.3829787234042553,
+   "mean_score": 0.3
+  },
+  {
+   "threshold": 7.0,
+   "false_alarm_rate": 0.6101694915254238,
+   "completeness_exact": 0.3829787234042553,
+   "completeness_with_aliases": 0.3829787234042553,
+   "mean_score": 0.385
+  },
+  {
+   "threshold": 9.0,
+   "false_alarm_rate": 0.4745762711864407,
+   "completeness_exact": 0.36879432624113473,
+   "completeness_with_aliases": 0.36879432624113473,
+   "mean_score": 0.415
+  },
+  {
+   "threshold": 11.0,
+   "false_alarm_rate": 0.2542372881355932,
+   "completeness_exact": 0.3546099290780142,
+   "completeness_with_aliases": 0.3546099290780142,
+   "mean_score": 0.47
+  },
+  {
+   "threshold": 13.0,
+   "false_alarm_rate": 0.0847457627118644,
+   "completeness_exact": 0.3475177304964539,
+   "completeness_with_aliases": 0.3475177304964539,
+   "mean_score": 0.515
+  },
+  {
+   "threshold": 15.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.3333333333333333,
+   "completeness_with_aliases": 0.3333333333333333,
+   "mean_score": 0.53
+  },
+  {
+   "threshold": 18.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.2907801418439716,
+   "completeness_with_aliases": 0.2907801418439716,
+   "mean_score": 0.5
+  },
+  {
+   "threshold": 21.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.20567375886524822,
+   "completeness_with_aliases": 0.20567375886524822,
+   "mean_score": 0.44
+  },
+  {
+   "threshold": 25.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.0851063829787234,
+   "completeness_with_aliases": 0.0851063829787234,
+   "mean_score": 0.355
+  },
+  {
+   "threshold": 30.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.014184397163120567,
+   "completeness_with_aliases": 0.014184397163120567,
+   "mean_score": 0.305
+  },
+  {
+   "threshold": 40.0,
+   "false_alarm_rate": 0.0,
+   "completeness_exact": 0.0,
+   "completeness_with_aliases": 0.0,
+   "mean_score": 0.295
+  }
+ ],
+ "max_false_alarm": 0.05,
+ "chosen_threshold": 14.393462370396243
+}

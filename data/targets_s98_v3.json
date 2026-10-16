@@ -1,0 +1,514 @@
+{
+  "created": "2026-10-16T19:02:57+00:00",
+  "sector": 98,
+  "seed": 1,
+  "n_requested": 60,
+  "n_selected": 38,
+  "cuts": {
+    "tmag_max": 12.0,
+    "teff_range": [
+      3000.0,
+      6500.0
+    ],
+    "radius_max": 1.5
+  },
+  "n_two_minute_in_sector": 13000,
+  "n_excluded_by_toi": 435,
+  "toi_csv": {
+    "url": "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv",
+    "sha256": "83db57e48575287100dac423e9c6ab8aaa9812c5ea6b62b2d5458e13e4c41a23",
+    "downloaded": "2026-10-11T03:55:42+00:00",
+    "n_tics": 7826
+  },
+  "rejected": {
+    "no_params": 0,
+    "tmag": 138,
+    "teff": 28,
+    "radius": 33,
+    "lumclass": 0
+  },
+  "targets": [
+    {
+      "tic": 156933657,
+      "sector": 98,
+      "tmag": 10.3638,
+      "teff": 5820.0,
+      "radius_rsun": 0.942154,
+      "logg": 4.51101,
+      "mass_msun": 1.05,
+      "lumclass": "DWARF",
+      "ra": 99.5090702915944,
+      "dec": -45.2301417955424
+    },
+    {
+      "tic": 160330305,
+      "sector": 98,
+      "tmag": 10.3863,
+      "teff": 6041.0,
+      "radius_rsun": 0.961691,
+      "logg": 4.52121,
+      "mass_msun": 1.12,
+      "lumclass": "DWARF",
+      "ra": 91.4233983548061,
+      "dec": -35.880202849476
+    },
+    {
+      "tic": 459953750,
+      "sector": 98,
+      "tmag": 10.1024,
+      "teff": 6311.0,
+      "radius_rsun": 1.1746,
+      "logg": 4.39241,
+      "mass_msun": 1.242,
+      "lumclass": "DWARF",
+      "ra": 71.2007141120525,
+      "dec": 1.87679997175606
+    },
+    {
+      "tic": 317412815,
+      "sector": 98,
+      "tmag": 10.9606,
+      "teff": 5635.0,
+      "radius_rsun": 1.01873,
+      "logg": 4.42152,
+      "mass_msun": 0.999,
+      "lumclass": "DWARF",
+      "ra": 87.726477510439,
+      "dec": -14.3540415178855
+    },
+    {
+      "tic": 374859347,
+      "sector": 98,
+      "tmag": 6.2473,
+      "teff": 4867.44,
+      "radius_rsun": 0.716684,
+      "logg": 4.62504,
+      "mass_msun": 0.79,
+      "lumclass": "DWARF",
+      "ra": 88.51767081393,
+      "dec": -60.0234699299399
+    },
+    {
+      "tic": 365776992,
+      "sector": 98,
+      "tmag": 7.9722,
+      "teff": 5987.0,
+      "radius_rsun": 1.06052,
+      "logg": 4.42842,
+      "mass_msun": 1.1,
+      "lumclass": "DWARF",
+      "ra": 81.7961127298285,
+      "dec": 11.5258359821179
+    },
+    {
+      "tic": 150033920,
+      "sector": 98,
+      "tmag": 11.693,
+      "teff": 5553.0,
+      "radius_rsun": 0.776763,
+      "logg": 4.64872,
+      "mass_msun": 0.98,
+      "lumclass": "DWARF",
+      "ra": 91.3080028610338,
+      "dec": -65.057155094365
+    },
+    {
+      "tic": 156836091,
+      "sector": 98,
+      "tmag": 11.2648,
+      "teff": 4401.0,
+      "radius_rsun": 0.680668,
+      "logg": 4.61105,
+      "mass_msun": 0.69,
+      "lumclass": "DWARF",
+      "ra": 98.7175612005355,
+      "dec": -44.4289327117089
+    },
+    {
+      "tic": 77155316,
+      "sector": 98,
+      "tmag": 10.6836,
+      "teff": 5033.0,
+      "radius_rsun": 0.880748,
+      "logg": 4.47264,
+      "mass_msun": 0.84,
+      "lumclass": "DWARF",
+      "ra": 68.0337582576855,
+      "dec": -38.2958625051929
+    },
+    {
+      "tic": 279249351,
+      "sector": 98,
+      "tmag": 6.83,
+      "teff": 5821.57,
+      "radius_rsun": 1.12952,
+      "logg": 4.35347,
+      "mass_msun": 1.05,
+      "lumclass": "DWARF",
+      "ra": 103.971749694988,
+      "dec": -56.9423967498796
+    },
+    {
+      "tic": 146535972,
+      "sector": 98,
+      "tmag": 9.0774,
+      "teff": 5819.0,
+      "radius_rsun": 0.988094,
+      "logg": 4.46966,
+      "mass_msun": 1.05,
+      "lumclass": "DWARF",
+      "ra": 76.8167131703877,
+      "dec": -23.189305370569
+    },
+    {
+      "tic": 32816814,
+      "sector": 98,
+      "tmag": 11.7235,
+      "teff": 3300.0,
+      "radius_rsun": 0.576305,
+      "logg": 4.67135,
+      "mass_msun": 0.568311,
+      "lumclass": "DWARF",
+      "ra": 86.8245110071896,
+      "dec": -28.936945546376
+    },
+    {
+      "tic": 21505902,
+      "sector": 98,
+      "tmag": 10.8172,
+      "teff": 4535.0,
+      "radius_rsun": 0.69647,
+      "logg": 4.60352,
+      "mass_msun": 0.71,
+      "lumclass": "DWARF",
+      "ra": 86.0038984473946,
+      "dec": -41.2519185724205
+    },
+    {
+      "tic": 157008710,
+      "sector": 98,
+      "tmag": 10.4109,
+      "teff": 5614.0,
+      "radius_rsun": 0.856736,
+      "logg": 4.56801,
+      "mass_msun": 0.99,
+      "lumclass": "DWARF",
+      "ra": 99.9725737046928,
+      "dec": -45.7404108475167
+    },
+    {
+      "tic": 146420104,
+      "sector": 98,
+      "tmag": 10.8862,
+      "teff": 4220.0,
+      "radius_rsun": 0.831246,
+      "logg": 4.41815,
+      "mass_msun": 0.66,
+      "lumclass": "DWARF",
+      "ra": 75.1186398492671,
+      "dec": -22.0278281825202
+    },
+    {
+      "tic": 298957105,
+      "sector": 98,
+      "tmag": 8.2981,
+      "teff": 6496.0,
+      "radius_rsun": NaN,
+      "logg": NaN,
+      "mass_msun": NaN,
+      "lumclass": "DWARF",
+      "ra": 70.1709300721404,
+      "dec": -1.2003918553638
+    },
+    {
+      "tic": 33831807,
+      "sector": 98,
+      "tmag": 9.9059,
+      "teff": 6111.0,
+      "radius_rsun": 1.38308,
+      "logg": 4.21707,
+      "mass_msun": 1.15,
+      "lumclass": "DWARF",
+      "ra": 63.372280131391,
+      "dec": -75.5880304059607
+    },
+    {
+      "tic": 150391195,
+      "sector": 98,
+      "tmag": 11.0265,
+      "teff": 5411.4,
+      "radius_rsun": NaN,
+      "logg": NaN,
+      "mass_msun": NaN,
+      "lumclass": null,
+      "ra": 96.6587627728797,
+      "dec": -63.1511359450631
+    },
+    {
+      "tic": 237971228,
+      "sector": 98,
+      "tmag": 10.5114,
+      "teff": 5693.0,
+      "radius_rsun": 0.867865,
+      "logg": 4.56548,
+      "mass_msun": 1.01,
+      "lumclass": "DWARF",
+      "ra": 101.884282191861,
+      "dec": -51.3036599120718
+    },
+    {
+      "tic": 279511563,
+      "sector": 98,
+      "tmag": 11.4573,
+      "teff": 3903.0,
+      "radius_rsun": 0.701697,
+      "logg": 4.56839,
+      "mass_msun": 0.664694,
+      "lumclass": "DWARF",
+      "ra": 105.723408877212,
+      "dec": -59.4220156961407
+    },
+    {
+      "tic": 293273183,
+      "sector": 98,
+      "tmag": 10.4981,
+      "teff": 5602.37,
+      "radius_rsun": 0.942725,
+      "logg": 4.48493,
+      "mass_msun": 0.99,
+      "lumclass": "DWARF",
+      "ra": 98.749392797176,
+      "dec": -60.0024726599939
+    },
+    {
+      "tic": 117747153,
+      "sector": 98,
+      "tmag": 8.9968,
+      "teff": 5215.0,
+      "radius_rsun": 0.932204,
+      "logg": 4.44844,
+      "mass_msun": 0.89,
+      "lumclass": "DWARF",
+      "ra": 69.196276448283,
+      "dec": -12.1557428510831
+    },
+    {
+      "tic": 20072435,
+      "sector": 98,
+      "tmag": 6.9963,
+      "teff": 6248.4,
+      "radius_rsun": 1.31202,
+      "logg": 4.28497,
+      "mass_msun": 1.21,
+      "lumclass": "DWARF",
+      "ra": 88.9298425658585,
+      "dec": -38.1045162442231
+    },
+    {
+      "tic": 46626635,
+      "sector": 98,
+      "tmag": 9.41861,
+      "teff": 6050.0,
+      "radius_rsun": 1.26329,
+      "logg": 4.2866,
+      "mass_msun": 1.126,
+      "lumclass": "DWARF",
+      "ra": 85.051347887365,
+      "dec": -15.7945595745424
+    },
+    {
+      "tic": 442896844,
+      "sector": 98,
+      "tmag": 11.6435,
+      "teff": 3391.0,
+      "radius_rsun": 0.266025,
+      "logg": 4.96553,
+      "mass_msun": 0.238399,
+      "lumclass": "DWARF",
+      "ra": 80.2089634038839,
+      "dec": -15.6734536882372
+    },
+    {
+      "tic": 121711742,
+      "sector": 98,
+      "tmag": 9.0292,
+      "teff": 4608.0,
+      "radius_rsun": 1.07036,
+      "logg": 4.24233,
+      "mass_msun": 0.73,
+      "lumclass": "DWARF",
+      "ra": 73.2063360866951,
+      "dec": -19.9171320482045
+    },
+    {
+      "tic": 255780375,
+      "sector": 98,
+      "tmag": 11.1224,
+      "teff": 3581.0,
+      "radius_rsun": 0.555534,
+      "logg": 4.68917,
+      "mass_msun": 0.550205,
+      "lumclass": "DWARF",
+      "ra": 99.8342321056015,
+      "dec": -49.291570929128
+    },
+    {
+      "tic": 21725734,
+      "sector": 98,
+      "tmag": 9.9797,
+      "teff": 5428.0,
+      "radius_rsun": 0.938936,
+      "logg": 4.47052,
+      "mass_msun": 0.95,
+      "lumclass": "DWARF",
+      "ra": 88.0843475130259,
+      "dec": -40.0178087936261
+    },
+    {
+      "tic": 13984854,
+      "sector": 98,
+      "tmag": 5.8235,
+      "teff": 6295.43,
+      "radius_rsun": 1.32347,
+      "logg": 4.28454,
+      "mass_msun": 1.23,
+      "lumclass": "DWARF",
+      "ra": 75.9748024651342,
+      "dec": -41.7449513145946
+    },
+    {
+      "tic": 436659586,
+      "sector": 98,
+      "tmag": 9.9587,
+      "teff": 4559.0,
+      "radius_rsun": 0.8781,
+      "logg": 4.40831,
+      "mass_msun": 0.72,
+      "lumclass": "DWARF",
+      "ra": 72.8899111094422,
+      "dec": 14.286367009225
+    },
+    {
+      "tic": 31301801,
+      "sector": 98,
+      "tmag": 11.6543,
+      "teff": 4889.0,
+      "radius_rsun": 0.735178,
+      "logg": 4.60783,
+      "mass_msun": 0.799,
+      "lumclass": "DWARF",
+      "ra": 82.6414427537532,
+      "dec": -29.3199692428201
+    },
+    {
+      "tic": 436703177,
+      "sector": 98,
+      "tmag": 9.8738,
+      "teff": 4491.0,
+      "radius_rsun": 0.733228,
+      "logg": 4.55885,
+      "mass_msun": 0.71,
+      "lumclass": "DWARF",
+      "ra": 73.726151203793,
+      "dec": 16.1788376275894
+    },
+    {
+      "tic": 33766129,
+      "sector": 98,
+      "tmag": 10.7687,
+      "teff": 5250.6,
+      "radius_rsun": 0.878949,
+      "logg": 4.50438,
+      "mass_msun": 0.9,
+      "lumclass": "DWARF",
+      "ra": 62.5143678792795,
+      "dec": -72.4161804182849
+    },
+    {
+      "tic": 170785439,
+      "sector": 98,
+      "tmag": 8.3263,
+      "teff": 6392.0,
+      "radius_rsun": 1.32985,
+      "logg": 4.29767,
+      "mass_msun": 1.28,
+      "lumclass": "DWARF",
+      "ra": 69.1751383702155,
+      "dec": -33.609221369502
+    },
+    {
+      "tic": 43603155,
+      "sector": 98,
+      "tmag": 11.9609,
+      "teff": 5572.0,
+      "radius_rsun": 0.878009,
+      "logg": 4.54362,
+      "mass_msun": 0.983,
+      "lumclass": "DWARF",
+      "ra": 75.4946552179122,
+      "dec": -11.7213399855271
+    },
+    {
+      "tic": 177077137,
+      "sector": 98,
+      "tmag": 11.2946,
+      "teff": 4032.0,
+      "radius_rsun": 0.737922,
+      "logg": 4.50139,
+      "mass_msun": 0.63,
+      "lumclass": "DWARF",
+      "ra": 103.399690319915,
+      "dec": -70.9846125463797
+    },
+    {
+      "tic": 55270064,
+      "sector": 98,
+      "tmag": 11.8978,
+      "teff": 5552.51,
+      "radius_rsun": 0.83747,
+      "logg": 4.58335,
+      "mass_msun": 0.98,
+      "lumclass": "DWARF",
+      "ra": 76.2822693101421,
+      "dec": -63.1388894039218
+    },
+    {
+      "tic": 178967253,
+      "sector": 98,
+      "tmag": 8.1229,
+      "teff": 6264.86,
+      "radius_rsun": 1.4243,
+      "logg": 4.21723,
+      "mass_msun": 1.22,
+      "lumclass": "DWARF",
+      "ra": 69.2578537835338,
+      "dec": -28.9528409912977
+    }
+  ],
+  "derived_from": "2026-10-11T03:55:46+00:00",
+  "binary_catalogues": {
+    "tess_eb": "J/ApJS/258/16/tess-ebs",
+    "gaia_classes": "I/358/vclassre"
+  },
+  "removed_binaries": [
+    {
+      "tic": 9380768,
+      "evidence": [
+        "tess_eb"
+      ]
+    },
+    {
+      "tic": 231822771,
+      "evidence": [
+        "tess_eb",
+        "gaia_ECL"
+      ]
+    },
+    {
+      "tic": 287841093,
+      "evidence": [
+        "tess_eb"
+      ]
+    }
+  ]
+}
