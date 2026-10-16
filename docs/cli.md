@@ -95,6 +95,7 @@ Run {class}`~stargazer.agent.ToolAgentDetector`. See {doc}`agent`.
 | `--max-tokens` | model card value | output cap for each turn, thinking included; 8192 for a thinking renderer |
 | `--seed` | 0 | sampling seed |
 | `--max-tool-calls` | 40 | tool-call limit for each episode |
+| `--max-turns` | 30 | model-turn limit for each episode; a family that thinks at length needs more |
 | `--limit` | 3 | number of episodes; 0 runs all |
 | `--workers` | 8 | episodes run at the same time |
 | `--period-rtol` | 0.01 | period tolerance of the scorer |

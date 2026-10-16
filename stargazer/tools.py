@@ -1010,6 +1010,27 @@ class ToolSpec:
             "function": {"name": self.name, "description": self.description, "parameters": self.parameters},
         }
 
+    def coerce(self, arguments: dict) -> dict:
+        """Return the arguments with text that spells a boolean or a number converted to that type.
+
+        Notes
+        -----
+        Some model families write every argument as text, for example ``"False"`` for
+        a boolean or ``"3.5"`` for a number. The call means the same thing, and a
+        rejection costs the model a turn to resubmit the same values. The conversion
+        applies only where the schema allows the target type: ``"true"`` and
+        ``"false"`` in any letter case become booleans, and a text that parses as a
+        number becomes an integer or a float. Any other text is left as it is, so
+        :meth:`validate` reports it.
+        """
+        props = self.parameters.get("properties", {})
+        coerced = {}
+        for name, value in arguments.items():
+            allowed = props.get(name, {}).get("type", "any")
+            allowed = allowed if isinstance(allowed, list) else [allowed]
+            coerced[name] = _coerce_text(value, allowed) if isinstance(value, str) else value
+        return coerced
+
     def validate(self, arguments: dict) -> list[str]:
         """Check arguments against the schema. Return a list of problems; empty means valid.
 
@@ -1039,6 +1060,26 @@ class ToolSpec:
                 if lo is not None and value <= lo:
                     problems.append(f"argument {name} must be greater than {lo}, got {value}")
         return problems
+
+
+_BOOLEAN_WORDS = {"true": True, "false": False}
+
+
+def _coerce_text(text: str, allowed: list[str]) -> object:
+    """Convert a text argument to the boolean or number the schema allows, or return it unchanged."""
+    word = text.strip().lower()
+    if "boolean" in allowed and word in _BOOLEAN_WORDS:
+        return _BOOLEAN_WORDS[word]
+    if "integer" in allowed or "number" in allowed:
+        try:
+            number = float(word)
+        except ValueError:
+            return text
+        if "integer" in allowed and number == int(number):
+            return int(number)
+        if "number" in allowed:
+            return number
+    return text
 
 
 def _json_type_ok(value: object, json_type: str) -> bool:
@@ -1446,6 +1487,7 @@ def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray, co
     spec = TOOLS_BY_NAME.get(name)
     if spec is None:
         return {"error": f"unknown tool: {name}", "available_tools": sorted(TOOLS_BY_NAME)}
+    arguments = spec.coerce(arguments)
     problems = spec.validate(arguments)
     if problems:
         return {

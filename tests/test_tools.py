@@ -152,6 +152,29 @@ def test_validate_nullable_type():
     assert _spec(a_value={"type": ["number", "null"]}).validate({"a_value": None}) == []
 
 
+def test_coerce_turns_boolean_and_number_words_into_their_types():
+    """``"False"`` for a boolean and ``"3.5"`` for a number become False and 3.5; no turn is lost."""
+    spec = _spec(a_value={"type": "boolean"}, b_value={"type": "number"}, c_value={"type": "integer"})
+    coerced = spec.coerce({"a_value": "False", "b_value": "3.5", "c_value": "4"})
+    assert coerced == {"a_value": False, "b_value": 3.5, "c_value": 4}
+    assert spec.validate(coerced) == []
+
+
+def test_coerce_leaves_text_that_is_not_a_boolean_or_a_number():
+    """``"yes"`` for a boolean and ``"abc"`` for a number stay text, so validate reports them."""
+    spec = _spec(a_value={"type": "boolean"}, b_value={"type": "number"}, c_value={"type": "string"})
+    assert spec.coerce({"a_value": "yes", "b_value": "abc", "c_value": "3"}) == {
+        "a_value": "yes",
+        "b_value": "abc",
+        "c_value": "3",
+    }
+
+
+def test_coerce_does_not_make_a_float_text_an_integer():
+    """``"2.5"`` for an integer stays text, because truncation would change the call silently."""
+    assert _spec(a_value={"type": "integer"}).coerce({"a_value": "2.5"}) == {"a_value": "2.5"}
+
+
 def test_validate_boolean_rejects_string():
     """``"yes"`` is not a boolean; a model that writes it must be corrected."""
     problems = _spec(a_value={"type": "boolean"}).validate({"a_value": "yes"})

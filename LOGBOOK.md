@@ -1094,3 +1094,63 @@ reasoning. The renderers in use are already the full-thinking variant of each fa
 (the cookbook offers `_disable_thinking` and, for Nemotron Ultra, a `_medium_thinking`
 variant below them). What remains is the prompt, which would break the comparison and
 would be a third prompt variant, or the reward.
+
+**First seed of the four large models, base prompt** (`results/full_v9large/`, seed 1,
+`--workers 8`, four processes at once, 20:36 to 21:23 UTC; the twenty remaining runs,
+base seeds 2 and 3 and rules seeds 1 to 3 for each model, started at 21:17 UTC from
+`run_seeds_large.sh` as eight parallel chains, and their numbers go in the next entry).
+
+| model | renderer | false alarm | completeness | with aliases | mean score | one-transit hits | output tokens an episode | cost | minutes |
+|---|---|---|---|---|---|---|---|---|---|
+| Inkling-Small, mean of 3 seeds | tml_v0 | 31.1% | 40.4% | 42.1% | 0.492 | 3 of 17 | about 500 | $13 | 25 |
+| Inkling | tml_v0 | 40.7% | 43.3% | 44.0% | 0.480 | 1 of 17 | 567 | $53 | 21 |
+| Nemotron 3 Ultra | nemotron3_ultra | 28.8% | 38.3% | 40.4% | 0.486 | 4 of 17 | 3,236 | $66 | 23 |
+| Qwen3.5-397B-A17B | qwen3_5 | 25.4% | 39.7% | 42.6% | 0.505 | 1 of 17 | 5,028 | $119 | 48 |
+| Kimi K2.6 | kimi_k26 | 20.3% | 45.4% | 46.1% | 0.554 | 2 of 17 | 10,370 | $88 | 36 |
+
+No errors in any run. Inkling and Nemotron Ultra land inside the small model's seed
+spread (score within 0.034). Qwen is just above it on score, with the gain on the
+false-alarm side. Kimi is outside it on both: more planets and fewer false alarms. The
+order of the four by score is their order by output tokens an episode.
+
+Reading the traces (Kimi, Qwen and Inkling-Small base seed 1, Inkling-Small rules
+seed 1).
+
+- The wrong periods are false alarms in disguise. The median expected
+  signal-to-noise ratio of the injected planet on a wrong-period episode is 5.1 for
+  Kimi, 5.3 for Qwen and 9.4 for Inkling-Small base, and 15 of Kimi's 24 are below 7.
+  The planet was unfindable and the model submitted a noise peak with an SDE of 10
+  to 12 and two events, which is the same act as a false alarm on a null episode.
+  With the rules prompt the three wrong periods have median signal-to-noise 19.9: the
+  rules remove the noise-peak submissions and leave real mistakes. The ratios of
+  submitted to true period are mostly unrelated (not aliases), which fits.
+- Every model misses the same findable planets. ep_0042, ep_0043, ep_0049 and
+  ep_0059 (signal-to-noise 12 to 18, three to five transits, 1,300 to 4,000 ppm) are
+  missed by Inkling-Small with both prompts, by Kimi and by Qwen. ep_0042, ep_0043
+  and ep_0059 sit on two hosts of Gaia class RS (spotted rotators, TIC 21505902 and
+  156836091). The strongest peak there is a 17.3-day V-shaped signal from the
+  variability; the model rejects it as an eclipsing binary or as rotation and
+  declines the whole star, without looking under it. The detrending window of 0.3
+  days leaves the rotation in. This is the Phase 3 item "stellar context: rotation
+  period, flares, variability class from the light curve", now with four named
+  episodes as the test.
+- Kimi's false alarms are argued, not careless: a single event above snr 10 with a
+  flat-bottom fit on an isolated star, submitted under the single-event rule of the
+  `single_events` tool description, or a two-event peak at 14 days whose double-period
+  alias it worked out correctly before submitting the wrong one of the two.
+
+Two harness defects found in the traces, both fixed after the runs in flight had
+loaded the old code, so the twenty runs of this batch carry them:
+
+1. Qwen3.5 writes `"detected": "False"` as text. The validator rejected it as not a
+   boolean and the model resubmitted; 186 of its 200 episodes needed two or more
+   submit calls (527 submit calls in all), one wasted turn each. `ToolSpec.coerce`
+   now converts the words true and false and a text that parses as a number to the
+   type the schema allows before validation; other text is still rejected.
+2. Kimi K2.6 hit a cap in 9 of 200 episodes: `max_turns` (30) in 5, `max_tokens`
+   (8,192 in one turn) in 3, and stopped without a tool call once. Two of the capped
+   episodes held findable planets (ep_0028 at snr 35, ep_0063 at snr 26), scored as
+   misses. The statement in the previous entry that no model is cut off was true of
+   the three-episode checks and false of the full run. `stargazer agent --max-turns`
+   now exists beside `--max-tool-calls` and `--max-tokens`; a Kimi rerun with
+   `--max-turns 60 --max-tokens 32768` is the next check, after this batch.

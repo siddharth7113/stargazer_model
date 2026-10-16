@@ -79,6 +79,49 @@ def test_agent_command_forwards_renderer_temperature_and_seed(monkeypatch):
     assert captured["max_tokens"] == 32768
 
 
+def test_agent_command_forwards_the_turn_and_tool_call_caps(monkeypatch):
+    """--max-turns and --max-tool-calls reach the detector; an unapplied cap cuts a run off silently."""
+    import stargazer.agent as agent_module
+    import stargazer.backends as backends_module
+    import stargazer.cli as cli_module
+    import stargazer.episodes as episodes_module
+
+    captured = {}
+
+    class RecordingBackend:
+        name = "recording"
+        config = {}
+
+        def __init__(self, **kwargs):
+            pass
+
+    def fake_detector(backend, **kwargs):
+        captured.update(kwargs)
+        raise StopHereError
+
+    monkeypatch.setattr(backends_module, "TinkerBackend", RecordingBackend)
+    monkeypatch.setattr(agent_module, "ToolAgentDetector", fake_detector)
+    monkeypatch.setattr(episodes_module, "EpisodeSet", lambda path: object())  # opened before the detector
+    args = cli_module.build_parser().parse_args(
+        [
+            "agent",
+            "--episodes",
+            "x",
+            "--backend",
+            "tinker",
+            "--model",
+            "m",
+            "--max-turns",
+            "60",
+            "--max-tool-calls",
+            "80",
+        ]
+    )
+    with pytest.raises(StopHereError):
+        cli_module.cmd_agent(args)
+    assert captured["max_turns"] == 60 and captured["max_tool_calls"] == 80
+
+
 def test_agent_command_leaves_max_tokens_to_the_model_card_by_default(monkeypatch):
     """Without --max-tokens the Tinker backend receives None, so the model card value applies."""
     import stargazer.backends as backends_module

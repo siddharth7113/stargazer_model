@@ -163,7 +163,12 @@ def cmd_agent(args: argparse.Namespace) -> None:
             seed=args.seed,
         )
     es = EpisodeSet(args.episodes)
-    det = ToolAgentDetector(backend, max_tool_calls=args.max_tool_calls, system_prompt=PROMPTS[args.prompt])
+    det = ToolAgentDetector(
+        backend,
+        max_tool_calls=args.max_tool_calls,
+        max_turns=args.max_turns,
+        system_prompt=PROMPTS[args.prompt],
+    )
     ids = es.ids[: args.limit] if args.limit else None
 
     def progress(episode_id, prediction, truth_record):
@@ -368,6 +373,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=0, help="sampling seed; vary it to measure variance")
     parser.add_argument(
         "--max-tool-calls", type=int, default=None, help="safety stop; default is the detector's (40)"
+    )
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        default=None,
+        help="safety stop on model turns; default is the detector's (30)",
     )
     parser.add_argument("--limit", type=int, default=3, help="episodes to run; 0 means all")
     parser.add_argument("--workers", type=int, default=8, help="episodes evaluated at the same time")
