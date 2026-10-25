@@ -158,11 +158,12 @@ an episode to the rejected text in all three seeds), Qwen3.5 base (the same), Ki
 K2.6 with `--max-turns 60 --max-tokens 32768`.
 
 First steps for the next session:
-1. TIC 55270064: look the star up on ExoFOP and in the literature for a 0.946-day
-   signal (TOI, community TOI, known variable). If the signal is real, the host must
-   leave the null pool of s98_v3 and the set gets a new version; if it is stellar,
-   record what it is and what tool would have said so. Then TIC 146420104 (15.37
-   days) and TIC 33831807 (14.44 days).
+1. TIC 55270064: ExoFOP has no TOI, no community TOI and no companion for it or for
+   TIC 146420104 and TIC 33831807 (LOGBOOK, 2026-10-25). Next, the light curve: fold
+   the star at 0.946 days in another sector, check the half- and double-period folds
+   for an eclipsing-binary alias, and vary the detrending window. If the signal is
+   real, the host must leave the null pool of s98_v3 and the set gets a new version;
+   if it is stellar, record what it is and what tool would have said so.
 2. A tool or a `summarize` field that names the TESS orbit boundaries and flags a
    period within a few percent of the orbit length or the sector length, so the model
    has a verdict word for the 14-day peaks. Phase 3 item; it breaks the comparison,

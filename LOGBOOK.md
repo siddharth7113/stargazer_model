@@ -1293,3 +1293,11 @@ holds the value the model meant (ep_0001 of Nemotron is a miss with `detected`
 False, where the rules-run files of 2026-10-16 would have made it a detection). Both
 hit ep_0002; both submitted the 24.6-day or 16.7-day noise peak on ep_0000 or ep_0001
 as before. The harness is clean for a rerun of either model.
+
+**The three null hosts on ExoFOP** (target pages read 2026-10-25). TIC 55270064 (Tmag
+11.90), TIC 146420104 (Tmag 10.89) and TIC 33831807 (Tmag 9.91) each have zero TOIs,
+zero community TOIs, no planet parameters and no stellar companions listed. The
+0.946-day signal on TIC 55270064 is in no catalogue the project reads. The next test
+is the light curve itself: the folded depth and shape at 0.946 days in a second
+sector, the half-period and double-period folds for an eclipsing-binary alias, and
+whether the dip survives a different detrending window.
