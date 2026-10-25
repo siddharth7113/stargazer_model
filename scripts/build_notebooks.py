@@ -304,11 +304,14 @@ plt.show()
                 """
 # 3. The period search
 
-A transit repeats. The Box Least Squares (BLS) search folds the light curve at each
-trial period and asks how well a box-shaped dip fits. The tool `bls_peaks` returns
-the strongest distinct peaks. The tool `search_signals` runs the search, masks the
-strongest signal, and searches again until the rest is noise. This notebook shows
-both on the loaded episode.
+- The Box Least Squares (BLS) search folds the light curve at each trial period and
+  asks how well a box-shaped dip fits. The tool `bls_peaks` returns the strongest
+  distinct peaks.
+- The tool `search_signals` runs the search, masks the strongest signal, and searches
+  again until the rest is noise.
+
+The output of this notebook is a short list of candidates: a period, an epoch, a
+duration and a depth for each, with a strength. Notebook 4 tests them.
 """,
             ),
             (
@@ -316,10 +319,17 @@ both on the loaded episode.
                 """
 ## Detrending first
 
-Both tools detrend the light curve before the search: a Savitzky-Golay filter fits a
-polynomial in a sliding window and divides the flux by the fit. The window must be
-several times the transit duration or the filter erases the dip. The plot shows the
-raw and the detrended flux.
+Both tools detrend the light curve before the search with a **Savitzky-Golay** filter.
+The filter slides a window along the light curve. In each window it fits a polynomial
+of order 2 to the flux. The value of the fit at the window centre is the trend at that
+point. The detrended flux is the raw flux divided by the trend. Points more than three
+standard deviations from the trend are clipped and the fit is repeated, so a deep
+transit does not pull the trend down. The light curve is split at gaps longer than
+five cadences, so a gap does not distort the fit on either side.
+
+The window is 0.75 days here. The window must be several times the transit duration or
+the filter would erase the dip. A window of 0.75 days keeps transits up to about 6
+hours. The plot shows the raw and the detrended flux.
 """,
             ),
             (
@@ -340,13 +350,53 @@ plt.show()
             (
                 "markdown",
                 """
+## How the search works
+
+A fold takes a trial period and places every point at its phase in that orbit: the
+time since the last trial epoch, instead of the time since the start. If the trial
+period is the true one, every transit lands at the same phase and the faint dips stack
+into one clear dip. If the trial period is wrong, the dips land at different phases
+and smear into the noise.
+
+On each folded curve the search fits a box: flux at one level everywhere, and a lower
+level inside a window of some width and position. It slides the window across the
+phase, tries several widths, and keeps the box that lowers the squared residuals the
+most. That best box gives the epoch, the duration and the depth. Its improvement in
+fit is the power at that trial period. The search repeats the fold and the box fit for
+thousands of trial periods. The power against period is the periodogram, and its
+highest peak is the candidate.
+
+![A wrong fold, the right fold with its box, and the periodogram](figures/bls_fold.png)
+
+The figure uses a synthetic light curve with one injected transit every 3.2 days.
+The smaller peaks at half, double and triple the period are aliases: a fold at a
+multiple of the true period still puts some dips at phase 0, so a box fits there too,
+with less power.
+
 ## `bls_peaks`
 
-Each peak has a period, an epoch, a duration, a depth and a signal detection
-efficiency (SDE): how far the peak stands above the mean of the periodogram, in
-standard deviations. On real stars noise alone reaches an SDE of 10 to 14, so a peak
-is a hypothesis to check, not a result. The tool also returns the half and double
-period of each peak, because a search often lands on an alias of the true period.
+Each peak has:
+- `period`: the trial period with the most box-fit power, in days.
+- `t0`: the epoch, the time of the first transit centre, in days from the start of the
+  light curve.
+- `duration`: the width of the box, in days. A duration of 0.051 days is 1.2 hours.
+- `depth_ppm`: the depth of the box in parts per million. 1000 ppm is 0.1 percent of
+  the star's light.
+- `sde`: the signal detection efficiency. It says how far the peak stands above the
+  mean of the periodogram, in standard deviations of the periodogram.
+- `n_events_in_data`: the number of transit epochs with at least three points in
+  transit. An epoch that falls in a data gap does not count.
+
+On real stars noise alone reaches an SDE of 10 to 14, so a peak is a hypothesis to
+check. The tool also returns the half and double period of each peak, because a search
+often lands on an alias of the true period.
+
+Read the output below as one signal, not five. The first row is the planet: a period
+of 0.776 days, SDE 23.6, 48 events. The next three rows are at two, three and four
+times that period. A fold at a multiple of the true period still puts a dip at phase
+0, so the box fits there too, but with fewer events and a lower SDE. The last row is
+at two thirds of the period, another alias. Its depth is lower because that fold
+spreads the dips over two phases and the box catches only part of them.
 """,
             ),
             (
@@ -421,11 +471,20 @@ plt.show()
                 """
 # 4. Vetting a candidate
 
-A peak from the period search is a hypothesis. Four tools test it: `fold` shows the
-shape, `fit_transit` fits a physical model and reports the geometry, `odd_even`
-compares alternate transits, and `secondary_eclipse` looks for a second dip half an
-orbit later. Each tool returns a verdict word with the numbers behind it. This
-notebook runs the four on the strongest signal of the loaded episode.
+A peak from the period search is a candidate, not a planet. Four tools test it:
+- `fold` shows the shape of the dip,
+- `fit_transit` fits a physical model and reports the geometry,
+- `odd_even` compares alternate transits, and
+- `secondary_eclipse` looks for a second dip half an orbit later.
+
+Each tool returns a verdict word with the numbers behind it. This notebook runs the
+four on the strongest signal of the loaded episode.
+
+The tools look for the usual impostors. The most common one is an eclipsing binary:
+two stars that orbit each other and take turns to block each other's light. Its dips
+can be as shallow as a planet's when the two stars are blended with a third, or when
+one star only grazes the edge of the other. Each test below catches one way a binary
+gives itself away.
 """,
             ),
             (
@@ -442,9 +501,24 @@ print({key: candidate[key] for key in ("period", "t0", "duration", "depth_ppm", 
                 """
 ## `fold`
 
-The tool folds the detrended flux at the period and epoch and returns 40 bins. At
-`phase_half_width` 0.5 the whole orbit is visible: a second dip at phase 0.5 means
-the true period is half the trial one. At 0.05 the transit shape is visible.
+The fold stacks every orbit on top of each other, as notebook 3 explains, and
+returns the stacked curve in 40 bins. The output is short on purpose: the model
+re-reads it on every later turn.
+
+Each bin has:
+- `phase`: the time from the transit centre, in days. Phase 0 is the centre of the dip.
+- `flux_ppm`: the binned flux minus one, in parts per million. A flat star reads 0
+  and a 1000 ppm transit reads about -1000 at phase 0.
+- `depth_ppm`: the deepest bin.
+
+The argument `phase_half_width` sets how much of the orbit to return, as a fraction
+of the period. The two plots use the two useful settings:
+- **0.5 shows the whole orbit**, from half a period before the dip to half a period
+  after. Use it to look for a second dip. A second dip half way round means the
+  candidate is a binary, or the true period is twice the trial one and the search
+  folded two different eclipses onto each other.
+- **0.05 zooms on the transit**, one twentieth of the orbit on each side. Use it to
+  see the shape of the dip: flat bottom or V, and how wide it is.
 """,
             ),
             (
@@ -466,21 +540,44 @@ plt.show()
             ),
             (
                 "markdown",
-                """
+                r"""
 ## `fit_transit`
 
-The fit uses the batman model with the epoch offset, the radius ratio, the scaled
-semi-major axis and the impact parameter free. The host density follows from the
-period and the scaled semi-major axis:
+The box in notebook 3 was a crude shape. This tool fits a real transit curve, the
+batman model, to the folded data. The curve has a round bottom from limb darkening,
+the dimming of a star's disc towards its edge. Four numbers are free in the fit:
+- the epoch offset, a small shift of the transit centre,
+- `rp_rs`, the radius of the planet divided by the radius of the star,
+- `a_rs`, the radius of the orbit divided by the radius of the star,
+- `impact_parameter`, how far from the centre of the star the planet crosses. 0 is
+  straight across the middle. 1 is along the edge.
 
-$$\\rho_\\star = \\frac{3 \\pi}{G P^2} \\left( \\frac{a}{R_\\star} \\right)^3$$
+The fit reports the depth as the square of `rp_rs`, the duration in hours and a
+refined epoch. The two verdict words come from the geometry.
 
-A main-sequence host has 0.1 to 20 g/cm³. A dip whose fit needs a density outside
-that range is not a planet at this period. The shape is `flat_bottom` when the
-planet disc lies well inside the stellar disc, `v_shaped` when it crosses the limb,
-as an eclipsing binary often does, and `grazing_uncertain` between the two, where a
-short transit does not let the fit separate the impact parameter from the radius
-ratio. The plot shows the binned fold with the fitted model.
+**The density verdict.** Kepler's third law links the period and the size of the
+orbit to the mass of the star. With the orbit size in units of the star's radius, the
+mass turns into a density:
+
+$$\rho_\star = \frac{3 \pi}{G P^2} \left( \frac{a}{R_\star} \right)^3$$
+
+So the fit says how dense the host star must be for a planet to make this dip at this
+period. A normal star has a density between 0.1 and 20 grams per cubic centimetre,
+and the verdict is `plausible` inside that range. A value outside it means the dip is
+not a planet transit at this period. A blended binary or a wrong period both give an
+impossible density.
+
+**The shape verdict.** The sum of the impact parameter and the radius ratio says
+whether the planet disc fits inside the star's disc at mid-transit. The shape is
+`flat_bottom` when the sum is below 0.9: the whole planet is in front of the star for
+a while, so the dip has a floor. The shape is `v_shaped` when the sum reaches 1: the
+object only grazes the edge, so the dip is a V with no floor. Two grazing stars make a
+V far more often than a planet does. The shape is `grazing_uncertain` between the two,
+where the fit of a short transit cannot tell the two apart.
+
+`significance_sigma` says how much better the transit curve fits than a flat line.
+`n_bins` and `n_in_transit` are the number of bins the fit used and the number inside
+the transit. The plot shows the binned fold with the fitted curve.
 """,
             ),
             (
@@ -520,11 +617,22 @@ plt.show()
                 """
 ## `odd_even`
 
-An eclipsing binary at twice the trial period shows two eclipses of different
-depth, which a search mistakes for one planet at half the period. The tool measures
-the depth of each event, averages the odd-numbered and the even-numbered ones, and
-compares them in units of the scatter between events. The verdict is `consistent`
-below 3 sigma.
+Two stars in a binary are not the same size and brightness, so the two eclipses in
+one orbit have different depths. If the search lands on half the true period, it
+folds the deep and the shallow eclipse onto each other and reports one dip. The
+alternate transits then differ in depth: the first, third and fifth are the deep
+eclipse and the second, fourth and sixth are the shallow one. A planet gives the
+same dip every time.
+
+The tool numbers the events in order and measures the depth of each. It averages the
+odd-numbered and the even-numbered events, then compares the two averages:
+- `odd_depth_ppm` and `even_depth_ppm`: the two average depths.
+- `odd_events` and `even_events`: how many events went into each average.
+- `difference_sigma`: the difference in the two depths, divided by its uncertainty.
+  The uncertainty comes from how much the single events differ from each other, not
+  from the point noise, so that leftover stellar variability counts.
+- `verdict`: `consistent` below 3 sigma, `inconsistent` at or above it, and
+  `insufficient_data` when either parity has fewer than two events.
 """,
             ),
             (
@@ -542,10 +650,28 @@ for key, value in parity.items():
                 """
 ## `secondary_eclipse`
 
-A self-luminous companion is eclipsed in turn, half an orbit after the primary. The
-tool measures the box depth at phase 0.5 and at 200 trial phases, with the noise
-taken from the spread of the trial depths. The plot shows the trial depths across
-the orbit; the primary window is left out of the noise.
+In a binary the smaller star shines too, so half an orbit after it passes in front
+of the larger star it passes behind it. That makes a second, shallower dip at phase
+0.5. A planet reflects too little light for its own secondary to show in one TESS
+sector, so a second dip at phase 0.5 marks a binary.
+
+The tool folds the detrended flux and measures the depth of a box, one transit
+duration wide, at 200 phases around the orbit. The spread of those 200 depths is the
+noise. Phases within three durations of the primary are left out of the noise and of
+the search, because the detrending leaves a residual around a deep dip.
+- `primary_depth_ppm`: the depth at phase 0, for comparison.
+- `secondary_depth_ppm` and `secondary_sigma`: the depth at phase 0.5 and that depth
+  divided by the noise.
+- `strongest_other_phase`, `strongest_other_depth_ppm` and `strongest_other_sigma`:
+  the deepest box at any phase away from the primary. A strong dip at a phase other
+  than 0.5 means the period is wrong or a second signal is present.
+- `noise_ppm`: the noise, from the spread of the trial depths.
+- `verdict`: `secondary_at_half_phase` if the phase-0.5 depth reaches 3 sigma,
+  `dip_at_other_phase` if the strongest other dip reaches 5 sigma, else
+  `no_secondary`.
+
+The plot shows the 200 trial depths across the orbit. The line at phase 0.5 marks
+where a binary's second eclipse would be.
 """,
             ),
             (
