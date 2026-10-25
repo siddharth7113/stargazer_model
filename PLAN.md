@@ -49,7 +49,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Baseline on s98_v2 recorded in the LOGBOOK
 - [x] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; s98_v3 built on the 36 clean hosts, BLS baseline recorded (LOGBOOK 2026-10-16)
 - [ ] One small episode set committed to git for tests and demonstrations
-- [x] Repeat each comparison run with three seeds and report mean and spread: Inkling-Small on s98_v3, both prompts (LOGBOOK 2026-10-16); the larger models are still single runs
+- [x] Repeat each comparison run with three seeds and report mean and spread: Inkling-Small on s98_v3, both prompts (LOGBOOK 2026-10-16); the four large models with the base prompt (LOGBOOK 2026-10-25); the rules prompt on the large models is at two seeds, the rest running on 2026-10-25
 
 ## Phase 2: The agent harness (done, being measured)
 
@@ -65,8 +65,9 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Same models on s98_v1 with the masked search and single_events: precision rose (Inkling 36 percent at 5 percent false alarm, above BLS); faint-regime completeness did not
 - [x] Inkling-Small on s98_v2: 32 percent at 11 percent false alarm; zero single-transit hits because the scorer requires a period
 - [x] Scorer: a single-event submission form (event time, duration, depth, no period) credited against injected transit times; set-level metrics for it (LOGBOOK 2026-10-11, single-event form)
-- [ ] Prompt rule: a peak near the noise level with no second line of evidence is "none" (wrong periods were noise peaks)
-- [ ] Larger models on the same sets: Kimi K2.6, Nemotron 3 Ultra, Inkling, Qwen3.5-397B-A17B
+- [x] Prompt rule: a peak near the noise level with no second line of evidence is "none"; the rules prompt cuts wrong periods from about 30 to 3 to 10 a run and the false-alarm rate from 31 to 2 percent on Inkling-Small (LOGBOOK 2026-10-16), and by 27 and 18 points on Inkling and Nemotron 3 Ultra (LOGBOOK 2026-10-25)
+- [x] Larger models on the same sets: Kimi K2.6, Nemotron 3 Ultra, Inkling, Qwen3.5-397B-A17B, three seeds each with the base prompt on s98_v3 (LOGBOOK 2026-10-25); Kimi K2.6 is the only one above the small model's seed spread
+- [x] Harness check from the traces: argument coercion, the agent reads the coerced submission, `stargazer rescore` (LOGBOOK 2026-10-25)
 
 ## Phase 3: The toolbox, in the order an astronomer uses it
 
@@ -90,7 +91,8 @@ description written for the model. The agent gets the tool only when the test pa
 - [ ] Centroid motion from the target pixel file: does the dip come from the target or a neighbour?
 - [ ] Difference imaging: in-transit minus out-of-transit image, where is the signal?
 - [x] Gaia neighbours within the aperture and the dilution they imply; `nearby_stars` (LOGBOOK 2026-10-11)
-- [ ] Systematics: momentum dumps, scattered light, and the Earth-and-Moon windows in TESS
+- [ ] Systematics: momentum dumps, scattered light, and the Earth-and-Moon windows in TESS; first the orbit boundaries, because peaks at 13.9 to 15.4 days (one TESS orbit) lead the false alarms on five null hosts of s98_v3 (LOGBOOK 2026-10-25)
+- [ ] Fold shape verdict: dip, step, sawtooth or sinusoid from the full-orbit fold, so a pulsator is named as one; the 0.946-day sawtooth on TIC 55270064 passes every present tool in every run (LOGBOOK 2026-10-25)
 - [ ] Stellar context: rotation period, flares, variability class from the light curve
 - [ ] TRICERATOPS or an equivalent false-positive probability as the final number
 
@@ -132,7 +134,7 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] Independent re-analysis of each survivor from the public data with a different model
 - [ ] Submit as community TOIs on ExoFOP; request follow-up where warranted
 
-## Handoff: state at the end of 2026-10-25
+## Handoff: state on 2026-10-25
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
@@ -151,19 +153,20 @@ completeness level; three null hosts hold 128 of the 291 false alarms of the 22 
 runs, one of them a 0.946-day dip on TIC 55270064 that passes every tool, the other
 two signals at the one-orbit timescale of 14 to 15 days.
 
-Nothing is running. Not run: rules seed 3 of Inkling and Nemotron 3 Ultra, rules
-seeds 1 to 3 of Kimi K2.6 and Qwen3.5-397B (eight runs, about $700, owner's yes
-needed). Rerun candidates with the fixed code: Nemotron 3 Ultra base (it lost a turn
-an episode to the rejected text in all three seeds), Qwen3.5 base (the same), Kimi
-K2.6 with `--max-turns 60 --max-tokens 32768`.
+Running at 17:02 UTC with the owner's yes: the eight rules runs that were not launched
+on 2026-10-16 (`results/full_v9large/run_rules_rest.sh`, all at once, eight workers
+each, lowest CPU priority). The two Kimi K2.6 runs with `--max-turns 60 --max-tokens
+32768` in the same script were stopped after three minutes to free memory; they run
+alone later. Rerun candidates with the fixed code: Nemotron 3 Ultra base and Qwen3.5
+base, which lost a turn an episode to the rejected text in all three seeds.
 
 First steps for the next session:
-1. TIC 55270064: ExoFOP has no TOI, no community TOI and no companion for it or for
-   TIC 146420104 and TIC 33831807 (LOGBOOK, 2026-10-25). Next, the light curve: fold
-   the star at 0.946 days in another sector, check the half- and double-period folds
-   for an eclipsing-binary alias, and vary the detrending window. If the signal is
-   real, the host must leave the null pool of s98_v3 and the set gets a new version;
-   if it is stellar, record what it is and what tool would have said so.
+1. TIC 55270064 is settled as far as sector 98 allows: the 0.946-day signal is a
+   sawtooth (a sharp rise, then a fade over the whole period), a pulsator shape and
+   not a transit, and ExoFOP has no entry for it or for TIC 146420104 and TIC 33831807
+   (LOGBOOK 2026-10-25). The host stays in the null pool. The missing tool is the
+   fold shape verdict (Phase 3b). Optional: the Gaia class of the neighbour at 6.7
+   arcseconds, which could be the pulsator at 0.7 percent of the flux.
 2. A tool or a `summarize` field that names the TESS orbit boundaries and flags a
    period within a few percent of the orbit length or the sector length, so the model
    has a verdict word for the 14-day peaks. Phase 3 item; it breaks the comparison,

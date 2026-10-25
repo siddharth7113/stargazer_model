@@ -1301,3 +1301,36 @@ zero community TOIs, no planet parameters and no stellar companions listed. The
 is the light curve itself: the folded depth and shape at 0.946 days in a second
 sector, the half-period and double-period folds for an eclipsing-binary alias, and
 whether the dip survives a different detrending window.
+
+**The ten runs launched, then eight** (`results/full_v9large/run_rules_rest.sh`,
+17:02 UTC, owner's yes for about $880). The eight rules runs not launched on
+2026-10-16 and the two Kimi K2.6 runs with `--max-turns 60 --max-tokens 32768` (base
+and rules, seed 1) started at once, each at eight workers, to fit the owner's window
+of an hour and a half. Three-episode check of Kimi with the caps first
+(`results/smoke/agent_kimi_k26_s98_v3_base3_caps.json`, $0.97): the config records
+`max_turns` 60 and `backend_max_tokens` 32768, no errors, the same outcomes as the
+check of 2026-10-16, and 26,120 output tokens on ep_0000 in 17 turns, above the old
+8,192 cap for a turn. Ten processes took 12.7 of 15.6 GB of memory and a load of 54
+on 12 cores, so the two caps runs were stopped after three minutes (about $1 lost) and
+the eight were set to the lowest CPU priority at the owner's request. Results land in
+`results/full_v9large/` under the names of the 2026-10-16 batch, and the entry with
+the numbers follows.
+
+**TIC 55270064 at 0.946 days: a sawtooth, not a transit** (the toolbox on ep_0019 of
+s98_v3; ep_0081 is the same light curve). `search_signals` finds the period at every
+detrending window (0.3, 0.75 and 2.0 days; SDE 15.2, 13.7, 12.3), with 39 to 43
+events and a depth of 400 to 560 ppm. `fit_transit` says flat bottom, density 2.7
+g/cc, 7.2 sigma; `odd_even` consistent; `secondary_eclipse` none; no TOI, no
+eclipsing binary, no Gaia class. The full-orbit fold shows what the verdicts do not:
+the flux is lowest just before phase 0 (about -500 ppm), jumps to +800 ppm within
+0.05 of a phase and then falls through the whole period back to -500. A narrow fold
+shows a step of 1,400 ppm at phase 0, not a dip with two edges; the half-period fold
+shows the same step, the double-period fold two of them. A sharp rise and a slow
+decline every 0.946 days is the light curve of a pulsating star (RR Lyrae stars
+have this shape at periods of 0.2 to 1 day), diluted to 0.1 percent either because
+the star is a low-amplitude pulsator or because the pulsator is the neighbour at 6.7
+arcseconds with 0.7 percent of the flux. Every tool in the box measures the in-transit
+flux against the out-of-transit median, and a step passes each of them. The missing
+tool is a verdict on the shape of the full-orbit fold: dip, step, sawtooth or
+sinusoid (PLAN, Phase 3b). The host stays in the null pool; its 36 false alarms
+across the 22 runs are right as scored.
