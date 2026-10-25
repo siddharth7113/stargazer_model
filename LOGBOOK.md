@@ -1544,3 +1544,39 @@ showed, one seed, Inkling-Small.
 | 9 | 0.254 | 0.357 | 0.493 |
 | 10 | 0.239 | 0.357 | 0.498 |
 | 12 | 0.000 | 0.318 | 0.560 |
+
+**Reference runs on the held-out set s92_v1** (`results/s92_v1/run_reference.sh`,
+Inkling-Small, `tml_v0`, seed 1, both prompts side by side, 18:50 to 19:00 UTC,
+$24.68; three-episode check first, `results/smoke/agent_inkling_small_s92_v1_rules3.json`).
+The toolbox is the twelve-tool one with `orbit_shape` as its own tool (commit
+2e077bb), so these runs are the reference for every later confirmation on this set
+and are not the 2026-10-16 toolbox. No errors.
+
+| prompt, s92_v1, seed 1 | false alarm | completeness | with aliases | mean score | one-transit hits | cost |
+|---|---|---|---|---|---|---|
+| BLS at 5 percent false alarm | 5% | 32% | 32% | - | 0 of 20 | - |
+| rules | 7.0% | 36.4% | 39.5% | 0.575 | 5 of 20 | $10 |
+| base | 31.0% | 38.0% | 40.3% | 0.497 | 3 of 20 | $14 |
+
+Reading. The numbers travel. On s98_v3 the same model gave 2.3 and 31.1 percent false
+alarms, 39.2 and 40.4 percent completeness and scores of 0.573 and 0.492 for the two
+prompts; on 28 other stars in another hemisphere it gives 7.0 and 31.0, 36.4 and 38.0,
+0.575 and 0.497. The gap between the prompts is the same 0.08 of score and it is
+restraint again. The false alarms are again a few hosts: with the rules prompt all
+five are one star, TIC 190310047, at 12.84 days in each of its five null episodes;
+with the base prompt 22 false alarms sit on seven hosts, TIC 248603283 at 11.23 days
+seven times and TIC 76774212 at 6.75 days six times, where `search_signals` finds
+nothing above SDE 10 and the model submitted a weaker peak. The 12.84-day signal on
+TIC 190310047 (Tmag 8.2, no TOI, no binary entry) is one event in 25.7 days: a
+flat-bottomed dip of 857 ppm and 2.3 hours at 10 sigma with a plausible density.
+It is a candidate to look at with the next sector, not a systematic that the orbit
+flag would name; it goes to the open questions.
+
+`orbit_shape` was called in 79 episodes with the rules prompt and 165 with the base
+prompt. It read `variable` on one host, TIC 5656273, an active star with a 0.86-day
+variation of 55,000 ppm, in all five of its transit episodes under both prompts; four
+of the five planets are unfindable (signal-to-noise 2 to 5) and one, ep_0144 at
+signal-to-noise 66 and 2.13 days, is findable and was missed in both runs, with the
+model declaring the star active after the 0.86-day peak. Whether the 2026-10-16
+toolbox would have found it on this star is not known, because no run without the
+tool exists on this set; the pattern is the one of ep_0029 on s98_v3.

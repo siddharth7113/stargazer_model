@@ -168,8 +168,9 @@ freezes.
    wait as well.
 2. The held-out set s92_v1 exists (LOGBOOK 2026-10-25). Each tool below is measured
    on s98_v3 with three seeds and then confirmed on s92_v1 with one seed. A tool
-   that moves s98_v3 and not s92_v1 is fitted to s98_v3 and does not stay. Still to
-   run on s92_v1: Inkling-Small with both prompts at one seed, as the reference.
+   that moves s98_v3 and not s92_v1 is fitted to s98_v3 and does not stay. The
+   reference on s92_v1 exists: Inkling-Small, both prompts, one seed, twelve tools
+   (LOGBOOK 2026-10-25); the numbers match s98_v3 within a few points.
 3. Three tools, in this order, each measured with Inkling-Small at three seeds and the
    rules prompt (about $36 a tool version; a change counts when it moves the
    false-alarm rate by more than 3 points or the completeness by more than 1 point):
@@ -207,6 +208,9 @@ small committed episode set for tests (Phase 1).
   accuracy on known TOIs before trusting a tier 2 number.
 - GLM-5.3's tokenizer fails with the pinned transformers in the cookbook; retry after an update.
 - Nemotron explores to the turn cap on hard episodes; decide whether that is a prompt problem or a cost to accept.
+- TIC 190310047 in s92_v1 (Tmag 8.2, no TOI): one flat-bottomed 857 ppm, 2.3-hour dip
+  at 10 sigma in 25.7 days, submitted as a 12.84-day planet in all five of its null
+  episodes under the rules prompt. A candidate for the next sector, not a systematic.
 - Three null hosts of s98_v3 carry signals that every model submits (TIC 55270064 at
   0.946 days, TIC 146420104 at 15.4 days, TIC 33831807 at 14.4 days). Until each is
   explained, the false-alarm rate on s98_v3 measures these three hosts as much as the

@@ -229,6 +229,13 @@ and 28 days) or a short-period variable star (a 0.946-day pulsator on TIC 552700
 a 1.38-day signal on TIC 32816814). The LOGBOOK entries of 2026-10-25 have the
 per-seed numbers and the reading.
 
+A held-out set, `s92_v1`, holds 200 episodes on 28 other stars from sector 92, built
+with the same settings. No tool or prompt is designed on it; it confirms a change that
+`s98_v3` showed. Inkling-Small at one seed gives 7 percent false alarms and 36 percent
+completeness with the rules prompt and 31 and 38 percent with the base prompt, against
+BLS at 32 percent completeness for 5 percent false alarms, the same picture as on
+`s98_v3` (LOGBOOK 2026-10-25).
+
 ## Toolbox
 
 | tool | what it does | status |
