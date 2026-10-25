@@ -65,6 +65,66 @@ def test_fold_empty_bins_are_null(lc):
     assert None in curve["flux_ppm"] and curve["n_empty_bins"] > 0 and curve["n_points"] == time.size
 
 
+def test_fold_orbit_shape_of_a_planet_is_flat(injected):
+    """A transit on a quiet star leaves the orbit flat apart from the dip, whatever window the fold shows."""
+    time, flux, _, truth = injected
+    zoom = tools.fold(time, flux, period=truth.period, t0=truth.t0, phase_half_width=0.05)
+    whole = tools.fold(time, flux, period=truth.period, t0=truth.t0, phase_half_width=0.5)
+    assert zoom["orbit_shape"] == whole["orbit_shape"] == "flat"
+    assert whole["orbit_amplitude_ppm"] < 0.5 * whole["depth_ppm"]
+
+
+def test_fold_orbit_shape_of_noise_is_flat(lc):
+    """Pure noise folded at any period has no coherent variation, so the orbit is flat."""
+    time, flux, _ = lc
+    assert tools.fold(time, flux, period=0.9, t0=0.0)["orbit_shape"] == "flat"
+
+
+def test_fold_orbit_shape_is_null_with_few_orbits(lc):
+    """A 27-day light curve folded at 10 days holds under five orbits, so no verdict is given.
+
+    With few orbits the fold does not average the star's own variability and any trend looks
+    coherent; a 24-day planet on a spotted star folded as a sawtooth before this guard.
+    """
+    time, flux, _ = lc
+    flux = flux + 0.002 * np.sin(2 * np.pi * (time - time[0]) / 10.0)
+    curve = tools.fold(time, flux, period=10.0, t0=time[0], detrend_window_days=3.0)
+    assert curve["orbit_shape"] is None and curve["orbit_amplitude_ppm"] > 0
+
+
+def test_fold_orbit_shape_of_a_sinusoid_is_variable(lc):
+    """A sinusoid at the fold period varies through the whole orbit with a rise of half a period."""
+    time, flux, _ = lc
+    flux = flux + 0.002 * np.sin(2 * np.pi * (time - time[0]) / 0.9)
+    curve = tools.fold(time, flux, period=0.9, t0=time[0], detrend_window_days=3.0)
+    assert curve["orbit_shape"] == "variable" and 0.35 < curve["rise_fraction"] < 0.65
+
+
+def test_fold_orbit_shape_of_a_sawtooth_is_variable_at_any_window(lc):
+    """A fast rise and a slow fall every period, the light curve of an RR Lyrae star, is variable.
+
+    This is the 0.946-day signal of TIC 55270064 in s98_v3, which passes every other tool. A
+    detrending window shorter than the period flattens the sawtooth into a dip-shaped residual,
+    so the verdict must hold at the short window too, and the rise fraction must show the fast rise.
+    """
+    time, flux, _ = lc
+    phase = ((time - time[0]) / 0.9) % 1.0
+    flux = flux + 0.002 * np.where(phase < 0.1, phase / 0.1, 1.0 - (phase - 0.1) / 0.9)
+    for window in (3.0, 0.3):
+        curve = tools.fold(time, flux, period=0.9, t0=time[0], detrend_window_days=window)
+        assert curve["orbit_shape"] == "variable" and curve["rise_fraction"] < 0.3
+
+
+def test_fold_orbit_shape_of_a_sinusoid_at_another_period_is_flat(lc):
+    """A 5-day variable folded at a 1.3-day transit is flat: the variation is at another period."""
+    time, flux, _ = lc
+    flux = flux + 0.01 * np.sin(2 * np.pi * (time - time[0]) / 5.0)
+    phase = ((time - time[0] - 0.4 + 0.65) % 1.3) - 0.65
+    flux = flux - 0.003 * (np.abs(phase) < 1 / 24)
+    curve = tools.fold(time, flux, period=1.3, t0=time[0] + 0.4, detrend_window_days=0.3)
+    assert curve["orbit_shape"] == "flat" and curve["depth_ppm"] > 1000
+
+
 def test_odd_even_equal_for_planet(injected):
     """Odd and even transits of one planet have the same depth: below 3 sigma and verdict consistent."""
     time, flux, _, truth = injected

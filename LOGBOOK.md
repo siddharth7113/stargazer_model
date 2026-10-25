@@ -1334,3 +1334,47 @@ flux against the out-of-transit median, and a step passes each of them. The miss
 tool is a verdict on the shape of the full-orbit fold: dip, step, sawtooth or
 sinusoid (PLAN, Phase 3b). The host stays in the null pool; its 36 false alarms
 across the 22 runs are right as scored.
+
+**Orbit shape verdict in `fold`** (commit follows; the fold tool breaks the comparison
+with every earlier run from here). `fold` now returns three more fields whatever the
+window asked for: `orbit_amplitude_ppm`, `rise_fraction` and `orbit_shape`, which is
+`flat`, `variable`, or null when the data cover fewer than five orbits. The judgement
+is made on a second full-orbit fold at a detrending window of at least two periods,
+because a window shorter than the period flattens a variation at the period and
+leaves a dip-shaped residual at its steep part, which is how the 0.946-day pulsator
+passed at the 0.3-day window. A two-harmonic model is fitted to the bins outside the
+dip; the orbit is `variable` when the model's amplitude is at least 3 times the bin
+scatter, at least half the depth, and at least 4 times the same amplitude at the
+periods 0.87, 0.93, 1.07 and 1.13 times the fold period. The last test is a
+periodogram on the fold: a star that varies at the period has its power there and
+not beside it, and red noise has about the same at every period.
+
+Two versions failed before this one, and the failure is worth the record because it
+is the overfitting the owner asked about. The first version judged the variation on
+the fold at the caller's window with a fixed three-bin exclusion and split
+`sawtooth` from `sinusoid` on the rise fraction; it passed its synthetic tests and,
+on the real set, read 45 of the 124 injected planets as a variable star, because
+real TESS stars carry red noise that two harmonics follow at any period, and it
+called a 24-day planet on a spotted star a sawtooth because two orbits do not
+average the spots out. The second version added an explained-variance test and the
+five-orbit guard and still flagged 46. The contrast against the off periods is what
+separates them: the pulsator has 8.6 and the synthetic sinusoid and sawtooth 9 to
+11, while 94 of the 96 injected planets with five or more orbits have under 4; the
+two above 4 are deep transits whose dip leaked past the three excluded bins, and
+excluding every bin deeper than 3 times the scatter settles them. The sawtooth
+word went as well: the pulsator's rise fraction comes out 0.6 on the long-window
+fold, which would have named it a sinusoid, so the verdict has two words and the
+rise fraction stays as a number.
+
+Checks on s98_v3 with the final version: TIC 55270064 at 0.946 days is `variable`
+at the 0.3-day and the 0.75-day window (amplitude 1,067 and 1,199 ppm against a
+depth of 507); all 96 injected planets with five or more orbits are `flat` at their
+true period and epoch, the 28 with fewer orbits are null; a synthetic 5-day
+sinusoid of 1 percent with a 1.3-day transit is `flat` at the transit period. One
+fold call takes 0.09 seconds with the five extra folds. Tests:
+`test_fold_orbit_shape_of_a_planet_is_flat`, `..._of_noise_is_flat`,
+`..._is_null_with_few_orbits`, `..._of_a_sinusoid_is_variable`,
+`..._of_a_sawtooth_is_variable_at_any_window`,
+`..._of_a_sinusoid_at_another_period_is_flat`. The viewer's fold line shows the
+word. Not yet measured in a run; the measurement is Inkling-Small, rules prompt,
+three seeds, against the 2026-10-16 table, and it follows the large-model batch.

@@ -515,7 +515,8 @@ def _fold_line(arguments: dict, data: dict) -> str:
     """Summarise a ``fold`` result: the depth, the bins and the empty bins."""
     flux = data.get("flux_ppm") or []
     empty = data.get("n_empty_bins", sum(value is None for value in flux))
-    return f"depth {_field(data, 'depth_ppm', '{:,.0f}')} ppm · {len(flux)} bins · {empty} empty"
+    shape = f" · {data['orbit_shape']}" if data.get("orbit_shape") else ""
+    return f"depth {_field(data, 'depth_ppm', '{:,.0f}')} ppm · {len(flux)} bins · {empty} empty{shape}"
 
 
 def _fit_line(arguments: dict, data: dict) -> str:
