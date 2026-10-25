@@ -187,10 +187,19 @@ freezes.
    - rotation-aware detrending or a `stellar_variability` tool for the spotted hosts;
      test: the shared misses ep_0042, ep_0043, ep_0049, ep_0059.
    Each tool breaks the comparison with the earlier runs; record the break in the
-   LOGBOOK and keep the earlier tables as the record of their toolbox version.
+   LOGBOOK and keep the earlier tables as the record of their toolbox version. Each
+   tool gets one measurement cycle: three seeds on s98_v3, one on s92_v1. A tool
+   that does not move both sets in the same direction goes, with no second version
+   on the small model. The toolbox freezes after the rotation item whether or not
+   the score moved; the remaining gain is the policy's job in Phase 5.
+3b. Beside the tools, started early because Phase 6 lives there: the Full Frame
+   Image loader (QLP or TESS-SPOC, 10- and 30-minute cadence) as a `LightCurveCache`
+   source, and one small FFI episode set on unvetted stars to test the three-array
+   interface on real systematics. Agreed with the owner on 2026-10-25.
 4. When the three tools are in: one large-model pass at one seed with the rules
    prompt (about $300) as the final table of Phase 3, and the Kimi raised-caps run.
-5. Phase 5 starts on that toolbox. Which model trains is an open decision. The case
+5. Phase 5 starts on that toolbox, and it is the experiment the project was built
+   for; the owner's $3,000 reserve is for it. Which model trains is an open decision. The case
    for a small model: a training run samples thousands of episodes, and an episode
    costs $0.06 on Inkling-Small against $0.42 on Kimi K2.6, so a run of 3,000
    episodes is about $200 against $1,300 before the training compute; the gap the
