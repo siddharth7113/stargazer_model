@@ -169,6 +169,7 @@ cannot look up the star.
 | `s98_v1` | 1 | 0.5 to 20 days | 39 | nearly always six or more |
 | `s98_v2` | 2 | 0.5 to 60 days | 39 | single and double transits are common |
 | `s98_v3` | 3 | 0.5 to 60 days | 36 | as `s98_v2`, without the three known eclipsing binaries |
+| `s92_v1` | 3 | 0.5 to 60 days | 28 | as `s98_v3`, on sector 92; the held-out set, never used to design a tool or a prompt |
 
 The hash of each set is in its manifest and in every results file scored on it. The
 LOGBOOK has the build command of each set.

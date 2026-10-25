@@ -100,14 +100,14 @@ stargazer/
   score.py       scoring rules and set-level metrics
   evaluate.py    evaluate and Results, with a worker pool
   baseline.py    BLSDetector
-  tools.py       analysis tools with JSON Schemas, one registry for every backend
+  tools.py       analysis tools with JSON Schemas, one registry for every backend; coerce_arguments reads a call as the tool runs it
   agent.py       ToolAgentDetector and the ChatBackend protocol
   backends.py    OpenAICompatibleBackend (OpenRouter, vLLM, Ollama) and TinkerBackend
   calibrate.py   threshold choice from recorded statistics
   compare.py     one table for several results files
   viewer.py      terminal trajectory viewer
   provenance.py  hashes, manifests, git commit
-  cli.py         command line
+  cli.py         command line, including rescore (rebuild predictions from trajectories and score again)
 tests/           one unit-test file for each module; tests/integration/ for cross-module checks
 scripts/         pre-commit lint hooks
 docs/            Sphinx documentation with Mermaid diagrams

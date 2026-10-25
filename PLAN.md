@@ -140,24 +140,27 @@ curve as three arrays, so each survey needs only a loader and a target list.
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The day: the eight overnight runs of 2026-10-16 are in the LOGBOOK with every seed
-run of the large models in one table and the mean and spread for each model and
-prompt beside Inkling-Small (README table). A harness defect found in the traces: the
-argument coercion of 2026-10-16 let the agent loop take the text `"False"` as a
-detection, which made Nemotron 3 Ultra's two rules runs report 80 percent false
-alarms. Fixed in `coerce_arguments` and the loop; `stargazer rescore` rebuilds a
-results file's predictions from its trajectories and scores it again, and the two
-Nemotron rules files have a `_rescored` twin that the tables use. The other 20 files
-rescore to the same numbers. Findings: with three seeds Kimi K2.6 stays the only
-large model above the small model's spread with the base prompt; the rules prompt
-cuts the false-alarm rate of Inkling and Nemotron 3 Ultra by 27 and 18 points with
-completeness level; three null hosts hold 128 of the 291 false alarms of the 22 seed
-runs, one of them a 0.946-day dip on TIC 55270064 that passes every tool, the other
-two signals at the one-orbit timescale of 14 to 15 days.
+The day, in order. The eight overnight runs of 2026-10-16 went into the LOGBOOK, and
+their traces showed a harness defect: the argument coercion let the agent loop take
+the text `"False"` as a detection. Fixed in `coerce_arguments` and the loop;
+`stargazer rescore` rebuilds a results file's predictions from its trajectories, and
+the two Nemotron rules files have `_rescored` twins. The eight missing rules runs
+ran with the owner's yes, so the large-model series on s98_v3 is complete at 30
+runs, five models, two prompts, three seeds: with the rules prompt every model lands
+between 0.54 and 0.57 and the small model is at the top, so the toolbox is the
+ceiling and no large model runs again until it freezes. The false alarms under the
+rules are the same few null hosts for every model: one- and two-orbit periods, and
+two short-period variables. The 0.946-day signal on TIC 55270064 is a pulsator, and
+a verdict for it was built, measured twice on the small model, found to cost
+completeness as a field of `fold`, and moved into its own tool `orbit_shape`. The
+held-out set s92_v1 was built from sector 92 with the s98_v3 settings, with its BLS
+baseline and the Inkling-Small reference with both prompts, and the numbers match
+s98_v3 within a few points. The owner read the Tinker balance, $4,697, and keeps
+$3,000 for Phase 5.
 
-Nothing is running. The large-model series on s98_v3 is complete at 30 runs: five
-models, two prompts, three seeds (LOGBOOK 2026-10-25). The two Kimi K2.6 runs with
-`--max-turns 60 --max-tokens 32768` wait for the frozen toolbox.
+Nothing is running. The two Kimi K2.6 runs with `--max-turns 60 --max-tokens 32768`
+wait for the frozen toolbox. The next session starts with the orbit boundary flag
+(item 3 below): a three-episode check, three seeds on s98_v3, one seed on s92_v1.
 
 Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
 bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small

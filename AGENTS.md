@@ -68,7 +68,15 @@ each model.
   the break in the LOGBOOK and rerun the baseline comparison.
 - Prefer a tool that gives the model a verdict word over one that makes the model
   apply a threshold. Prefer derived fields (alias periods, event counts) over asking
-  the model to do arithmetic.
+  the model to do arithmetic. A verdict word that is not part of the procedure goes in
+  its own tool, not in a field of a tool the model calls on every candidate: a
+  `variable` word inside `fold` made the model stop searching (LOGBOOK 2026-10-25).
+- Measure a tool change on `s98_v3` with Inkling-Small, the rules prompt and three
+  seeds; confirm it on the held-out set `s92_v1` with one seed. Never design a tool
+  or a prompt from the failures on `s92_v1`. A change counts when it moves the
+  false-alarm rate by more than 3 points or the completeness by more than 1 point on
+  `s98_v3`, and in the same direction on `s92_v1`.
+- No large-model run until the toolbox freezes; the owner's yes is needed for one.
 - End a session by updating the Handoff section of PLAN.md: what is running, where
   results will land, the first three steps for the next session.
 
