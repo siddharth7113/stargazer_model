@@ -49,7 +49,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Baseline on s98_v2 recorded in the LOGBOOK
 - [x] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; s98_v3 built on the 36 clean hosts, BLS baseline recorded (LOGBOOK 2026-10-16)
 - [ ] One small episode set committed to git for tests and demonstrations
-- [ ] A held-out episode set from a second sector, built with the settings of s98_v3 (host selection, `BuildConfig`, context, BLS baseline). No tool and no prompt is changed from reading its failures; it only confirms a change that s98_v3 showed, and every tool is measured on both before the toolbox freezes
+- [x] A held-out episode set from a second sector: s92_v1, 28 hosts, hash `facd9778...`, BLS 0.32 at 5 percent false alarm (LOGBOOK 2026-10-25). No tool and no prompt is changed from reading its failures; it only confirms a change that s98_v3 showed, and every tool is measured on both before the toolbox freezes
 - [x] Repeat each comparison run with three seeds and report mean and spread: Inkling-Small on s98_v3, both prompts (LOGBOOK 2026-10-16); the four large models with the base prompt (LOGBOOK 2026-10-25); the rules prompt on the large models is at two seeds, the rest running on 2026-10-25
 
 ## Phase 2: The agent harness (done, being measured)
@@ -93,7 +93,7 @@ description written for the model. The agent gets the tool only when the test pa
 - [ ] Difference imaging: in-transit minus out-of-transit image, where is the signal?
 - [x] Gaia neighbours within the aperture and the dilution they imply; `nearby_stars` (LOGBOOK 2026-10-11)
 - [ ] Systematics: momentum dumps, scattered light, and the Earth-and-Moon windows in TESS; first the orbit boundaries, because peaks at 13.9 to 15.4 days (one TESS orbit) lead the false alarms on five null hosts of s98_v3 (LOGBOOK 2026-10-25)
-- [ ] Fold shape verdict: dip, step, sawtooth or sinusoid from the full-orbit fold, so a pulsator is named as one; the 0.946-day sawtooth on TIC 55270064 passes every present tool in every run (LOGBOOK 2026-10-25)
+- [x] Orbit shape verdict, `orbit_shape`: flat, or variable at the period as a pulsating or rotating star is, from a long-window fold with a period contrast; names the 0.946-day pulsator on TIC 55270064 and the 0.92-day rotation of TIC 32816814, reads all 96 injected planets with five orbits as flat. As a field of `fold` it cost Inkling-Small 3 points of completeness, because the model stopped at the first `variable` word, so it is a separate tool; no gain measured on the small model, its test is the large-model pass and s92_v1 (LOGBOOK 2026-10-25)
 - [ ] Stellar context: rotation period, flares, variability class from the light curve
 - [ ] TRICERATOPS or an equivalent false-positive probability as the final number
 
@@ -166,17 +166,16 @@ freezes.
 
 1. No large-model run until the toolbox freezes. The two Kimi K2.6 raised-caps runs
    wait as well.
-2. The held-out set: `stargazer targets --sector N` for a sector other than 98, the
-   same host selection and build settings, context and BLS baseline, recorded in the
-   LOGBOOK with its hash. Each tool below is measured on s98_v3 with three seeds and
-   then confirmed on the held-out set with one seed. A tool that moves s98_v3 and
-   not the held-out set is fitted to s98_v3 and does not stay.
+2. The held-out set s92_v1 exists (LOGBOOK 2026-10-25). Each tool below is measured
+   on s98_v3 with three seeds and then confirmed on s92_v1 with one seed. A tool
+   that moves s98_v3 and not s92_v1 is fitted to s98_v3 and does not stay. Still to
+   run on s92_v1: Inkling-Small with both prompts at one seed, as the reference.
 3. Three tools, in this order, each measured with Inkling-Small at three seeds and the
    rules prompt (about $36 a tool version; a change counts when it moves the
    false-alarm rate by more than 3 points or the completeness by more than 1 point):
-   - the fold shape verdict (dip, step, sawtooth, sinusoid) on the full-orbit fold;
-     test: the 0.946-day sawtooth on TIC 55270064 (ep_0019, ep_0081 of s98_v3) must
-     be named a pulsator;
+   - the orbit shape verdict: done as the separate tool `orbit_shape`; measured
+     twice on the small model with no gain and, as a fold field, a loss (LOGBOOK
+     2026-10-25). Not to be revisited on the small model;
    - the orbit boundary flag, a `summarize` field or a verdict in `bls_peaks` and
      `search_signals` for a period within a few percent of one TESS orbit or the
      sector length; test: the 14.4- and 15.4-day peaks on TIC 33831807 and TIC

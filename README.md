@@ -238,6 +238,7 @@ per-seed numbers and the reading.
 | `search_signals` | search, mask the strongest signal, search again, until the rest is noise | done |
 | `single_events` | strongest individual dips by the single-event statistic, with the noise at each timescale | done |
 | `fold` | binned phase curve at a period and epoch | done |
+| `orbit_shape` | the whole orbit at a period: flat, or variable at that period as a pulsating or rotating star is | done; no gain on Inkling-Small, kept for the large-model pass |
 | `fit_transit` | batman fit: depth, duration, impact parameter, host density and shape verdicts | done |
 | `odd_even` | per-event depth comparison with a verdict | done |
 | `secondary_eclipse` | second dip at phase 0.5 or any other phase, with a verdict | done |

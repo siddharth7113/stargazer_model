@@ -65,22 +65,21 @@ def test_fold_empty_bins_are_null(lc):
     assert None in curve["flux_ppm"] and curve["n_empty_bins"] > 0 and curve["n_points"] == time.size
 
 
-def test_fold_orbit_shape_of_a_planet_is_flat(injected):
-    """A transit on a quiet star leaves the orbit flat apart from the dip, whatever window the fold shows."""
+def test_orbit_shape_of_a_planet_is_flat(injected):
+    """A transit on a quiet star leaves the orbit flat apart from the dip, at any detrending window."""
     time, flux, _, truth = injected
-    zoom = tools.fold(time, flux, period=truth.period, t0=truth.t0, phase_half_width=0.05)
-    whole = tools.fold(time, flux, period=truth.period, t0=truth.t0, phase_half_width=0.5)
-    assert zoom["orbit_shape"] == whole["orbit_shape"] == "flat"
-    assert whole["orbit_amplitude_ppm"] < 0.5 * whole["depth_ppm"]
+    for window in (0.75, 0.3):
+        result = tools.orbit_shape(time, flux, period=truth.period, t0=truth.t0, detrend_window_days=window)
+        assert result["orbit_shape"] == "flat"
 
 
-def test_fold_orbit_shape_of_noise_is_flat(lc):
+def test_orbit_shape_of_noise_is_flat(lc):
     """Pure noise folded at any period has no coherent variation, so the orbit is flat."""
     time, flux, _ = lc
-    assert tools.fold(time, flux, period=0.9, t0=0.0)["orbit_shape"] == "flat"
+    assert tools.orbit_shape(time, flux, period=0.9, t0=0.0)["orbit_shape"] == "flat"
 
 
-def test_fold_orbit_shape_is_null_with_few_orbits(lc):
+def test_orbit_shape_is_null_with_few_orbits(lc):
     """A 27-day light curve folded at 10 days holds under five orbits, so no verdict is given.
 
     With few orbits the fold does not average the star's own variability and any trend looks
@@ -88,19 +87,19 @@ def test_fold_orbit_shape_is_null_with_few_orbits(lc):
     """
     time, flux, _ = lc
     flux = flux + 0.002 * np.sin(2 * np.pi * (time - time[0]) / 10.0)
-    curve = tools.fold(time, flux, period=10.0, t0=time[0], detrend_window_days=3.0)
-    assert curve["orbit_shape"] is None and curve["orbit_amplitude_ppm"] > 0
+    result = tools.orbit_shape(time, flux, period=10.0, t0=time[0], detrend_window_days=3.0)
+    assert result["orbit_shape"] is None and result["orbit_amplitude_ppm"] > 0 and result["n_orbits"] < 5
 
 
-def test_fold_orbit_shape_of_a_sinusoid_is_variable(lc):
+def test_orbit_shape_of_a_sinusoid_is_variable(lc):
     """A sinusoid at the fold period varies through the whole orbit with a rise of half a period."""
     time, flux, _ = lc
     flux = flux + 0.002 * np.sin(2 * np.pi * (time - time[0]) / 0.9)
-    curve = tools.fold(time, flux, period=0.9, t0=time[0], detrend_window_days=3.0)
-    assert curve["orbit_shape"] == "variable" and 0.35 < curve["rise_fraction"] < 0.65
+    result = tools.orbit_shape(time, flux, period=0.9, t0=time[0], detrend_window_days=3.0)
+    assert result["orbit_shape"] == "variable" and 0.35 < result["rise_fraction"] < 0.65
 
 
-def test_fold_orbit_shape_of_a_sawtooth_is_variable_at_any_window(lc):
+def test_orbit_shape_of_a_sawtooth_is_variable_at_any_window(lc):
     """A fast rise and a slow fall every period, the light curve of an RR Lyrae star, is variable.
 
     This is the 0.946-day signal of TIC 55270064 in s98_v3, which passes every other tool. A
@@ -111,12 +110,12 @@ def test_fold_orbit_shape_of_a_sawtooth_is_variable_at_any_window(lc):
     phase = ((time - time[0]) / 0.9) % 1.0
     flux = flux + 0.002 * np.where(phase < 0.1, phase / 0.1, 1.0 - (phase - 0.1) / 0.9)
     for window in (3.0, 0.3):
-        curve = tools.fold(time, flux, period=0.9, t0=time[0], detrend_window_days=window)
-        assert curve["orbit_shape"] == "variable" and curve["rise_fraction"] < 0.3
+        result = tools.orbit_shape(time, flux, period=0.9, t0=time[0], detrend_window_days=window)
+        assert result["orbit_shape"] == "variable" and result["rise_fraction"] < 0.3
 
 
-def test_fold_orbit_shape_holds_one_percent_off_the_period(lc):
-    """A sawtooth at 0.9 days folded at 0.909 days is still variable, and orbit_period lands near 0.9.
+def test_orbit_shape_holds_one_percent_off_the_period(lc):
+    """A sawtooth at 0.9 days judged at 0.909 days is still variable, and orbit_period lands near 0.9.
 
     A box search gives a pulsator's period to about a percent, and without the refinement a fold
     that far off smears the cycles flat, as the search peak on TIC 55270064 did.
@@ -124,18 +123,33 @@ def test_fold_orbit_shape_holds_one_percent_off_the_period(lc):
     time, flux, _ = lc
     phase = ((time - time[0]) / 0.9) % 1.0
     flux = flux + 0.002 * np.where(phase < 0.1, phase / 0.1, 1.0 - (phase - 0.1) / 0.9)
-    curve = tools.fold(time, flux, period=0.909, t0=time[0], detrend_window_days=3.0)
-    assert curve["orbit_shape"] == "variable" and abs(curve["orbit_period"] - 0.9) < 0.003
+    result = tools.orbit_shape(time, flux, period=0.909, t0=time[0], detrend_window_days=3.0)
+    assert result["orbit_shape"] == "variable" and abs(result["orbit_period"] - 0.9) < 0.003
 
 
-def test_fold_orbit_shape_of_a_sinusoid_at_another_period_is_flat(lc):
-    """A 5-day variable folded at a 1.3-day transit is flat: the variation is at another period."""
+def test_orbit_shape_of_a_sinusoid_at_another_period_is_flat(lc):
+    """A 5-day variable judged at a 1.3-day transit is flat: the variation is at another period."""
     time, flux, _ = lc
     flux = flux + 0.01 * np.sin(2 * np.pi * (time - time[0]) / 5.0)
     phase = ((time - time[0] - 0.4 + 0.65) % 1.3) - 0.65
     flux = flux - 0.003 * (np.abs(phase) < 1 / 24)
-    curve = tools.fold(time, flux, period=1.3, t0=time[0] + 0.4, detrend_window_days=0.3)
-    assert curve["orbit_shape"] == "flat" and curve["depth_ppm"] > 1000
+    result = tools.orbit_shape(time, flux, period=1.3, t0=time[0] + 0.4, detrend_window_days=0.3)
+    assert result["orbit_shape"] == "flat"
+
+
+def test_fold_has_no_verdict_fields():
+    """``fold`` returns the phase curve and its depth only; the orbit verdict is its own tool.
+
+    A fold field made Inkling-Small stop at the first ``variable`` word (LOGBOOK 2026-10-25).
+    """
+    time = np.arange(0, 27, 2 / 1440)
+    assert set(tools.fold(time, np.ones_like(time), period=0.9, t0=0.0)) == {
+        "phase",
+        "flux_ppm",
+        "n_points",
+        "n_empty_bins",
+        "depth_ppm",
+    }
 
 
 def test_odd_even_equal_for_planet(injected):
@@ -286,6 +300,8 @@ def test_registry_periods_durations_and_depth_are_positive():
         ("fold", "period"),
         ("fold", "phase_half_width"),
         ("fold", "detrend_window_days"),
+        ("orbit_shape", "period"),
+        ("orbit_shape", "detrend_window_days"),
         ("fit_transit", "period"),
         ("fit_transit", "duration"),
         ("fit_transit", "detrend_window_days"),

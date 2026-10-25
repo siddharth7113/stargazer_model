@@ -335,22 +335,61 @@ def fold(
         ``phase`` (bin centres, days from the transit centre), ``flux_ppm`` (binned
         flux minus one, integer parts per million, null for an empty bin),
         ``n_points`` (points in the window), ``n_empty_bins`` and ``depth_ppm`` (the
-        deepest bin), then the shape of the whole orbit whatever the window:
-        ``orbit_amplitude_ppm`` (peak to peak of the smooth variation),
-        ``rise_fraction`` (the part of the period from its minimum to its maximum)
-        ``orbit_period`` (the period within ``ORBIT_SHAPE_REFINE_FRACTION`` of the
-        one asked for that gives the largest smooth variation, days) and
-        ``orbit_shape``, ``flat`` or ``variable``, or null when the data cover
-        fewer than ``ORBIT_SHAPE_MIN_CYCLES`` orbits. The output
-        is kept short because the model re-reads it on every later turn.
+        deepest bin). The output is kept short because the model re-reads it on every
+        later turn.
 
     Notes
     -----
     Phase in days is ``((t - t0 + P/2) mod P) - P/2``. A transit at the right period
     and epoch shows as a single dip at phase zero. A wrong period smears it out.
+    """
+    work_time, work_flux = detrend(time, flux, detrend_window_days)
+    phase = ((work_time - t0 + 0.5 * period) % period) - 0.5 * period
+    centres, flux_ppm, counts = _bin_phase(phase, work_flux, phase_half_width * period, n_bins)
+    return {
+        "phase": [round(float(centre), 3) for centre in centres],
+        "flux_ppm": [None if np.isnan(value) else round(float(value)) for value in flux_ppm],
+        "n_points": int(counts.sum()),
+        "n_empty_bins": int((counts == 0).sum()),
+        "depth_ppm": None if np.all(np.isnan(flux_ppm)) else round(float(-np.nanmin(flux_ppm)), 1),
+    }
 
-    The orbit shape is judged on a second fold over the whole orbit in ``n_bins``
-    bins, with the phase as a fraction of the period ``x`` in [-0.5, 0.5), at a
+
+def orbit_shape(
+    time: np.ndarray,
+    flux: np.ndarray,
+    period: float,
+    t0: float,
+    n_bins: int = 40,
+    detrend_window_days: float = 0.75,
+) -> dict:
+    """Judge whether the flux varies through the whole orbit at a period, as a star does.
+
+    Parameters
+    ----------
+    time, flux : ndarray
+    period, t0 : float
+        Days. The period of the candidate signal and the epoch of one event.
+    n_bins : int
+    detrend_window_days : float
+        The window the candidate was found with, days. The depth of the dip is read
+        at this window.
+
+    Returns
+    -------
+    dict
+        ``orbit_period`` (the period within ``ORBIT_SHAPE_REFINE_FRACTION`` of the
+        one asked for that gives the largest smooth variation, days),
+        ``orbit_amplitude_ppm`` (peak to peak of the smooth variation),
+        ``rise_fraction`` (the part of the period from its minimum to its maximum),
+        ``n_orbits`` (orbits the data cover) and ``orbit_shape``, ``flat`` or
+        ``variable``, or null when the data cover fewer than
+        ``ORBIT_SHAPE_MIN_CYCLES`` orbits.
+
+    Notes
+    -----
+    The judgement is made on a fold over the whole orbit in ``n_bins`` bins,
+    with the phase as a fraction of the period ``x`` in [-0.5, 0.5), at a
     detrending window of at least ``ORBIT_SHAPE_WINDOW_PERIODS`` periods, because a
     window shorter than the period flattens a variation at the period and leaves a
     dip-shaped residual at its steep part. The fold is made at
@@ -390,7 +429,10 @@ def fold(
     ``ORBIT_SHAPE_MIN_CYCLES`` orbits.
     Every other tool measures the in-transit flux against the out-of-transit median,
     and a step passes each of them; this verdict is the one that reads the whole
-    orbit.
+    orbit. It is a separate tool and not a field of :func:`fold`, because a run of
+    Inkling-Small with the rules prompt showed that the model stops at the first
+    ``variable`` word it sees in a fold, where it would otherwise have gone on to the
+    planet at another period (LOGBOOK 2026-10-25).
 
     References
     ----------
@@ -404,7 +446,6 @@ def fold(
     """
     work_time, work_flux = detrend(time, flux, detrend_window_days)
     phase = ((work_time - t0 + 0.5 * period) % period) - 0.5 * period
-    centres, flux_ppm, counts = _bin_phase(phase, work_flux, phase_half_width * period, n_bins)
     _, dip_ppm, _ = _bin_phase(phase, work_flux, 0.5 * period, n_bins)
     long_time, long_flux = detrend(time, flux, max(detrend_window_days, ORBIT_SHAPE_WINDOW_PERIODS * period))
 
@@ -440,11 +481,7 @@ def fold(
     orbit_ppm = orbit_fold(orbit_period)
     off_amplitudes = [refined(factor * orbit_period)[1] for factor in ORBIT_SHAPE_OFF_PERIODS]
     return {
-        "phase": [round(float(centre), 3) for centre in centres],
-        "flux_ppm": [None if np.isnan(value) else round(float(value)) for value in flux_ppm],
-        "n_points": int(counts.sum()),
-        "n_empty_bins": int((counts == 0).sum()),
-        "depth_ppm": None if np.all(np.isnan(flux_ppm)) else round(float(-np.nanmin(flux_ppm)), 1),
+        "n_orbits": round(cycles, 1),
         "orbit_period": round(orbit_period, 5),
         **_orbit_shape(dip_ppm, orbit_ppm, cycles, float(np.nanmedian(off_amplitudes))),
     }
@@ -1534,15 +1571,7 @@ TOOLS: tuple[ToolSpec, ...] = (
             "phase (days from the transit centre), flux_ppm per bin (null when a bin is empty), "
             "n_points, n_empty_bins and depth_ppm. A planet shows one dip centred at phase 0 with the "
             "rest flat near 0 ppm. Use phase_half_width 0.5 to see the whole orbit (a second dip at "
-            "phase 0.5 means the true period is half) and 0.05 to see the transit shape. Whatever the "
-            "width, orbit_shape judges the whole orbit: flat means the orbit is flat apart from phase 0; "
-            "variable means the flux varies through the whole orbit at orbit_period (the period "
-            "within 2 percent that varies most) and not beside it, which is a pulsating or rotating "
-            "star and not a transit at this period, with orbit_amplitude_ppm and rise_fraction (the "
-            "part of the period from minimum to maximum; 0.1 to 0.2 is the fast rise of an RR Lyrae "
-            "star). A variable orbit rules out this period only: the star can still hold a planet at "
-            "another period, so mask the signal and search again. Null when the data hold fewer than "
-            "five orbits."
+            "phase 0.5 means the true period is half) and 0.05 to see the transit shape."
         ),
         parameters={
             "type": "object",
@@ -1565,6 +1594,34 @@ TOOLS: tuple[ToolSpec, ...] = (
             t0=t0,
             phase_half_width=phase_half_width,
             detrend_window_days=detrend_window_days,
+        ),
+    ),
+    ToolSpec(
+        name="orbit_shape",
+        description=(
+            "Use when a periodic signal could be the star's own variation: a short period, an active "
+            "star, a V-shaped fit or an implausible density. Judges the whole orbit at period and t0. "
+            "orbit_shape flat means the orbit is flat apart from phase 0. variable means the flux "
+            "varies through the whole orbit at orbit_period (the period within 2 percent that varies "
+            "most) and not beside it, which is a pulsating or rotating star and not a transit at this "
+            "period; orbit_amplitude_ppm and rise_fraction (the part of the period from minimum to "
+            "maximum; 0.1 to 0.2 is the fast rise of an RR Lyrae star) describe it. A variable orbit "
+            "rules out this period only: the star can still hold a planet at another period, so mask "
+            "the signal and search again. Null when the data hold fewer than five orbits."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "period": _number("Period, days.", positive=True),
+                "t0": _number("Epoch of a transit centre, days from the start."),
+                "detrend_window_days": _number(
+                    "Detrending window the signal was found with, days.", 0.75, positive=True
+                ),
+            },
+            "required": ["period", "t0"],
+        },
+        function=lambda time, flux, period, t0, detrend_window_days=0.75: orbit_shape(
+            time, flux, period=period, t0=t0, detrend_window_days=detrend_window_days
         ),
     ),
     ToolSpec(

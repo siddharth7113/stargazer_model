@@ -43,7 +43,8 @@ On each turn:
 | `bls_peaks` | `min_period`, `max_period`, `detrend_window_days`, `masks` | the five strongest distinct BLS peaks with SDE, depth, duration, alias periods and event counts |
 | `search_signals` | `min_period`, `max_period`, `detrend_window_days`, `min_sde`, `max_signals` | the signals found in turn by search, mask and search again, with the residual SDE and the stop reason |
 | `single_events` | `detrend_window_days` | the strongest individual dips, ranked by the single-event statistic, with the noise at each event's timescale |
-| `fold` | `period`, `t0`, `phase_half_width`, `detrend_window_days` | a 40-bin phase curve, its depth and the orbit shape verdict (dip, sinusoid, sawtooth, no_dip) |
+| `fold` | `period`, `t0`, `phase_half_width`, `detrend_window_days` | a 40-bin phase curve and its depth |
+| `orbit_shape` | `period`, `t0`, `detrend_window_days` | whether the flux varies through the whole orbit at the period: `flat` or `variable`, with the refined period, the amplitude and the rise fraction |
 | `fit_transit` | `period`, `t0`, `duration`, `detrend_window_days` | a batman fit: depth, duration, impact parameter, host density with a verdict, shape, significance |
 | `odd_even` | `period`, `t0`, `duration` | odd and even depths, their difference in sigma, and a verdict |
 | `secondary_eclipse` | `period`, `t0`, `duration`, `detrend_window_days` | the depth at phase 0.5 and the strongest other dip, in sigma, with a verdict |

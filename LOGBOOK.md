@@ -1488,3 +1488,59 @@ The owner keeps $3,000 for the reinforcement-learning phase. The provider bills
 cached prompt tokens at about a fifth of the full rate, and the price table in
 `stargazer.backends` charges every token at the full rate, so the costs in this
 LOGBOOK are upper bounds.
+
+**Second measurement of the fold verdict: worse, and the verdict leaves `fold`**
+(`results/full_v11shape/run_seeds.sh`, commit 38917dc, Inkling-Small, rules prompt,
+seeds 1, 2, 3, 18:19 to 18:44 UTC, $34.29).
+
+| version | false alarm | completeness | with aliases | mean score | one-transit hits |
+|---|---|---|---|---|---|
+| 2026-10-16 toolbox, 3 seeds | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | 2.7 of 17 |
+| fold verdict, first version, 3 seeds | 3.4% (2.9) | 39.2% (2.0) | 41.6% (2.3) | 0.569 (0.013) | 2.7 of 17 |
+| fold verdict, refined period and the continue text, 3 seeds | 2.8% (3.5) | 35.9% (2.5) | 38.5% (2.5) | 0.549 (0.026) | 1.7 of 17 |
+
+Completeness fell by 3.3 points, more than the spread, and the score by 0.024. The
+model saw `variable` in 15 of 600 episodes: 6 null episodes that it declined as before,
+8 planet episodes it missed and 1 it found. ep_0029, a planet at signal-to-noise 106
+and 1.685 days, was missed in all three seeds: the model folds the strongest search
+peak first, 0.925 days, reads `variable`, and submits no detection, where the
+2026-10-16 runs went on to the 1.685-day signal in every seed. The text in the tool
+("a variable orbit rules out this period only; mask the signal and search again")
+did not change that. ep_0027, a planet at signal-to-noise 25 whose own 5.0-day fold
+reads `variable` with a contrast just above the cut, was missed in two seeds. The
+pulsator episodes ep_0019 and ep_0081 were true nulls in every run of every version,
+so there was nothing for the verdict to win on this model.
+
+Decision, by the rule in the PLAN: the verdict does not stay in `fold`. It is now a
+separate tool, `orbit_shape(period, t0, detrend_window_days)`, with the same
+computation and the same output plus `n_orbits`, and `fold` returns what it returned
+on 2026-10-16 (commit follows; `test_fold_has_no_verdict_fields` keeps it so). The
+rules prompt does not name the new tool, so the small model under the rules will
+seldom call it; its test is the large-model pass at the end of Phase 3, where the
+0.946-day pulsator cost 15 false alarms in twelve rules runs, and the held-out set.
+The toolbox now has twelve tools, and the tool list in a results config shows which
+version a run used.
+
+**Held-out episode set s92_v1** (sector 92, built 2026-10-25 18:25 UTC with the
+settings of s98_v3; hash `facd9778fa83...`). `stargazer targets --sector 92 --n 60
+--seed 1` drew 60 stars and the cuts (no TOI, no eclipsing-binary entry, no Gaia
+eclipsing class, quiet dwarfs) left 31; the first draw stopped on a VizieR 500 error
+and the second passed. `stargazer fetch` cached 28 light curves; the first attempt
+hung on a MAST request after five stars and was restarted under a ten-minute cap for
+each attempt, after which it finished at once. `stargazer build --n 200 --seed 3
+--max-period 60` on the 28 hosts: 200 episodes, 58 null, 142 injected, of which 20
+have one transit in the data and 13 none. `stargazer context` fetched the catalogue
+rows: 23 episodes on Gaia `SOLAR_LIKE` hosts, none on `RS` hosts, which differs from
+s98_v3 and is part of what the set tests. BLS baseline
+(`results/baseline_bls_s92_v1.json`, sweep in `results/calibrate_bls_s92_v1.json`):
+completeness 0.357 at the default threshold 7 with a 0.59 false-alarm rate; at the 5
+percent false-alarm threshold of 11.08, completeness 0.32. The set's rule: no tool
+and no prompt is changed from reading its failures; it confirms a change that s98_v3
+showed, one seed, Inkling-Small.
+
+| SDE threshold | false-alarm rate | completeness exact | mean score |
+|---|---|---|---|
+| 7 | 0.592 | 0.357 | 0.376 |
+| 9 | 0.254 | 0.357 | 0.493 |
+| 10 | 0.239 | 0.357 | 0.498 |
+| 12 | 0.000 | 0.318 | 0.560 |

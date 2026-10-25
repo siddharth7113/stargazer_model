@@ -515,8 +515,15 @@ def _fold_line(arguments: dict, data: dict) -> str:
     """Summarise a ``fold`` result: the depth, the bins and the empty bins."""
     flux = data.get("flux_ppm") or []
     empty = data.get("n_empty_bins", sum(value is None for value in flux))
-    shape = f" · {data['orbit_shape']}" if data.get("orbit_shape") else ""
-    return f"depth {_field(data, 'depth_ppm', '{:,.0f}')} ppm · {len(flux)} bins · {empty} empty{shape}"
+    return f"depth {_field(data, 'depth_ppm', '{:,.0f}')} ppm · {len(flux)} bins · {empty} empty"
+
+
+def _orbit_shape_line(arguments: dict, data: dict) -> str:
+    """Summarise an ``orbit_shape`` result: the verdict, the refined period, the amplitude and the rise."""
+    period = _field(data, "orbit_period", "{:.5f}")
+    amplitude = _field(data, "orbit_amplitude_ppm", "{:,.0f}")
+    rise = _field(data, "rise_fraction")
+    return f"{_field(data, 'orbit_shape')} · at {period} d · amplitude {amplitude} ppm · rise {rise}"
 
 
 def _fit_line(arguments: dict, data: dict) -> str:
@@ -587,6 +594,7 @@ SUMMARY_LINES: dict[str, Callable[[dict, dict], str]] = {
     "search_signals": _signals_line,
     "single_events": _events_line,
     "fold": _fold_line,
+    "orbit_shape": _orbit_shape_line,
     "fit_transit": _fit_line,
     "odd_even": _odd_even_line,
     "secondary_eclipse": _secondary_line,

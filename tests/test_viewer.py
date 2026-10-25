@@ -307,6 +307,20 @@ def test_summary_line_of_single_events_gives_count_and_first_event():
     assert summary_line(_result("single_events", result)) == expected
 
 
+def test_summary_line_of_orbit_shape_names_the_verdict_and_the_refined_period():
+    """The orbit_shape line leads with the verdict word and gives the refined period, amplitude and rise."""
+    result = {
+        "orbit_shape": "variable",
+        "orbit_period": 0.94568,
+        "orbit_amplitude_ppm": 1155.0,
+        "rise_fraction": 0.6,
+    }
+    assert (
+        summary_line(_result("orbit_shape", result))
+        == "variable · at 0.94568 d · amplitude 1,155 ppm · rise 0.6"
+    )
+
+
 def test_summary_line_of_fold_counts_empty_bins_from_the_nulls():
     """An older fold result has no ``n_empty_bins``, so the line counts the null bins itself."""
     result = {"depth_ppm": 15681.0, "flux_ppm": [10.0, None, -15681.0, None]}

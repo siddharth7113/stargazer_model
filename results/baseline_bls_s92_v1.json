@@ -1,0 +1,4885 @@
+{
+ "config": {
+  "bin_minutes": 10.0,
+  "detrend_window_days": 0.75,
+  "durations_days": [
+   0.03,
+   0.05,
+   0.08,
+   0.12,
+   0.18,
+   0.25
+  ],
+  "epoch_frac": 0.5,
+  "errors": [],
+  "frequency_factor": 2.0,
+  "max_period_frac_of_span": 0.5,
+  "min_period_days": 0.5,
+  "n_requested": 200,
+  "period_rtol": 0.01,
+  "sde_threshold": 7.0,
+  "single_event_credit": 0.5,
+  "wall_seconds": 249.9,
+  "workers": 1
+ },
+ "created": "2026-10-25T18:30:47+00:00",
+ "episode_set": "data/episodes/s92_v1",
+ "episode_set_hash": "facd9778fa8391260b87fb7163e927db53ff7119f386a3293b49e8ece8c6c00e",
+ "episodes": {
+  "ep_0000": {
+   "pred": {
+    "depth": 0.00021127215248217744,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 0.7680758931933429,
+    "sde": 5.286698900531918,
+    "seconds": 2.53,
+    "t0": 0.6942780499472101
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0001": {
+   "pred": {
+    "depth": 0.02652952647850078,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.383638477319673,
+    "seconds": 0.54,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0002": {
+   "pred": {
+    "depth": 0.012557524645204618,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.968719146457424,
+    "seconds": 0.46,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0003": {
+   "pred": {
+    "depth": 0.0019811555252170644,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 11.746359286193034,
+    "sde": 6.342905610097153,
+    "seconds": 0.49,
+    "t0": 11.090778057333946
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0004": {
+   "pred": {
+    "depth": 0.0002650423578993091,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 0.5411634389583747,
+    "sde": 5.771279024564602,
+    "seconds": 0.5,
+    "t0": 0.2637780510765297
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0005": {
+   "pred": {
+    "depth": 0.0005631035856312079,
+    "detected": false,
+    "duration": 0.249,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 0.5231784798491966,
+    "sde": 6.677835825985855,
+    "seconds": 0.48,
+    "t0": 0.41227799618652355
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0006": {
+   "pred": {
+    "depth": 0.02652884161527324,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.383731045890642,
+    "seconds": 0.51,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0007": {
+   "pred": {
+    "depth": 0.00039598546694457373,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20365,
+    "n_points_binned": 3270,
+    "period": 9.511142958487929,
+    "sde": 5.4531032185227035,
+    "seconds": 0.52,
+    "t0": 1.9512780381892627
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0008": {
+   "pred": {
+    "depth": 0.002153639469781671,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.551739506194325,
+    "seconds": 0.49,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0009": {
+   "pred": {
+    "depth": 0.0002903509226449968,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20356,
+    "n_points_binned": 3279,
+    "period": 5.828334776754492,
+    "sde": 5.911768889981443,
+    "seconds": 0.52,
+    "t0": 1.8897780577474004
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0010": {
+   "pred": {
+    "depth": 0.00044915967316321324,
+    "detected": false,
+    "duration": 0.12,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 9.077693723269014,
+    "sde": 6.887828318886566,
+    "seconds": 0.51,
+    "t0": 1.6857780439634626
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0011": {
+   "pred": {
+    "depth": 0.0004534179480200331,
+    "detected": false,
+    "duration": 0.12,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 9.077693723269014,
+    "sde": 6.946773098443082,
+    "seconds": 0.55,
+    "t0": 1.6857780439634626
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0012": {
+   "pred": {
+    "depth": 0.0016072507537257547,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20356,
+    "n_points_binned": 3279,
+    "period": 3.8914761799184547,
+    "sde": 18.47933987117547,
+    "seconds": 0.48,
+    "t0": 0.3942780577474005
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0013": {
+   "pred": {
+    "depth": 0.0005744878865669315,
+    "detected": false,
+    "duration": 0.249,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 0.5231784798491966,
+    "sde": 6.863804193384304,
+    "seconds": 0.51,
+    "t0": 0.41227799618652355
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0014": {
+   "pred": {
+    "depth": 0.0012205878407613928,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 1.8690709408594004,
+    "sde": 18.040085413203958,
+    "seconds": 0.97,
+    "t0": 1.1442780499472103
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0015": {
+   "pred": {
+    "depth": 0.007801823640041615,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20364,
+    "n_points_binned": 3010,
+    "period": 6.653433857787974,
+    "sde": 9.600032348661713,
+    "seconds": 0.85,
+    "t0": 0.04327801108768472
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0016": {
+   "pred": {
+    "depth": 0.0010924696866421195,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 9.16583408785816,
+    "sde": 8.86927024993565,
+    "seconds": 0.58,
+    "t0": 3.76627804994721
+   },
+   "score": {
+    "alias": 0.5,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "alias",
+    "period_credit": 0.5,
+    "score": 0.5
+   }
+  },
+  "ep_0017": {
+   "pred": {
+    "depth": 0.006578343380503124,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 1.1227822088418655,
+    "sde": 17.167954136430545,
+    "seconds": 0.58,
+    "t0": 0.6822779803543126
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0018": {
+   "pred": {
+    "depth": 0.0017139508994293462,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.745508861663049,
+    "sde": 8.825745822483581,
+    "seconds": 1.5,
+    "t0": 6.395778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0019": {
+   "pred": {
+    "depth": 0.00039598546694457373,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20365,
+    "n_points_binned": 3270,
+    "period": 9.511142958487929,
+    "sde": 5.4531032185227035,
+    "seconds": 1.9,
+    "t0": 1.9512780381892627
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0020": {
+   "pred": {
+    "depth": 0.0003696853718222908,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 0.9175612710983055,
+    "sde": 17.575691568446533,
+    "seconds": 1.58,
+    "t0": 0.7722779823098171
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0021": {
+   "pred": {
+    "depth": 0.0015511963221556274,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.85341623821515,
+    "seconds": 5.48,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0022": {
+   "pred": {
+    "depth": 0.0012226331625417978,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 2.915584249631143,
+    "sde": 19.372414594508385,
+    "seconds": 4.71,
+    "t0": 1.9512780499472102
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0023": {
+   "pred": {
+    "depth": 0.0007954704953919117,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 6.735942684208873,
+    "sde": 7.948432835893566,
+    "seconds": 2.45,
+    "t0": 5.993778016302727
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0024": {
+   "pred": {
+    "depth": 0.000979454206047103,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 11.082766799662457,
+    "seconds": 2.43,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0025": {
+   "pred": {
+    "depth": 0.0021639203095689583,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.641093858190014,
+    "seconds": 1.39,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0026": {
+   "pred": {
+    "depth": 0.007114444283638393,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20356,
+    "n_points_binned": 3279,
+    "period": 3.090326133064919,
+    "sde": 17.0822751062524,
+    "seconds": 4.2,
+    "t0": 1.0752780577474004
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0027": {
+   "pred": {
+    "depth": 0.0004531085068563297,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 12.4031535587525,
+    "sde": 7.456491735118105,
+    "seconds": 4.01,
+    "t0": 0.8502779823098172
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0028": {
+   "pred": {
+    "depth": 0.00042628976183554815,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20091,
+    "n_points_binned": 3183,
+    "period": 0.5629832646882552,
+    "sde": 5.147544779519692,
+    "seconds": 2.88,
+    "t0": 0.1287780196554886
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0029": {
+   "pred": {
+    "depth": 0.0007326457097751399,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 1.685127920016662,
+    "sde": 16.235708344297354,
+    "seconds": 1.58,
+    "t0": 0.4392780024729509
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0030": {
+   "pred": {
+    "depth": 0.0021638576011909624,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.662906452690046,
+    "seconds": 1.8,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0031": {
+   "pred": {
+    "depth": 5.236344185857524e-05,
+    "detected": true,
+    "duration": 0.249,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 0.5697592887303888,
+    "sde": 8.460802431944023,
+    "seconds": 1.22,
+    "t0": 0.13027805715932117
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0032": {
+   "pred": {
+    "depth": 0.00017948756466191769,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 2.4614354184316984,
+    "sde": 10.5276435752964,
+    "seconds": 0.78,
+    "t0": 0.593778002472951
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0033": {
+   "pred": {
+    "depth": 0.0009211897367762622,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.902629656405991,
+    "seconds": 0.68,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0034": {
+   "pred": {
+    "depth": 0.0006803432961962716,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 1.4688051260717987,
+    "sde": 17.672152935840092,
+    "seconds": 0.55,
+    "t0": 0.1872780532995166
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0035": {
+   "pred": {
+    "depth": 0.01258441851090364,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.981590836004475,
+    "seconds": 0.54,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0036": {
+   "pred": {
+    "depth": 0.0015097307424734635,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 0.644410898037687,
+    "sde": 16.465985477603652,
+    "seconds": 0.52,
+    "t0": 0.4962780439634626
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0037": {
+   "pred": {
+    "depth": 0.00027124149192788853,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 10.4736231276747,
+    "sde": 7.052358348130904,
+    "seconds": 0.65,
+    "t0": 4.409778002472951
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0038": {
+   "pred": {
+    "depth": 0.000979454206047103,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 11.082766799662457,
+    "seconds": 0.56,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0039": {
+   "pred": {
+    "depth": 0.000428764435174069,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20091,
+    "n_points_binned": 3183,
+    "period": 0.5629832646882552,
+    "sde": 5.087443213095325,
+    "seconds": 0.61,
+    "t0": 0.1287780196554886
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0040": {
+   "pred": {
+    "depth": 0.0034747224792781553,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20135,
+    "n_points_binned": 3118,
+    "period": 5.3541575089746,
+    "sde": 19.059681747147046,
+    "seconds": 0.51,
+    "t0": 0.8577780528570474
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0041": {
+   "pred": {
+    "depth": 0.0008126064910917752,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 12.631277412764867,
+    "sde": 10.88916981499612,
+    "seconds": 0.66,
+    "t0": 0.04327800577914604
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0042": {
+   "pred": {
+    "depth": 0.019924591130355912,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.33529428559731,
+    "seconds": 0.6,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0043": {
+   "pred": {
+    "depth": 0.01992460356934164,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.310134065759499,
+    "seconds": 0.61,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0044": {
+   "pred": {
+    "depth": 0.0017139486323298695,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.85317905711153,
+    "seconds": 0.78,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0045": {
+   "pred": {
+    "depth": 0.002600793961555277,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 7.969582321614496,
+    "sde": 5.353970584242548,
+    "seconds": 0.95,
+    "t0": 3.81427805107653
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0046": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 0.67,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0047": {
+   "pred": {
+    "depth": 0.008156895143671959,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 8.128980140117958,
+    "sde": 9.186593911561593,
+    "seconds": 0.58,
+    "t0": 3.833777982309817
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0048": {
+   "pred": {
+    "depth": 0.0004516288487109504,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 1.824745026937841,
+    "sde": 15.858713502145799,
+    "seconds": 0.63,
+    "t0": 0.2922780163027273
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0049": {
+   "pred": {
+    "depth": 0.0017663948105778745,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 11.784238475067157,
+    "sde": 12.017361280086654,
+    "seconds": 0.73,
+    "t0": 9.554777957629769
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0050": {
+   "pred": {
+    "depth": 0.0005809619094515898,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 11.861204810788475,
+    "sde": 8.195941337442187,
+    "seconds": 0.9,
+    "t0": 1.585278005779146
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0051": {
+   "pred": {
+    "depth": 0.0008609524021461866,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20330,
+    "n_points_binned": 3277,
+    "period": 1.1181904758999366,
+    "sde": 17.56162079675989,
+    "seconds": 1.03,
+    "t0": 0.9822780444754171
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0052": {
+   "pred": {
+    "depth": 0.0007953257971001151,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 6.735942684208873,
+    "sde": 8.477884070865542,
+    "seconds": 0.91,
+    "t0": 5.993778016302727
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0053": {
+   "pred": {
+    "depth": 0.0010227601456050239,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 4.335099649898981,
+    "sde": 14.307612889393624,
+    "seconds": 0.95,
+    "t0": 1.5297780532995167
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0054": {
+   "pred": {
+    "depth": 0.008017646991603958,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20262,
+    "n_points_binned": 3143,
+    "period": 6.359647036770936,
+    "sde": 7.96120562720307,
+    "seconds": 1.42,
+    "t0": 0.009130989171252147
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0055": {
+   "pred": {
+    "depth": 0.00026321710429023145,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 0.5411634389583747,
+    "sde": 5.639170194754439,
+    "seconds": 1.15,
+    "t0": 0.2637780510765297
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0056": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 1.52,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0057": {
+   "pred": {
+    "depth": 0.00039598546694457373,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20365,
+    "n_points_binned": 3270,
+    "period": 9.511142958487929,
+    "sde": 5.4531032185227035,
+    "seconds": 1.35,
+    "t0": 1.9512780381892627
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0058": {
+   "pred": {
+    "depth": 0.0032316633799641596,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 5.107023396804668,
+    "sde": 15.17208128334435,
+    "seconds": 2.0,
+    "t0": 4.460778027944441
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0059": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 1.37,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0060": {
+   "pred": {
+    "depth": 0.0008697228978267756,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 1.2431343331593643,
+    "sde": 11.562960892806656,
+    "seconds": 1.32,
+    "t0": 1.1352780279444414
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0061": {
+   "pred": {
+    "depth": 0.00044915967316321324,
+    "detected": false,
+    "duration": 0.12,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 9.077693723269014,
+    "sde": 6.887828318886566,
+    "seconds": 1.11,
+    "t0": 1.6857780439634626
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0062": {
+   "pred": {
+    "depth": 0.0008801394874194411,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 12.676167391305675,
+    "sde": 6.541337978908872,
+    "seconds": 0.99,
+    "t0": 12.628278005779144
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0063": {
+   "pred": {
+    "depth": 0.00026312268452278743,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 0.5412468310265858,
+    "sde": 5.779028203817973,
+    "seconds": 1.46,
+    "t0": 0.2607780510765297
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0064": {
+   "pred": {
+    "depth": 0.0005631035856312079,
+    "detected": false,
+    "duration": 0.249,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 0.5231784798491966,
+    "sde": 6.677835825985855,
+    "seconds": 1.4,
+    "t0": 0.41227799618652355
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0065": {
+   "pred": {
+    "depth": 0.0009682404456899992,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 5.299244931274669,
+    "sde": 18.41245053480676,
+    "seconds": 1.11,
+    "t0": 3.3747780163027277
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0066": {
+   "pred": {
+    "depth": 0.0012661995156719838,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.673338292061507,
+    "seconds": 0.98,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0067": {
+   "pred": {
+    "depth": 0.0004422929514718894,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 12.4031535587525,
+    "sde": 7.12412070224525,
+    "seconds": 1.85,
+    "t0": 0.8502779823098172
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0068": {
+   "pred": {
+    "depth": 0.003602550630950742,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 3.86990201869089,
+    "sde": 16.205734155711184,
+    "seconds": 3.85,
+    "t0": 3.650778057333944
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0069": {
+   "pred": {
+    "depth": 0.019924591130355912,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.33529428559731,
+    "seconds": 0.95,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0070": {
+   "pred": {
+    "depth": 0.000979969826968897,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 11.07096181288111,
+    "seconds": 1.01,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0071": {
+   "pred": {
+    "depth": 0.0005845801320442251,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 12.475111999159333,
+    "sde": 7.5120374402470524,
+    "seconds": 0.95,
+    "t0": 11.330778058032438
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0072": {
+   "pred": {
+    "depth": 0.00019209983383155943,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20356,
+    "n_points_binned": 3279,
+    "period": 3.6653604291094894,
+    "sde": 10.725595743373066,
+    "seconds": 0.99,
+    "t0": 2.3937780577474004
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0073": {
+   "pred": {
+    "depth": 0.0002903509226449968,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20356,
+    "n_points_binned": 3279,
+    "period": 5.828334776754492,
+    "sde": 5.911768889981443,
+    "seconds": 2.94,
+    "t0": 1.8897780577474004
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0074": {
+   "pred": {
+    "depth": 0.0026848040394862513,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 1.7234335636493339,
+    "sde": 11.30548437867823,
+    "seconds": 0.94,
+    "t0": 1.5582779961865236
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0075": {
+   "pred": {
+    "depth": 0.00022823758920388873,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 19831,
+    "n_points_binned": 3053,
+    "period": 0.5129353118266422,
+    "sde": 6.916953748403055,
+    "seconds": 1.65,
+    "t0": 0.4407780307385911
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0076": {
+   "pred": {
+    "depth": 0.00036403640659186183,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 2.0615751015435055,
+    "sde": 13.364247441296403,
+    "seconds": 2.38,
+    "t0": 1.9782780163027274
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0077": {
+   "pred": {
+    "depth": 4.880029224580016e-05,
+    "detected": true,
+    "duration": 0.249,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 0.5697592887303888,
+    "sde": 8.017447240666952,
+    "seconds": 2.12,
+    "t0": 0.13027805715932117
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0078": {
+   "pred": {
+    "depth": 0.00801870649786222,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20262,
+    "n_points_binned": 3143,
+    "period": 6.359647036770936,
+    "sde": 7.975094793253319,
+    "seconds": 0.93,
+    "t0": 0.009130989171252147
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0079": {
+   "pred": {
+    "depth": 0.0007953257971001151,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 6.735942684208873,
+    "sde": 8.477884070865542,
+    "seconds": 0.68,
+    "t0": 5.993778016302727
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0080": {
+   "pred": {
+    "depth": 0.0006440711968478065,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20091,
+    "n_points_binned": 3183,
+    "period": 1.193507950235809,
+    "sde": 5.043760270821904,
+    "seconds": 0.63,
+    "t0": 0.3747780196554886
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0081": {
+   "pred": {
+    "depth": 0.0005845800006459855,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 12.475111999159333,
+    "sde": 7.451604559276768,
+    "seconds": 0.6,
+    "t0": 11.330778058032438
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0082": {
+   "pred": {
+    "depth": 0.007801967074623573,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20364,
+    "n_points_binned": 3010,
+    "period": 6.653433857787974,
+    "sde": 9.481217065310702,
+    "seconds": 0.56,
+    "t0": 0.04327801108768472
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0083": {
+   "pred": {
+    "depth": 0.0017139486323298695,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.85317905711153,
+    "seconds": 0.93,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0084": {
+   "pred": {
+    "depth": 0.000548419604499215,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 2.755507117855595,
+    "sde": 5.588336274161828,
+    "seconds": 0.55,
+    "t0": 0.8667780499472101
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0085": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 0.51,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0086": {
+   "pred": {
+    "depth": 0.01992460922481847,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.341336391201045,
+    "seconds": 0.5,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0087": {
+   "pred": {
+    "depth": 0.0008847534180620547,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 12.38754076629108,
+    "sde": 11.307203229260573,
+    "seconds": 0.51,
+    "t0": 11.888778016302727
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 0.7
+   }
+  },
+  "ep_0088": {
+   "pred": {
+    "depth": 0.00021127215248217744,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 0.7680758931933429,
+    "sde": 5.286698900531918,
+    "seconds": 1.07,
+    "t0": 0.6942780499472101
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0089": {
+   "pred": {
+    "depth": 0.0017139486323298695,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.85317905711153,
+    "seconds": 0.59,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0090": {
+   "pred": {
+    "depth": 0.0015324078509142552,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20365,
+    "n_points_binned": 3270,
+    "period": 10.119358812845592,
+    "sde": 18.51020523562737,
+    "seconds": 0.6,
+    "t0": 3.7587780381892624
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0091": {
+   "pred": {
+    "depth": 4.880029224580016e-05,
+    "detected": true,
+    "duration": 0.249,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 0.5697592887303888,
+    "sde": 8.017447240666952,
+    "seconds": 1.06,
+    "t0": 0.13027805715932117
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0092": {
+   "pred": {
+    "depth": 0.0017139486323298695,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.85317905711153,
+    "seconds": 0.54,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0093": {
+   "pred": {
+    "depth": 0.00011742820051409575,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 0.5077342276298821,
+    "sde": 5.910454961398454,
+    "seconds": 0.97,
+    "t0": 0.41227800577914603
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0094": {
+   "pred": {
+    "depth": 0.0006178723018881904,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 5.0686021321103505,
+    "sde": 6.358557731417154,
+    "seconds": 1.11,
+    "t0": 5.021778005779146
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0095": {
+   "pred": {
+    "depth": 0.019922106840689846,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.337422888461873,
+    "seconds": 0.87,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0096": {
+   "pred": {
+    "depth": 0.000923228162257784,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.927974833295711,
+    "seconds": 1.01,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0097": {
+   "pred": {
+    "depth": 0.0011113690388379308,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19831,
+    "n_points_binned": 3053,
+    "period": 2.952502091395281,
+    "sde": 12.066522857355846,
+    "seconds": 1.01,
+    "t0": 0.5982780307385911
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0098": {
+   "pred": {
+    "depth": 0.0004530662931613015,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 12.4031535587525,
+    "sde": 7.567401340195601,
+    "seconds": 1.46,
+    "t0": 0.8502779823098172
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0099": {
+   "pred": {
+    "depth": 0.0005293535933464069,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 2.53090694793911,
+    "sde": 15.203273405557908,
+    "seconds": 1.15,
+    "t0": 1.8687780163027274
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0100": {
+   "pred": {
+    "depth": 0.0006197772834048566,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 5.642514758582465,
+    "sde": 6.3321176966046515,
+    "seconds": 1.52,
+    "t0": 3.3612780499472104
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0101": {
+   "pred": {
+    "depth": 0.0006456349742699144,
+    "detected": false,
+    "duration": 0.249,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 0.5103978130168345,
+    "sde": 6.751565695025119,
+    "seconds": 1.06,
+    "t0": 0.4182779961865235
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0102": {
+   "pred": {
+    "depth": 0.01992458615279672,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.34105020441216,
+    "seconds": 1.18,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0103": {
+   "pred": {
+    "depth": 0.0007948649822761732,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 6.735942684208873,
+    "sde": 8.081722584326798,
+    "seconds": 1.78,
+    "t0": 5.993778016302727
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0104": {
+   "pred": {
+    "depth": 0.00801742603638203,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20262,
+    "n_points_binned": 3143,
+    "period": 6.359647036770936,
+    "sde": 7.921744644481263,
+    "seconds": 1.33,
+    "t0": 0.009130989171252147
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0105": {
+   "pred": {
+    "depth": 0.0015288869262950395,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.730955952635208,
+    "seconds": 1.73,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0106": {
+   "pred": {
+    "depth": 0.0013058354345824655,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.964406351226549,
+    "seconds": 1.48,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0107": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 1.78,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0108": {
+   "pred": {
+    "depth": 0.012583309442055653,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.975135796619487,
+    "seconds": 1.9,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0109": {
+   "pred": {
+    "depth": 0.0005845800006459855,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 12.475111999159333,
+    "sde": 7.451604559276768,
+    "seconds": 1.65,
+    "t0": 11.330778058032438
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0110": {
+   "pred": {
+    "depth": 0.005195958053594213,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 1.7631095316582044,
+    "sde": 20.818698637128264,
+    "seconds": 1.48,
+    "t0": 1.343778005779146
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0111": {
+   "pred": {
+    "depth": 0.0013058354345824655,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.964406351226549,
+    "seconds": 1.43,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0112": {
+   "pred": {
+    "depth": 0.00027056618566532206,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 10.4736231276747,
+    "sde": 8.564757536451364,
+    "seconds": 1.51,
+    "t0": 4.409778002472951
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0113": {
+   "pred": {
+    "depth": 0.0013474079792109143,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 0.6676678587396857,
+    "sde": 13.932719730044402,
+    "seconds": 1.09,
+    "t0": 0.43927805733394415
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0114": {
+   "pred": {
+    "depth": 0.0005445435001409135,
+    "detected": false,
+    "duration": 0.249,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 0.5231784798491966,
+    "sde": 6.269765452036016,
+    "seconds": 1.99,
+    "t0": 0.41227799618652355
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0115": {
+   "pred": {
+    "depth": 0.007967724066100749,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20262,
+    "n_points_binned": 3143,
+    "period": 6.359647036770936,
+    "sde": 7.932059456061471,
+    "seconds": 1.14,
+    "t0": 0.009130989171252147
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0116": {
+   "pred": {
+    "depth": 0.0006180357966921135,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 5.0686021321103505,
+    "sde": 6.596712447116997,
+    "seconds": 0.97,
+    "t0": 5.021778005779146
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0117": {
+   "pred": {
+    "depth": 0.0019102133801840197,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 2.6647027349851324,
+    "sde": 18.9323669045271,
+    "seconds": 1.11,
+    "t0": 0.3882779823098172
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0118": {
+   "pred": {
+    "depth": 0.0002650423578993091,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 0.5411634389583747,
+    "sde": 5.771279024564602,
+    "seconds": 0.96,
+    "t0": 0.2637780510765297
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0119": {
+   "pred": {
+    "depth": 0.0017139486323298695,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.85317905711153,
+    "seconds": 0.9,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0120": {
+   "pred": {
+    "depth": 0.000979454206047103,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 11.082766799662457,
+    "seconds": 0.84,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0121": {
+   "pred": {
+    "depth": 0.0017136602325850657,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.731289840218343,
+    "seconds": 0.97,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0122": {
+   "pred": {
+    "depth": 0.0012928543664726781,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.115565906074648,
+    "seconds": 0.92,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0123": {
+   "pred": {
+    "depth": 0.0007868533548178398,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 6.735942684208873,
+    "sde": 8.154511174608153,
+    "seconds": 0.73,
+    "t0": 5.993778016302727
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0124": {
+   "pred": {
+    "depth": 0.026527000844751746,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.383637569196132,
+    "seconds": 0.89,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0125": {
+   "pred": {
+    "depth": 0.0005845800006459855,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 12.475111999159333,
+    "sde": 7.451604559276768,
+    "seconds": 0.93,
+    "t0": 11.330778058032438
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0126": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 0.94,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0127": {
+   "pred": {
+    "depth": 0.004033194201450536,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20091,
+    "n_points_binned": 3183,
+    "period": 4.856631903976632,
+    "sde": 20.482703205400686,
+    "seconds": 0.56,
+    "t0": 2.8392780196554885
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0128": {
+   "pred": {
+    "depth": 0.0003035813697699077,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20135,
+    "n_points_binned": 3118,
+    "period": 7.736291545531082,
+    "sde": 7.319187410435158,
+    "seconds": 0.64,
+    "t0": 2.7192780528570473
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0129": {
+   "pred": {
+    "depth": 0.0017134757627102286,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.8558934151626,
+    "seconds": 0.92,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0130": {
+   "pred": {
+    "depth": 0.0007953282600018787,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19696,
+    "n_points_binned": 3153,
+    "period": 6.735942684208873,
+    "sde": 8.503085070233489,
+    "seconds": 0.75,
+    "t0": 5.993778016302727
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0131": {
+   "pred": {
+    "depth": 0.0028637559016068495,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20091,
+    "n_points_binned": 3183,
+    "period": 0.8925423585098147,
+    "sde": 18.432928501528394,
+    "seconds": 0.54,
+    "t0": 0.8562780196554887
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0132": {
+   "pred": {
+    "depth": 0.001305495016098696,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 11.005331696816022,
+    "seconds": 1.09,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0133": {
+   "pred": {
+    "depth": 0.0005631035856312079,
+    "detected": false,
+    "duration": 0.249,
+    "n_periods": 20510,
+    "n_points_binned": 3035,
+    "period": 0.5231784798491966,
+    "sde": 6.677835825985855,
+    "seconds": 1.06,
+    "t0": 0.41227799618652355
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0134": {
+   "pred": {
+    "depth": 0.0009211897367762622,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.902629656405991,
+    "seconds": 1.16,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0135": {
+   "pred": {
+    "depth": 0.012619736107621371,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.974502478794813,
+    "seconds": 0.98,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0136": {
+   "pred": {
+    "depth": 0.026541358025812287,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.384834672376002,
+    "seconds": 1.04,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0137": {
+   "pred": {
+    "depth": 0.004076838197984152,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 4.577829002805997,
+    "sde": 17.319693709778033,
+    "seconds": 1.13,
+    "t0": 3.8862779823098172
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0138": {
+   "pred": {
+    "depth": 0.001344626540898068,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 1.0768094955455503,
+    "sde": 13.35932030748516,
+    "seconds": 2.02,
+    "t0": 0.5052780571593213
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0139": {
+   "pred": {
+    "depth": 0.019924591130355912,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.33529428559731,
+    "seconds": 2.89,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0140": {
+   "pred": {
+    "depth": 0.0021639203095689583,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.641093858190014,
+    "seconds": 1.38,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0141": {
+   "pred": {
+    "depth": 0.0021639203095689583,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.641093858190014,
+    "seconds": 1.77,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0142": {
+   "pred": {
+    "depth": 0.0005900532293870234,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 20242,
+    "n_points_binned": 3246,
+    "period": 7.626985872204639,
+    "sde": 5.995172605498494,
+    "seconds": 1.45,
+    "t0": 0.1032780499472101
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0143": {
+   "pred": {
+    "depth": 0.0009211897367762622,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.902629656405991,
+    "seconds": 1.05,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0144": {
+   "pred": {
+    "depth": 0.026522531879290698,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.392276345100232,
+    "seconds": 2.47,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0145": {
+   "pred": {
+    "depth": 0.0009211897367762622,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.902629656405991,
+    "seconds": 1.35,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0146": {
+   "pred": {
+    "depth": 0.0006657141148574119,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 5.14550737222374,
+    "sde": 17.861202025782088,
+    "seconds": 1.63,
+    "t0": 1.475778002472951
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0147": {
+   "pred": {
+    "depth": 0.012583309442055653,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.975135796619487,
+    "seconds": 2.18,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0148": {
+   "pred": {
+    "depth": 0.003832861457511209,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.1492685392540714,
+    "sde": 13.387516118230382,
+    "seconds": 1.5,
+    "t0": 0.06277802794444141
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0149": {
+   "pred": {
+    "depth": 0.007921393330224676,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 12.264768401498038,
+    "sde": 17.366165487106617,
+    "seconds": 1.13,
+    "t0": 1.6767779823098172
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0150": {
+   "pred": {
+    "depth": 0.0021639203095689583,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.641093858190014,
+    "seconds": 1.05,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0151": {
+   "pred": {
+    "depth": 5.0118456957791576e-05,
+    "detected": true,
+    "duration": 0.249,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 0.5697592887303888,
+    "sde": 8.104763684711122,
+    "seconds": 1.07,
+    "t0": 0.13027805715932117
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0152": {
+   "pred": {
+    "depth": 0.0007579315474252758,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 19831,
+    "n_points_binned": 3053,
+    "period": 1.9908439464656105,
+    "sde": 6.019644693801372,
+    "seconds": 0.93,
+    "t0": 0.16627803073859104
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0153": {
+   "pred": {
+    "depth": 0.0009663006870072852,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 10.887602930377454,
+    "seconds": 0.63,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0154": {
+   "pred": {
+    "depth": 0.0017139486323298695,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 6.741114342654176,
+    "sde": 8.85317905711153,
+    "seconds": 0.64,
+    "t0": 6.404778056035277
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0155": {
+   "pred": {
+    "depth": 0.000358502844770789,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20330,
+    "n_points_binned": 3277,
+    "period": 6.974669487943229,
+    "sde": 7.296204739870168,
+    "seconds": 0.84,
+    "t0": 5.8677780444754175
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0156": {
+   "pred": {
+    "depth": 0.007257049115491101,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 0.5953263560473709,
+    "sde": 14.85060931076911,
+    "seconds": 0.72,
+    "t0": 0.43927800247295096
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0157": {
+   "pred": {
+    "depth": 0.01258330803591056,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.974851908705244,
+    "seconds": 0.78,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0158": {
+   "pred": {
+    "depth": 0.0013053641350528962,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.910657815170751,
+    "seconds": 0.73,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0159": {
+   "pred": {
+    "depth": 0.007324822726517986,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 3.6396607795528086,
+    "sde": 20.682660755914508,
+    "seconds": 0.59,
+    "t0": 1.1667780560352765
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0160": {
+   "pred": {
+    "depth": 0.007801830710567308,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20364,
+    "n_points_binned": 3010,
+    "period": 6.653433857787974,
+    "sde": 9.632688427652543,
+    "seconds": 0.62,
+    "t0": 0.04327801108768472
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0161": {
+   "pred": {
+    "depth": 0.0003489355067374757,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 0.7132147960617533,
+    "sde": 17.163234145027907,
+    "seconds": 0.94,
+    "t0": 0.06727805329951661
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0162": {
+   "pred": {
+    "depth": 0.000358502844770789,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20330,
+    "n_points_binned": 3277,
+    "period": 6.974669487943229,
+    "sde": 7.296204739870168,
+    "seconds": 0.94,
+    "t0": 5.8677780444754175
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0163": {
+   "pred": {
+    "depth": 0.0017042855473015646,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.621627386752449,
+    "seconds": 0.84,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0164": {
+   "pred": {
+    "depth": 0.00026468182308515907,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 0.5411634389583747,
+    "sde": 5.755236964196948,
+    "seconds": 0.88,
+    "t0": 0.2637780510765297
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0165": {
+   "pred": {
+    "depth": 0.00044915967316321324,
+    "detected": false,
+    "duration": 0.12,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 9.077693723269014,
+    "sde": 6.887828318886566,
+    "seconds": 1.06,
+    "t0": 1.6857780439634626
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0166": {
+   "pred": {
+    "depth": 0.0021640307901954277,
+    "detected": false,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.054375212452486,
+    "sde": 5.757817521690414,
+    "seconds": 1.12,
+    "t0": 2.6022779785848003
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0167": {
+   "pred": {
+    "depth": 0.0009148412547941008,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.811603470505197,
+    "seconds": 1.54,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0168": {
+   "pred": {
+    "depth": 0.00044915967316321324,
+    "detected": false,
+    "duration": 0.12,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 9.077693723269014,
+    "sde": 6.887828318886566,
+    "seconds": 1.31,
+    "t0": 1.6857780439634626
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0169": {
+   "pred": {
+    "depth": 0.0016895525796869542,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20081,
+    "n_points_binned": 3212,
+    "period": 1.788218275642753,
+    "sde": 17.791562074793326,
+    "seconds": 1.43,
+    "t0": 1.6872780439634627
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0170": {
+   "pred": {
+    "depth": 0.001305591400928507,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20014,
+    "n_points_binned": 3110,
+    "period": 12.507266214611843,
+    "sde": 10.971686547653986,
+    "seconds": 0.92,
+    "t0": 0.028278053299516617
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0171": {
+   "pred": {
+    "depth": 0.0004530637604262858,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 12.4031535587525,
+    "sde": 7.62216318936337,
+    "seconds": 1.05,
+    "t0": 0.8502779823098172
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0172": {
+   "pred": {
+    "depth": 0.0015511156358530428,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 19978,
+    "n_points_binned": 3136,
+    "period": 11.137015253680032,
+    "sde": 8.900611958028897,
+    "seconds": 2.29,
+    "t0": 2.4942779803543127
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0173": {
+   "pred": {
+    "depth": 0.00020197177240277288,
+    "detected": false,
+    "duration": 0.12,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 4.79033689547814,
+    "sde": 6.445726897493963,
+    "seconds": 1.27,
+    "t0": 1.7937780580324363
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0174": {
+   "pred": {
+    "depth": 0.0037077347821959073,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20718,
+    "n_points_binned": 3053,
+    "period": 11.726632250495278,
+    "sde": 8.728501579040987,
+    "seconds": 1.13,
+    "t0": 10.49377800247295
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0175": {
+   "pred": {
+    "depth": 0.026528932343386602,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.38385687985767,
+    "seconds": 1.25,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0176": {
+   "pred": {
+    "depth": 0.0059462898928221595,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20115,
+    "n_points_binned": 3240,
+    "period": 6.84294735515869,
+    "sde": 9.374505319649094,
+    "seconds": 0.98,
+    "t0": 6.083778057333944
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0177": {
+   "pred": {
+    "depth": 0.01261839599535994,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20631,
+    "n_points_binned": 3048,
+    "period": 9.890933724963661,
+    "sde": 10.729856676845268,
+    "seconds": 0.87,
+    "t0": 0.04327797467333585
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0178": {
+   "pred": {
+    "depth": 0.0003448633632847199,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20135,
+    "n_points_binned": 3118,
+    "period": 11.068220195665894,
+    "sde": 7.108139052424124,
+    "seconds": 0.84,
+    "t0": 10.456278052857048
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0179": {
+   "pred": {
+    "depth": 0.0009211897367762622,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.902629656405991,
+    "seconds": 1.03,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0180": {
+   "pred": {
+    "depth": 0.000979454206047103,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 11.082766799662457,
+    "seconds": 1.57,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0181": {
+   "pred": {
+    "depth": 0.0009493722411016077,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 20330,
+    "n_points_binned": 3277,
+    "period": 1.2449836202356799,
+    "sde": 18.025576571571186,
+    "seconds": 1.31,
+    "t0": 1.2012780444754172
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0182": {
+   "pred": {
+    "depth": 0.019924591130355912,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.33529428559731,
+    "seconds": 1.52,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0183": {
+   "pred": {
+    "depth": 0.004716804780790316,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 11.30199081965057,
+    "sde": 15.510963040749042,
+    "seconds": 2.67,
+    "t0": 4.961778027944441
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0184": {
+   "pred": {
+    "depth": 0.01992459382379494,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.335957512883475,
+    "seconds": 1.58,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0185": {
+   "pred": {
+    "depth": 0.0078017900010707245,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20364,
+    "n_points_binned": 3010,
+    "period": 6.653433857787974,
+    "sde": 9.606520433479648,
+    "seconds": 1.47,
+    "t0": 0.04327801108768472
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0186": {
+   "pred": {
+    "depth": 0.0007567743619633198,
+    "detected": false,
+    "duration": 0.051000000000000004,
+    "n_periods": 19831,
+    "n_points_binned": 3053,
+    "period": 1.9908439464656105,
+    "sde": 6.012713668966378,
+    "seconds": 0.97,
+    "t0": 0.16627803073859104
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0187": {
+   "pred": {
+    "depth": 0.019924591130355912,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19933,
+    "n_points_binned": 3099,
+    "period": 12.478528824487533,
+    "sde": 10.33529428559731,
+    "seconds": 1.17,
+    "t0": 12.457278048107211
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0188": {
+   "pred": {
+    "depth": 0.02652884161527324,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.383731045890642,
+    "seconds": 1.98,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0189": {
+   "pred": {
+    "depth": 0.001741971587465584,
+    "detected": true,
+    "duration": 0.051000000000000004,
+    "n_periods": 19865,
+    "n_points_binned": 3094,
+    "period": 0.6695246199868247,
+    "sde": 15.726543792517365,
+    "seconds": 1.45,
+    "t0": 0.2532780560352767
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0190": {
+   "pred": {
+    "depth": 0.0015189926960910585,
+    "detected": true,
+    "duration": 0.12,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 7.7126293231535445,
+    "sde": 21.13721561060155,
+    "seconds": 1.54,
+    "t0": 2.537777982309817
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0191": {
+   "pred": {
+    "depth": 0.004667155530199487,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 20330,
+    "n_points_binned": 3277,
+    "period": 3.6846499607676373,
+    "sde": 18.042476193885125,
+    "seconds": 1.2,
+    "t0": 2.0982780444754177
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0192": {
+   "pred": {
+    "depth": 0.007979586262743598,
+    "detected": true,
+    "duration": 0.03,
+    "n_periods": 20262,
+    "n_points_binned": 3143,
+    "period": 6.359647036770936,
+    "sde": 7.940550941355183,
+    "seconds": 1.9,
+    "t0": 0.009130989171252147
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": false,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "wrong_period",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0193": {
+   "pred": {
+    "depth": 0.0002650423578993091,
+    "detected": false,
+    "duration": 0.18,
+    "n_periods": 20237,
+    "n_points_binned": 3254,
+    "period": 0.5411634389583747,
+    "sde": 5.771279024564602,
+    "seconds": 2.59,
+    "t0": 0.2637780510765297
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "true_null",
+    "period_credit": 0.0,
+    "score": 1.0
+   }
+  },
+  "ep_0194": {
+   "pred": {
+    "depth": 0.000979454206047103,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3233,
+    "period": 12.844510155489676,
+    "sde": 11.082766799662457,
+    "seconds": 1.76,
+    "t0": 12.80227795762977
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0195": {
+   "pred": {
+    "depth": 0.0003718095568185825,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20365,
+    "n_points_binned": 3270,
+    "period": 3.60290004019035,
+    "sde": 4.42012481625426,
+    "seconds": 2.28,
+    "t0": 2.7567780381892626
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0196": {
+   "pred": {
+    "depth": 0.0006343024449734876,
+    "detected": true,
+    "duration": 0.081,
+    "n_periods": 21130,
+    "n_points_binned": 3249,
+    "period": 4.762268721833099,
+    "sde": 16.004645028696387,
+    "seconds": 2.66,
+    "t0": 4.159277982309817
+   },
+   "score": {
+    "alias": 1.0,
+    "depth_ok": true,
+    "detected": true,
+    "epoch_ok": true,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "hit",
+    "period_credit": 1.0,
+    "score": 1.0
+   }
+  },
+  "ep_0197": {
+   "pred": {
+    "depth": 0.0009291754067756071,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20147,
+    "n_points_binned": 3222,
+    "period": 2.0263880726289,
+    "sde": 4.997449407338098,
+    "seconds": 1.57,
+    "t0": 1.9917780279444413
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0198": {
+   "pred": {
+    "depth": 0.02652884161527324,
+    "detected": true,
+    "duration": 0.18,
+    "n_periods": 20125,
+    "n_points_binned": 3204,
+    "period": 0.8629030932937237,
+    "sde": 10.383731045890642,
+    "seconds": 0.98,
+    "t0": 0.4467780211928984
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": true,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "null",
+    "outcome": "false_alarm",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  },
+  "ep_0199": {
+   "pred": {
+    "depth": 0.0006179434931003662,
+    "detected": false,
+    "duration": 0.03,
+    "n_periods": 20558,
+    "n_points_binned": 3000,
+    "period": 5.0686021321103505,
+    "sde": 6.587597211526914,
+    "seconds": 1.37,
+    "t0": 5.021778005779146
+   },
+   "score": {
+    "alias": null,
+    "depth_ok": null,
+    "detected": false,
+    "epoch_ok": false,
+    "event_ok": null,
+    "kind": "transit",
+    "outcome": "miss",
+    "period_credit": 0.0,
+    "score": 0.0
+   }
+  }
+ },
+ "git_commit": "351a4923aee09e1324d927e18ad6ce2496e17cae-dirty",
+ "summary": {
+  "by_n_transits": {
+   "1-1": {
+    "completeness": 0.05,
+    "n": 20
+   },
+   "2-2": {
+    "completeness": 0.2,
+    "n": 20
+   },
+   "3-5": {
+    "completeness": 0.36,
+    "n": 25
+   },
+   "6-inf": {
+    "completeness": 0.515625,
+    "n": 64
+   }
+  },
+  "by_snr": {
+   "0-5": {
+    "completeness": 0.0,
+    "n": 38
+   },
+   "10-20": {
+    "completeness": 0.35714285714285715,
+    "n": 14
+   },
+   "20-50": {
+    "completeness": 0.65,
+    "n": 20
+   },
+   "5-7": {
+    "completeness": 0.0,
+    "n": 16
+   },
+   "50-inf": {
+    "completeness": 0.8181818181818182,
+    "n": 33
+   },
+   "7-10": {
+    "completeness": 0.25,
+    "n": 8
+   }
+  },
+  "completeness_exact": 0.35658914728682173,
+  "completeness_with_aliases": 0.3643410852713178,
+  "false_alarm_rate": 0.5915492957746479,
+  "mean_score": 0.376,
+  "n_episodes": 200,
+  "n_null": 71,
+  "n_transit": 129
+ },
+ "system": "baseline_bls"
+}
