@@ -160,24 +160,35 @@ each, lowest CPU priority). The two Kimi K2.6 runs with `--max-turns 60 --max-to
 alone later. Rerun candidates with the fixed code: Nemotron 3 Ultra base and Qwen3.5
 base, which lost a turn an episode to the rejected text in all three seeds.
 
-First steps for the next session:
-1. TIC 55270064 is settled as far as sector 98 allows: the 0.946-day signal is a
-   sawtooth (a sharp rise, then a fade over the whole period), a pulsator shape and
-   not a transit, and ExoFOP has no entry for it or for TIC 146420104 and TIC 33831807
-   (LOGBOOK 2026-10-25). The host stays in the null pool. The missing tool is the
-   fold shape verdict (Phase 3b). Optional: the Gaia class of the neighbour at 6.7
-   arcseconds, which could be the pulsator at 0.7 percent of the flux.
-2. A tool or a `summarize` field that names the TESS orbit boundaries and flags a
-   period within a few percent of the orbit length or the sector length, so the model
-   has a verdict word for the 14-day peaks. Phase 3 item; it breaks the comparison,
-   so record the break and rerun Inkling-Small base and rules at one seed.
-3. The three-episode check of Nemotron 3 Ultra and Qwen3.5 on the fixed code is done
-   (LOGBOOK, 2026-10-25: one accepted submit an episode). Next the Kimi rerun with the
-   raised caps at one seed, base prompt. Ask the owner before the eight rules runs,
-   and settle step 1 first, because a change to the null pool makes s98_v3 reruns
-   moot.
-4. The spotted-rotator misses (ep_0042, ep_0043, ep_0049, ep_0059) and the
-   rotation-aware detrending, as in the 2026-10-16 handoff; and a second sector.
+Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
+bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
+at $13), so the spend goes to tools, measured on the small model, until the toolbox
+freezes.
+
+1. No large-model run until the toolbox freezes. The two Kimi K2.6 raised-caps runs
+   wait as well.
+2. Three tools, in this order, each measured with Inkling-Small at three seeds and the
+   rules prompt (about $36 a tool version; a change counts when it moves the
+   false-alarm rate by more than 3 points or the completeness by more than 1 point):
+   - the fold shape verdict (dip, step, sawtooth, sinusoid) on the full-orbit fold;
+     test: the 0.946-day sawtooth on TIC 55270064 (ep_0019, ep_0081 of s98_v3) must
+     be named a pulsator;
+   - the orbit boundary flag, a `summarize` field or a verdict in `bls_peaks` and
+     `search_signals` for a period within a few percent of one TESS orbit or the
+     sector length; test: the 14.4- and 15.4-day peaks on TIC 33831807 and TIC
+     146420104 (ep_0033, ep_0134, ep_0143, ep_0155);
+   - rotation-aware detrending or a `stellar_variability` tool for the spotted hosts;
+     test: the shared misses ep_0042, ep_0043, ep_0049, ep_0059.
+   Each tool breaks the comparison with the earlier runs; record the break in the
+   LOGBOOK and keep the earlier tables as the record of their toolbox version.
+3. When the three tools are in: one large-model pass at one seed with the rules
+   prompt (about $300) as the final table of Phase 3, and the Kimi raised-caps run.
+4. Phase 5 starts on that toolbox. The model that trains on Tinker is a small one, so
+   the small-model measurements are the ones that set the reward.
+
+Also open: TIC 55270064's neighbour at 6.7 arcseconds (its Gaia class, if any); a
+second sector with `stargazer targets --sector N`; the small committed episode set
+for tests (Phase 1).
 
 ## Open questions
 
