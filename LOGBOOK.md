@@ -1440,3 +1440,51 @@ Reading.
 - Seed spread under the rules is in the false-alarm rate (standard deviation 3 to 6
   points on the large models, 2 on the small one) and not in completeness (1 to 2
   points). The models differ in restraint from seed to seed, not in what they find.
+
+**First measurement of the fold verdict, and the revision it forced**
+(`results/full_v10shape/run_seeds.sh`, Inkling-Small, rules prompt, seeds 1, 2, 3 side
+by side, 17:52 to 18:16 UTC, $35.43; three-episode check first,
+`results/smoke/agent_inkling_small_s98_v3_rules3_shape.json`). Against the 2026-10-16
+runs on the same model and prompt:
+
+| version | false alarm | completeness | with aliases | mean score | one-transit hits |
+|---|---|---|---|---|---|
+| 2026-10-16 toolbox, 3 seeds | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | 2.7 of 17 |
+| fold verdict, commit 77cc5b3, 3 seeds | 3.4% (2.9) | 39.2% (2.0) | 41.6% (2.3) | 0.569 (0.013) | 2.7 of 17 |
+
+No measurable change: every difference is inside the seed spread. The small model with
+the rules prompt never submitted the 0.946-day pulsator on TIC 55270064 in the first
+place; the transit fit's density and shape verdicts reject it at the search peak. The
+model saw `variable` in 7 of 600 episodes. Two of those show the verdict doing harm:
+on ep_0090 (seed 3), a real 10-day planet on the pulsator's own star at
+signal-to-noise 23, the model read `variable` at 0.946 days and declined the whole
+star, where the old run found the planet; on ep_0029 (seed 1), a planet at
+signal-to-noise 106, the model read `variable` at a 0.93-day peak and stopped, where
+seeds 2 and 3 went on to the 1.685-day signal and hit. And the verdict was
+period-sensitive: the model folds at the search peak, 0.958 days, where the fold
+smears the pulsation over 60 cycles and reads `flat`; the true period 0.946 days is
+1.2 percent away and reads `variable`.
+
+Revision (commit 38917dc). The fold refines the period before the judgement: trial
+periods within 2 percent, spaced so that the fold phase drifts by at most a tenth of
+a cycle across the data (25 trials at 0.95 days, 5 at 5 days), and the one with the
+largest smooth amplitude is `orbit_period`. The off periods of the contrast are
+refined the same way, so the largest of 25 trials is compared with the largest of 25
+and noise gains nothing. That halves the contrasts: the pulsator reads 3.6 at the
+search peak and 3.7 at its period, the 0.92-day rotation of TIC 32816814 5.9, a
+synthetic sinusoid or sawtooth 5.7 to 6.5, noise 0.8, and 90 percent of the 96
+planets with five or more orbits under 2.2. The cut moves from 4 to 3. Two planets
+read `variable` at their true period: ep_0121 (signal-to-noise 11, on a spotted
+star that rotates at the planet's 2.9-day period, 26,000 ppm of variation against a
+750 ppm dip) and ep_0027 (signal-to-noise 25, 5.0 days, contrast just above 3). The
+tool text now says that a variable orbit rules out this period only and that the
+star can still hold a planet at another period, so the model masks the signal and
+searches on. The separation is real but not wide; the held-out sector 92 set is the
+test of whether the cut travels. A fold call takes 0.9 seconds at 0.95 days and 0.2
+seconds at 5 days. The three seeds run again on this version.
+
+**Tinker balance** read by the owner in the browser at about 18:15 UTC: $4,696.66.
+The owner keeps $3,000 for the reinforcement-learning phase. The provider bills
+cached prompt tokens at about a fifth of the full rate, and the price table in
+`stargazer.backends` charges every token at the full rate, so the costs in this
+LOGBOOK are upper bounds.
