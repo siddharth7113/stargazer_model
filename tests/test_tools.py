@@ -115,6 +115,19 @@ def test_fold_orbit_shape_of_a_sawtooth_is_variable_at_any_window(lc):
         assert curve["orbit_shape"] == "variable" and curve["rise_fraction"] < 0.3
 
 
+def test_fold_orbit_shape_holds_one_percent_off_the_period(lc):
+    """A sawtooth at 0.9 days folded at 0.909 days is still variable, and orbit_period lands near 0.9.
+
+    A box search gives a pulsator's period to about a percent, and without the refinement a fold
+    that far off smears the cycles flat, as the search peak on TIC 55270064 did.
+    """
+    time, flux, _ = lc
+    phase = ((time - time[0]) / 0.9) % 1.0
+    flux = flux + 0.002 * np.where(phase < 0.1, phase / 0.1, 1.0 - (phase - 0.1) / 0.9)
+    curve = tools.fold(time, flux, period=0.909, t0=time[0], detrend_window_days=3.0)
+    assert curve["orbit_shape"] == "variable" and abs(curve["orbit_period"] - 0.9) < 0.003
+
+
 def test_fold_orbit_shape_of_a_sinusoid_at_another_period_is_flat(lc):
     """A 5-day variable folded at a 1.3-day transit is flat: the variation is at another period."""
     time, flux, _ = lc

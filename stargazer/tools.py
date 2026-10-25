@@ -266,12 +266,34 @@ ORBIT_SHAPE_OFF_PERIODS: tuple[float, ...] = (0.87, 0.93, 1.07, 1.13)
 contrast. A star that varies at the period has its amplitude there and not at these;
 red noise and spots at another period fold to about the same amplitude at any period."""
 
-ORBIT_SHAPE_CONTRAST = 4.0
+ORBIT_SHAPE_CONTRAST = 3.0
 """Ratio of the smooth amplitude at the period to its median at the off periods above
-which the variation is coherent at this period. On s98_v3 the 0.946-day pulsator on
-TIC 55270064 has 8.6 and a synthetic sinusoid or sawtooth 9 to 11; 94 of the 96
-injected planets with five or more orbits have under 4, and the two above it are
-deep transits whose dip leaks into the fit, which the depth ratio keeps flat."""
+which the variation is coherent at this period. With the period refined on both
+sides, on s98_v3 the 0.946-day pulsator on TIC 55270064 has 3.6 at the search peak
+and 3.7 at its period, the 0.92-day rotation of TIC 32816814 has 5.9, a synthetic
+sinusoid or sawtooth 5.7 to 6.5 and noise 0.8; 90 percent of the 96 injected planets
+with five or more orbits are under 2.2. Three planets are above 3: two deep
+short-period transits whose dip leaks into the fit, which the depth ratio keeps
+flat, and a faint planet on a spotted star that rotates at the planet's period."""
+
+ORBIT_SHAPE_REFINE_FRACTION = 0.02
+"""Half-width, as a fraction of the period, of the search for the period that gives the
+largest smooth amplitude before the orbit is judged. A box search gives the period of a
+pulsator to about a percent, and a fold one percent off smears sixty cycles into a
+flat orbit: on TIC 55270064 the search peak at 0.958 days reads flat and the refined
+0.946 days reads variable."""
+
+ORBIT_SHAPE_PHASE_TOLERANCE = 0.1
+"""Largest drift of the fold phase across the data, in cycles, between one trial
+period and the next in the refinement. The number of trials follows from it and the
+number of orbits the data cover: 25 trials at 0.95 days in one sector, 5 at 5 days.
+The off periods of the contrast are refined with the same number of trials, so the
+largest of the trials is compared with the largest of the same number and noise gains
+nothing from the search."""
+
+ORBIT_SHAPE_MAX_TRIALS = 41
+"""Upper bound of the trials in one refinement, so a very short period cannot make a
+fold call slow."""
 
 ORBIT_SHAPE_MIN_CYCLES = 5.0
 """Orbits the data must cover before the verdict is given. With fewer, the fold does
@@ -316,7 +338,9 @@ def fold(
         deepest bin), then the shape of the whole orbit whatever the window:
         ``orbit_amplitude_ppm`` (peak to peak of the smooth variation),
         ``rise_fraction`` (the part of the period from its minimum to its maximum)
-        and ``orbit_shape``, ``flat`` or ``variable``, or null when the data cover
+        ``orbit_period`` (the period within ``ORBIT_SHAPE_REFINE_FRACTION`` of the
+        one asked for that gives the largest smooth variation, days) and
+        ``orbit_shape``, ``flat`` or ``variable``, or null when the data cover
         fewer than ``ORBIT_SHAPE_MIN_CYCLES`` orbits. The output
         is kept short because the model re-reads it on every later turn.
 
@@ -329,7 +353,13 @@ def fold(
     bins, with the phase as a fraction of the period ``x`` in [-0.5, 0.5), at a
     detrending window of at least ``ORBIT_SHAPE_WINDOW_PERIODS`` periods, because a
     window shorter than the period flattens a variation at the period and leaves a
-    dip-shaped residual at its steep part. A smooth model with
+    dip-shaped residual at its steep part. The fold is made at
+    trial periods within ``ORBIT_SHAPE_REFINE_FRACTION``, spaced so that the fold
+    phase drifts by at most ``ORBIT_SHAPE_PHASE_TOLERANCE`` cycles across the data
+    from one trial to the next,
+    of the period asked for, and the one with the largest smooth amplitude is
+    ``orbit_period``, because a box search gives the period of a smooth variation
+    to about a percent and a fold that far off smears many cycles flat. A smooth model with
     ``ORBIT_SHAPE_HARMONICS`` harmonics of the period is fitted by least squares to
     the bins outside the dip: not within ``ORBIT_SHAPE_EXCLUDED_BINS`` bins of the
     deepest one and not deeper than ``ORBIT_SHAPE_SIGMA`` times the scatter of the
@@ -341,8 +371,8 @@ def fold(
     The amplitude is ``max m - min m`` over the orbit, in ppm. The scatter is the
     median absolute deviation of the bins about ``m``, scaled to a standard
     deviation. The contrast is the amplitude divided by the median of the same
-    amplitude at the periods ``ORBIT_SHAPE_OFF_PERIODS`` times the period, a
-    periodogram test on the fold: a star that varies at the period has its power
+    amplitude at the periods ``ORBIT_SHAPE_OFF_PERIODS`` times the period, each
+    refined the same way, a periodogram test on the fold: a star that varies at the period has its power
     there and not beside it, and red noise has about the same at every period. The rise
     fraction is ``(x_max - x_min) mod 1`` on the bins after a three-bin running mean,
     the part of the period between the minimum and the following maximum; it is
@@ -377,23 +407,45 @@ def fold(
     centres, flux_ppm, counts = _bin_phase(phase, work_flux, phase_half_width * period, n_bins)
     _, dip_ppm, _ = _bin_phase(phase, work_flux, 0.5 * period, n_bins)
     long_time, long_flux = detrend(time, flux, max(detrend_window_days, ORBIT_SHAPE_WINDOW_PERIODS * period))
-    long_phase = ((long_time - t0 + 0.5 * period) % period) - 0.5 * period
-    _, orbit_ppm, _ = _bin_phase(long_phase, long_flux, 0.5 * period, n_bins)
+
+    def orbit_fold(trial_period: float) -> np.ndarray:
+        trial_phase = ((long_time - t0 + 0.5 * trial_period) % trial_period) - 0.5 * trial_period
+        return _bin_phase(trial_phase, long_flux, 0.5 * trial_period, n_bins)[1]
+
+    def amplitude_at(trial_period: float) -> float:
+        trial_ppm = orbit_fold(trial_period)
+        return _harmonic_fit(trial_ppm, int(np.argmin(np.where(np.isfinite(trial_ppm), trial_ppm, np.inf))))[
+            1
+        ]
+
     cycles = float((np.nanmax(time) - np.nanmin(time)) / period)
-    off_amplitudes = []
-    for factor in ORBIT_SHAPE_OFF_PERIODS:
-        off_period = factor * period
-        off_phase = ((long_time - t0 + 0.5 * off_period) % off_period) - 0.5 * off_period
-        _, off_ppm, _ = _bin_phase(off_phase, long_flux, 0.5 * off_period, n_bins)
-        off_amplitudes.append(
-            _harmonic_fit(off_ppm, int(np.argmin(np.where(np.isfinite(off_ppm), off_ppm, np.inf))))[1]
+    n_trials = int(
+        min(
+            ORBIT_SHAPE_MAX_TRIALS,
+            max(3, np.ceil(2 * ORBIT_SHAPE_REFINE_FRACTION * cycles / ORBIT_SHAPE_PHASE_TOLERANCE) + 1),
         )
+    )
+
+    def refined(centre: float) -> tuple[float, float]:
+        trials = centre * np.linspace(
+            1 - ORBIT_SHAPE_REFINE_FRACTION, 1 + ORBIT_SHAPE_REFINE_FRACTION, n_trials
+        )
+        amplitudes = np.array([amplitude_at(float(trial)) for trial in trials])
+        if np.all(np.isnan(amplitudes)):
+            return centre, np.nan
+        best = int(np.nanargmax(amplitudes))
+        return float(trials[best]), float(amplitudes[best])
+
+    orbit_period, _ = refined(period)
+    orbit_ppm = orbit_fold(orbit_period)
+    off_amplitudes = [refined(factor * orbit_period)[1] for factor in ORBIT_SHAPE_OFF_PERIODS]
     return {
         "phase": [round(float(centre), 3) for centre in centres],
         "flux_ppm": [None if np.isnan(value) else round(float(value)) for value in flux_ppm],
         "n_points": int(counts.sum()),
         "n_empty_bins": int((counts == 0).sum()),
         "depth_ppm": None if np.all(np.isnan(flux_ppm)) else round(float(-np.nanmin(flux_ppm)), 1),
+        "orbit_period": round(orbit_period, 5),
         **_orbit_shape(dip_ppm, orbit_ppm, cycles, float(np.nanmedian(off_amplitudes))),
     }
 
@@ -1484,10 +1536,13 @@ TOOLS: tuple[ToolSpec, ...] = (
             "rest flat near 0 ppm. Use phase_half_width 0.5 to see the whole orbit (a second dip at "
             "phase 0.5 means the true period is half) and 0.05 to see the transit shape. Whatever the "
             "width, orbit_shape judges the whole orbit: flat means the orbit is flat apart from phase 0; "
-            "variable means the flux varies through the whole orbit at this period and not beside it, "
-            "a pulsating or rotating star and not a transit, with orbit_amplitude_ppm and "
-            "rise_fraction (the part of the period from minimum to maximum; 0.1 to 0.2 is the fast "
-            "rise of an RR Lyrae star); null when the data hold fewer than five orbits."
+            "variable means the flux varies through the whole orbit at orbit_period (the period "
+            "within 2 percent that varies most) and not beside it, which is a pulsating or rotating "
+            "star and not a transit at this period, with orbit_amplitude_ppm and rise_fraction (the "
+            "part of the period from minimum to maximum; 0.1 to 0.2 is the fast rise of an RR Lyrae "
+            "star). A variable orbit rules out this period only: the star can still hold a planet at "
+            "another period, so mask the signal and search again. Null when the data hold fewer than "
+            "five orbits."
         ),
         parameters={
             "type": "object",
