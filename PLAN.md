@@ -49,6 +49,7 @@ LOGBOOK has an entry that points to the evidence: a results file, a test run or 
 - [x] Baseline on s98_v2 recorded in the LOGBOOK
 - [x] Host selection: exclude stars in the TESS eclipsing-binary catalogue and Gaia ECL class, as TOI hosts are excluded; s98_v3 built on the 36 clean hosts, BLS baseline recorded (LOGBOOK 2026-10-16)
 - [ ] One small episode set committed to git for tests and demonstrations
+- [ ] A held-out episode set from a second sector, built with the settings of s98_v3 (host selection, `BuildConfig`, context, BLS baseline). No tool and no prompt is changed from reading its failures; it only confirms a change that s98_v3 showed, and every tool is measured on both before the toolbox freezes
 - [x] Repeat each comparison run with three seeds and report mean and spread: Inkling-Small on s98_v3, both prompts (LOGBOOK 2026-10-16); the four large models with the base prompt (LOGBOOK 2026-10-25); the rules prompt on the large models is at two seeds, the rest running on 2026-10-25
 
 ## Phase 2: The agent harness (done, being measured)
@@ -168,7 +169,12 @@ freezes.
 
 1. No large-model run until the toolbox freezes. The two Kimi K2.6 raised-caps runs
    wait as well.
-2. Three tools, in this order, each measured with Inkling-Small at three seeds and the
+2. The held-out set: `stargazer targets --sector N` for a sector other than 98, the
+   same host selection and build settings, context and BLS baseline, recorded in the
+   LOGBOOK with its hash. Each tool below is measured on s98_v3 with three seeds and
+   then confirmed on the held-out set with one seed. A tool that moves s98_v3 and
+   not the held-out set is fitted to s98_v3 and does not stay.
+3. Three tools, in this order, each measured with Inkling-Small at three seeds and the
    rules prompt (about $36 a tool version; a change counts when it moves the
    false-alarm rate by more than 3 points or the completeness by more than 1 point):
    - the fold shape verdict (dip, step, sawtooth, sinusoid) on the full-orbit fold;
@@ -182,9 +188,9 @@ freezes.
      test: the shared misses ep_0042, ep_0043, ep_0049, ep_0059.
    Each tool breaks the comparison with the earlier runs; record the break in the
    LOGBOOK and keep the earlier tables as the record of their toolbox version.
-3. When the three tools are in: one large-model pass at one seed with the rules
+4. When the three tools are in: one large-model pass at one seed with the rules
    prompt (about $300) as the final table of Phase 3, and the Kimi raised-caps run.
-4. Phase 5 starts on that toolbox. Which model trains is an open decision. The case
+5. Phase 5 starts on that toolbox. Which model trains is an open decision. The case
    for a small model: a training run samples thousands of episodes, and an episode
    costs $0.06 on Inkling-Small against $0.42 on Kimi K2.6, so a run of 3,000
    episodes is about $200 against $1,300 before the training compute; the gap the
@@ -196,9 +202,8 @@ freezes.
    check which of the sampling models Tinker also trains, and run one short training
    test on the small model to measure the cost of a step.
 
-Also open: TIC 55270064's neighbour at 6.7 arcseconds (its Gaia class, if any); a
-second sector with `stargazer targets --sector N`; the small committed episode set
-for tests (Phase 1).
+Also open: TIC 55270064's neighbour at 6.7 arcseconds (its Gaia class, if any); the
+small committed episode set for tests (Phase 1).
 
 ## Open questions
 
