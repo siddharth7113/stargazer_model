@@ -1378,3 +1378,65 @@ fold call takes 0.09 seconds with the five extra folds. Tests:
 `..._of_a_sinusoid_at_another_period_is_flat`. The viewer's fold line shows the
 word. Not yet measured in a run; the measurement is Inkling-Small, rules prompt,
 three seeds, against the 2026-10-16 table, and it follows the large-model batch.
+
+**The eight rules runs of the large models** (`results/full_v9large/run_rules_rest.sh`,
+17:02 to 17:55 UTC, eight processes at eight workers at once, $584 in all; the
+large-model series on s98_v3 now stands at 30 runs and $1,762). No errors. Qwen3.5
+wrote text booleans in 178 to 183 episodes a run and Nemotron 3 Ultra in 169, and the
+fixed code accepted each on the first call: one `submit_prediction` an episode, so
+the lost turn of 2026-10-16 is gone and Qwen's rules runs cost $92 to $101 against
+$115 to $123 with the base prompt. Kimi K2.6 under the rules hit a cap in 0, 2 and 1
+episodes, wrote 7,000 output tokens an episode against 9,800 with the base prompt,
+and cost $60 to $64 a run against $81 to $88.
+
+| model | prompt | seed | false alarm | completeness | with aliases | mean score | one-transit hits | hits / false alarms / wrong periods | capped episodes | output tokens an episode | cost | minutes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Inkling | rules | 3 | 20.3% | 43.3% | 45.4% | 0.547 | 2 of 17 | 59 / 12 / 27 | 1 | 526 | $58 | 34 |
+| Nemotron 3 Ultra | rules | 3 | 3.4% | 36.9% | 39.0% | 0.552 | 3 of 17 | 49 / 2 / 9 | 0 | 2,816 | $53 | 30 |
+| Qwen3.5-397B-A17B | rules | 1 | 10.2% | 41.8% | 43.3% | 0.564 | 3 of 17 | 57 / 6 / 24 | 1 | 3,416 | $92 | 32 |
+| Qwen3.5-397B-A17B | rules | 2 | 16.9% | 42.6% | 44.7% | 0.552 | 2 of 17 | 58 / 10 / 27 | 1 | 3,842 | $95 | 32 |
+| Qwen3.5-397B-A17B | rules | 3 | 16.9% | 44.0% | 45.4% | 0.560 | 2 of 17 | 60 / 10 / 24 | 1 | 3,904 | $101 | 33 |
+| Kimi K2.6 | rules | 1 | 13.6% | 41.1% | 42.6% | 0.550 | 2 of 17 | 56 / 8 / 18 | 0 | 6,705 | $60 | 51 |
+| Kimi K2.6 | rules | 2 | 8.5% | 42.6% | 43.3% | 0.571 | 2 of 17 | 59 / 5 / 19 | 2 | 7,243 | $64 | 52 |
+| Kimi K2.6 | rules | 3 | 18.6% | 41.1% | 42.6% | 0.535 | 2 of 17 | 56 / 11 / 20 | 1 | 7,102 | $60 | 52 |
+
+The complete table, mean over three seeds with the standard deviation in brackets,
+every model and both prompts (Nemotron rules seeds 1 and 2 are the rescored files):
+
+| model | prompt | false alarm | completeness | with aliases | mean score | one-transit hits | output tokens an episode | cost a run |
+|---|---|---|---|---|---|---|---|---|
+| Inkling-Small | rules | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | 2.7 of 17 | 395 | $12 |
+| Inkling | rules | 15.8% (6.4) | 42.8% (0.8) | 45.2% (0.4) | 0.558 (0.015) | 2.0 of 17 | 514 | $57 |
+| Qwen3.5-397B-A17B | rules | 14.7% (3.9) | 42.8% (1.1) | 44.4% (1.1) | 0.558 (0.006) | 2.3 of 17 | 3,720 | $96 |
+| Kimi K2.6 | rules | 13.6% (5.1) | 41.6% (0.8) | 42.8% (0.4) | 0.552 (0.018) | 2.0 of 17 | 7,016 | $61 |
+| Nemotron 3 Ultra | rules | 6.8% (3.4) | 36.9% (2.1) | 39.2% (1.8) | 0.543 (0.021) | 3.0 of 17 | 2,787 | $54 |
+| Kimi K2.6 | base | 20.9% (1.0) | 44.7% (1.2) | 45.4% (0.7) | 0.548 (0.009) | 2.3 of 17 | 9,822 | $84 |
+| Qwen3.5-397B-A17B | base | 28.8% (4.5) | 40.2% (0.8) | 42.6% (0.0) | 0.498 (0.014) | 2.0 of 17 | 4,813 | $119 |
+| Inkling-Small | base | 31.1% (5.2) | 40.4% (3.3) | 42.1% (2.2) | 0.492 (0.034) | 2.7 of 17 | 471 | $13 |
+| Inkling | base | 40.1% (4.3) | 43.3% (0.7) | 43.7% (1.1) | 0.482 (0.018) | 1.0 of 17 | 548 | $51 |
+| Nemotron 3 Ultra | base | 26.6% (3.9) | 37.1% (1.5) | 38.8% (2.3) | 0.482 (0.004) | 3.7 of 17 | 3,324 | $65 |
+
+Reading.
+
+- The ceiling is the toolbox. With the rules prompt the five models land between
+  0.543 and 0.573, within one or two seed spreads of each other, and the small
+  model is at the top. Kimi K2.6 gains nothing from the procedure (0.548 to 0.552):
+  the rules cut its false alarms from 21 to 14 percent and cost it three points of
+  completeness, and the two cancel. The rules prompt moves every model the same
+  way, false alarms down by 12 to 24 points and completeness level, which is what it
+  did for the small model on 2026-10-16. The decision of the morning stands with
+  the complete table: no further large-model run until the toolbox changes.
+- The false alarms under the rules are the same stars for every model. The twelve
+  rules runs of the large models hold 90 false alarms, and 83 of them are on nine
+  null hosts. Two families. Periods of 13.8 to 16.7 days on TIC 146420104, TIC
+  33831807, TIC 177077137 and TIC 317412815, and 28.3 days on TIC 13984854, which
+  are one and two TESS orbits: the spacecraft's gaps and ramps, which the next tool
+  names. Short-period variables: the 0.946-day pulsator on TIC 55270064 (15 false
+  alarms), which the new fold verdict reads as `variable`, and a 1.38-day signal on
+  TIC 32816814 (8), which is one and a half times that star's 0.92-day rotation and
+  which the verdict reads as `flat`; it needs the rotation tool. The single events
+  submitted on TIC 146420104, TIC 279511563, TIC 117747153 and TIC 13984854 are the
+  rest.
+- Seed spread under the rules is in the false-alarm rate (standard deviation 3 to 6
+  points on the large models, 2 on the small one) and not in completeness (1 to 2
+  points). The models differ in restraint from seed to seed, not in what they find.

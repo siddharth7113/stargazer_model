@@ -155,12 +155,9 @@ completeness level; three null hosts hold 128 of the 291 false alarms of the 22 
 runs, one of them a 0.946-day dip on TIC 55270064 that passes every tool, the other
 two signals at the one-orbit timescale of 14 to 15 days.
 
-Running at 17:02 UTC with the owner's yes: the eight rules runs that were not launched
-on 2026-10-16 (`results/full_v9large/run_rules_rest.sh`, all at once, eight workers
-each, lowest CPU priority). The two Kimi K2.6 runs with `--max-turns 60 --max-tokens
-32768` in the same script were stopped after three minutes to free memory; they run
-alone later. Rerun candidates with the fixed code: Nemotron 3 Ultra base and Qwen3.5
-base, which lost a turn an episode to the rejected text in all three seeds.
+Nothing is running. The large-model series on s98_v3 is complete at 30 runs: five
+models, two prompts, three seeds (LOGBOOK 2026-10-25). The two Kimi K2.6 runs with
+`--max-turns 60 --max-tokens 32768` wait for the frozen toolbox.
 
 Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
 bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
