@@ -1281,3 +1281,15 @@ Reading.
 The eight rules runs that were not launched (rules seed 3 of Inkling and Nemotron 3
 Ultra, rules seeds 1 to 3 of Kimi K2.6 and Qwen3.5-397B) stay unlaunched; about $700
 at the costs above, which needs the owner's yes.
+
+**Three-episode check of the two text-boolean models on the fixed code**
+(`results/smoke/check_coercion.sh`, base prompt, seed 0, side by side, 16:46 to 16:48
+UTC, commit `a5d7f92`). Qwen3.5-397B (`qwen3_5`, $1.56, 69 seconds) and Nemotron 3
+Ultra (`nemotron3_ultra`, $1.17, 74 seconds): no errors, one `submit_prediction` call
+in each of the six episodes, every call accepted on the first try, so the lost turn of
+the 2026-10-16 runs is gone. Nemotron wrote `"True"` as text on ep_0000 and ep_0002
+and the boolean `false` on ep_0001, Qwen wrote `"True"` on all three; each prediction
+holds the value the model meant (ep_0001 of Nemotron is a miss with `detected`
+False, where the rules-run files of 2026-10-16 would have made it a detection). Both
+hit ep_0002; both submitted the 24.6-day or 16.7-day noise peak on ep_0000 or ep_0001
+as before. The harness is clean for a rerun of either model.

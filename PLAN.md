@@ -167,9 +167,11 @@ First steps for the next session:
    period within a few percent of the orbit length or the sector length, so the model
    has a verdict word for the 14-day peaks. Phase 3 item; it breaks the comparison,
    so record the break and rerun Inkling-Small base and rules at one seed.
-3. The three-episode check of Nemotron 3 Ultra and Qwen3.5 on the fixed code (the
-   submit must be accepted on the first call), then the Kimi rerun with the raised
-   caps at one seed, base prompt. Ask the owner before the eight rules runs.
+3. The three-episode check of Nemotron 3 Ultra and Qwen3.5 on the fixed code is done
+   (LOGBOOK, 2026-10-25: one accepted submit an episode). Next the Kimi rerun with the
+   raised caps at one seed, base prompt. Ask the owner before the eight rules runs,
+   and settle step 1 first, because a change to the null pool makes s98_v3 reruns
+   moot.
 4. The spotted-rotator misses (ep_0042, ep_0043, ep_0049, ep_0059) and the
    rotation-aware detrending, as in the 2026-10-16 handoff; and a second sector.
 
