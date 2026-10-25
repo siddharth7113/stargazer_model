@@ -183,8 +183,17 @@ freezes.
    LOGBOOK and keep the earlier tables as the record of their toolbox version.
 3. When the three tools are in: one large-model pass at one seed with the rules
    prompt (about $300) as the final table of Phase 3, and the Kimi raised-caps run.
-4. Phase 5 starts on that toolbox. The model that trains on Tinker is a small one, so
-   the small-model measurements are the ones that set the reward.
+4. Phase 5 starts on that toolbox. Which model trains is an open decision. The case
+   for a small model: a training run samples thousands of episodes, and an episode
+   costs $0.06 on Inkling-Small against $0.42 on Kimi K2.6, so a run of 3,000
+   episodes is about $200 against $1,300 before the training compute; the gap the
+   policy has to close is restraint, which the rules prompt already gives the small
+   model, so the reward has a known target; and the small model with the rules prompt
+   scores the same as the best large model with the base prompt. The case for a
+   large model: Kimi K2.6 finds more planets at a lower false-alarm rate with no
+   procedure, so its ceiling with a learned policy is higher. Before the decision:
+   check which of the sampling models Tinker also trains, and run one short training
+   test on the small model to measure the cost of a step.
 
 Also open: TIC 55270064's neighbour at 6.7 arcseconds (its Gaia class, if any); a
 second sector with `stargazer targets --sector N`; the small committed episode set
