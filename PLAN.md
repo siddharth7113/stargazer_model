@@ -132,41 +132,46 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] Independent re-analysis of each survivor from the public data with a different model
 - [ ] Submit as community TOIs on ExoFOP; request follow-up where warranted
 
-## Handoff: state at the end of 2026-10-16
+## Handoff: state at the end of 2026-10-25
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The day: host selection excludes known eclipsing binaries; `data/episodes/s98_v3` (36
-hosts, hash with context `745c6cb5...`) with its BLS baseline; Inkling-Small three seeds
-of each prompt on it (`results/full_v8seeds/`, README table); the first seed of four
-large models with the base prompt (`results/full_v9large/`, LOGBOOK table); `--max-tokens`
-and `--max-turns` on `stargazer agent`; argument coercion of boolean and number text.
-Findings: the prompt gap is restraint; wrong periods are false alarms on unfindable
-planets; every model misses the same planets on two spotted rotators; Kimi K2.6 is the
-only large model outside the small model's seed spread. GLM-5.3 still fails on its
-tokenizer.
+The day: the eight overnight runs of 2026-10-16 are in the LOGBOOK with every seed
+run of the large models in one table and the mean and spread for each model and
+prompt beside Inkling-Small (README table). A harness defect found in the traces: the
+argument coercion of 2026-10-16 let the agent loop take the text `"False"` as a
+detection, which made Nemotron 3 Ultra's two rules runs report 80 percent false
+alarms. Fixed in `coerce_arguments` and the loop; `stargazer rescore` rebuilds a
+results file's predictions from its trajectories and scores it again, and the two
+Nemotron rules files have a `_rescored` twin that the tables use. The other 20 files
+rescore to the same numbers. Findings: with three seeds Kimi K2.6 stays the only
+large model above the small model's spread with the base prompt; the rules prompt
+cuts the false-alarm rate of Inkling and Nemotron 3 Ultra by 27 and 18 points with
+completeness level; three null hosts hold 128 of the 291 false alarms of the 22 seed
+runs, one of them a 0.946-day dip on TIC 55270064 that passes every tool, the other
+two signals at the one-orbit timescale of 14 to 15 days.
 
-Running at close: eight runs of `results/full_v9large/run_seeds_large.sh`, left to
-finish after the owner stopped the queue at 21:58 UTC to cap the day's spend: base
-seeds 2 and 3 of Kimi K2.6 and Qwen3.5-397B, rules seeds 1 and 2 of Inkling and
-Nemotron 3 Ultra. Their results files appear in `results/full_v9large/` when each ends;
-the chain that wrote `progress.log` was killed, so no line is written for them. Not
-run: rules seed 3 of Inkling and Nemotron 3 Ultra, rules seeds 1, 2, 3 of Kimi K2.6 and
-Qwen3.5-397B (eight runs, about $700). These runs loaded the code before the two
-fixes, so Qwen loses a turn on most submits and Kimi hits the caps in about 4 percent
-of episodes; both are in the LOGBOOK. Spend rule from today: an explicit yes from the
-owner before any batch above about $300.
+Nothing is running. Not run: rules seed 3 of Inkling and Nemotron 3 Ultra, rules
+seeds 1 to 3 of Kimi K2.6 and Qwen3.5-397B (eight runs, about $700, owner's yes
+needed). Rerun candidates with the fixed code: Nemotron 3 Ultra base (it lost a turn
+an episode to the rejected text in all three seeds), Qwen3.5 base (the same), Kimi
+K2.6 with `--max-turns 60 --max-tokens 32768`.
 
 First steps for the next session:
-1. Put the finished large-model runs into one table with the mean and spread for each
-   model and prompt, beside Inkling-Small; LOGBOOK entry, README table, commit the
-   results files. Ask the owner before launching the eight missing rules runs.
-2. Kimi K2.6 rerun with `--max-turns 60 --max-tokens 32768`, three-episode check first,
-   then base and rules at one seed, to see what the caps cost it. Qwen3.5 with the
-   coercion fix, one seed, to see whether the lost turn mattered.
-3. The spotted-rotator misses (ep_0042, ep_0043, ep_0049, ep_0059 of s98_v3): what a
-   rotation-aware detrending or a `stellar_variability` tool would show. Phase 3 item.
-4. A second sector with `stargazer targets --sector N`, same build settings as s98_v3.
+1. TIC 55270064: look the star up on ExoFOP and in the literature for a 0.946-day
+   signal (TOI, community TOI, known variable). If the signal is real, the host must
+   leave the null pool of s98_v3 and the set gets a new version; if it is stellar,
+   record what it is and what tool would have said so. Then TIC 146420104 (15.37
+   days) and TIC 33831807 (14.44 days).
+2. A tool or a `summarize` field that names the TESS orbit boundaries and flags a
+   period within a few percent of the orbit length or the sector length, so the model
+   has a verdict word for the 14-day peaks. Phase 3 item; it breaks the comparison,
+   so record the break and rerun Inkling-Small base and rules at one seed.
+3. The three-episode check of Nemotron 3 Ultra and Qwen3.5 on the fixed code (the
+   submit must be accepted on the first call), then the Kimi rerun with the raised
+   caps at one seed, base prompt. Ask the owner before the eight rules runs.
+4. The spotted-rotator misses (ep_0042, ep_0043, ep_0049, ep_0059) and the
+   rotation-aware detrending, as in the 2026-10-16 handoff; and a second sector.
 
 ## Open questions
 
@@ -174,3 +179,7 @@ First steps for the next session:
   accuracy on known TOIs before trusting a tier 2 number.
 - GLM-5.3's tokenizer fails with the pinned transformers in the cookbook; retry after an update.
 - Nemotron explores to the turn cap on hard episodes; decide whether that is a prompt problem or a cost to accept.
+- Three null hosts of s98_v3 carry signals that every model submits (TIC 55270064 at
+  0.946 days, TIC 146420104 at 15.4 days, TIC 33831807 at 14.4 days). Until each is
+  explained, the false-alarm rate on s98_v3 measures these three hosts as much as the
+  models.

@@ -134,6 +134,29 @@ def cmd_score(args: argparse.Namespace) -> None:
     print(f"results -> {out}")
 
 
+def cmd_rescore(args: argparse.Namespace) -> None:
+    """Rebuild the predictions of an agent results file from its trajectories and score them again."""
+    from stargazer.agent import ToolAgentDetector
+    from stargazer.episodes import EpisodeSet
+    from stargazer.evaluate import Results
+
+    source = Results.load(Path(args.results))
+    es = EpisodeSet(args.episodes)
+    if es.hash != source.episode_set_hash:
+        raise SystemExit(
+            f"episode set hash {es.hash[:12]} differs from the results file's {source.episode_set_hash[:12]}"
+        )
+    rescored = ToolAgentDetector.rescore(source, es.truth, str(args.results))
+    out = (
+        Path(args.out)
+        if args.out
+        else Path(args.results).with_name(Path(args.results).stem + "_rescored.json")
+    )
+    rescored.save(out)
+    print(json.dumps(rescored.summary, indent=1))
+    print(f"results -> {out}")
+
+
 def cmd_agent(args: argparse.Namespace) -> None:
     """Run the tool-using agent with a model backend on a few episodes and score it."""
     from stargazer.agent import PROMPTS, ToolAgentDetector
@@ -342,6 +365,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--period-rtol", type=float, default=0.01)
     parser.add_argument("--out", default=None)
     parser.set_defaults(func=cmd_score)
+
+    parser = sub.add_parser(
+        "rescore",
+        help="rebuild an agent results file's predictions from its trajectories and score them again",
+    )
+    parser.add_argument("--results", required=True)
+    parser.add_argument("--episodes", required=True)
+    parser.add_argument("--out", default=None, help="default: the results path with _rescored before .json")
+    parser.set_defaults(func=cmd_rescore)
 
     parser = sub.add_parser("agent", help="run the tool-using agent with a model backend")
     parser.add_argument("--episodes", required=True)

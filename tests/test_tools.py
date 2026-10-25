@@ -6,7 +6,7 @@ import pytest
 from stargazer import tools
 from stargazer.context import BTJD_OFFSET, EpisodeContext
 from stargazer.inject import G_SI, inject, make_truth
-from stargazer.tools import TOOLS, TOOLS_BY_NAME, ToolSpec, call_tool, tool_definitions
+from stargazer.tools import TOOLS, TOOLS_BY_NAME, ToolSpec, call_tool, coerce_arguments, tool_definitions
 
 
 def test_summarize_cadence_and_scatter(lc):
@@ -173,6 +173,12 @@ def test_coerce_leaves_text_that_is_not_a_boolean_or_a_number():
 def test_coerce_does_not_make_a_float_text_an_integer():
     """``"2.5"`` for an integer stays text, because truncation would change the call silently."""
     assert _spec(a_value={"type": "integer"}).coerce({"a_value": "2.5"}) == {"a_value": "2.5"}
+
+
+def test_coerce_arguments_uses_the_named_tool_schema_and_leaves_an_unknown_tool_alone():
+    """The text ``"False"`` becomes the boolean for ``submit_prediction``; an unknown tool has no schema."""
+    assert coerce_arguments("submit_prediction", {"detected": "False"}) == {"detected": False}
+    assert coerce_arguments("no_such_tool", {"detected": "False"}) == {"detected": "False"}
 
 
 def test_validate_boolean_rejects_string():

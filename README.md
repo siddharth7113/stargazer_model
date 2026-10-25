@@ -209,6 +209,21 @@ rate, and no single transit.
 | Box Least Squares at 5 percent false alarm | 5% | 34% | 34% | - | 0 of 17 |
 | Inkling-Small, rules prompt, 3 seeds | 2% (2) | 39% (1) | 41% (1) | 0.573 (0.000) | 3 of 17 |
 | Inkling-Small, base prompt, 3 seeds | 31% (5) | 40% (3) | 42% (2) | 0.492 (0.034) | 3 of 17 |
+| Inkling, rules prompt, 2 seeds | 14% (7) | 43% (1) | 45% (1) | 0.564 (0.016) | 2 of 17 |
+| Inkling, base prompt, 3 seeds | 40% (4) | 43% (1) | 44% (1) | 0.482 (0.018) | 1 of 17 |
+| Nemotron 3 Ultra, rules prompt, 2 seeds | 8% (2) | 37% (3) | 39% (3) | 0.538 (0.028) | 3 of 17 |
+| Nemotron 3 Ultra, base prompt, 3 seeds | 27% (4) | 37% (2) | 39% (2) | 0.482 (0.004) | 4 of 17 |
+| Qwen3.5-397B-A17B, base prompt, 3 seeds | 29% (5) | 40% (1) | 43% (0) | 0.498 (0.014) | 2 of 17 |
+| Kimi K2.6, base prompt, 3 seeds | 21% (1) | 45% (1) | 45% (1) | 0.548 (0.009) | 2 of 17 |
+
+The large models ran through the Tinker sampling API with the thinking renderer of
+each family (`results/full_v9large/`). Kimi K2.6 writes about 10,000 output tokens an
+episode and is the only model outside the small model's seed spread with the base
+prompt. With the rules prompt the three models that ran land within 0.04 of each
+other. Three of the 27 null hosts carry a periodic signal that every model submits
+(a 0.946-day dip on TIC 55270064, and 15.4-day and 14.4-day signals on TIC 146420104
+and TIC 33831807); they hold 128 of the 291 false alarms across the 22 runs. The
+LOGBOOK entry of 2026-10-25 has the per-seed numbers and the reading.
 
 ## Toolbox
 

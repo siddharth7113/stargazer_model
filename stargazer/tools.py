@@ -1466,6 +1466,28 @@ def tool_definitions() -> list[dict]:
     return [tool.definition() for tool in TOOLS]
 
 
+def coerce_arguments(name: str, arguments: dict) -> dict:
+    """Return the arguments of a tool call as the tool runs them.
+
+    Parameters
+    ----------
+    name : str
+        The tool name. An unknown name returns the arguments unchanged.
+    arguments : dict
+        The arguments as the model wrote them.
+
+    Notes
+    -----
+    The conversion is :meth:`ToolSpec.coerce`: a text that spells a boolean or a
+    number becomes that type where the schema allows it. The agent calls this before
+    it runs a tool and before it reads a submission, so that a submission with the
+    text ``"False"`` is the same as one with the boolean. A results file records the
+    arguments as the model wrote them, so a reader can see both.
+    """
+    spec = TOOLS_BY_NAME.get(name)
+    return arguments if spec is None else spec.coerce(arguments)
+
+
 def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray, context=None) -> dict:
     """Validate and run one tool. An invalid call returns ``{"error": ...}`` instead of raising.
 
@@ -1487,7 +1509,7 @@ def call_tool(name: str, arguments: dict, time: np.ndarray, flux: np.ndarray, co
     spec = TOOLS_BY_NAME.get(name)
     if spec is None:
         return {"error": f"unknown tool: {name}", "available_tools": sorted(TOOLS_BY_NAME)}
-    arguments = spec.coerce(arguments)
+    arguments = coerce_arguments(name, arguments)
     problems = spec.validate(arguments)
     if problems:
         return {

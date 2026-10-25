@@ -7,6 +7,7 @@ import pytest
 
 from stargazer import agent as agent_module
 from stargazer.agent import PROMPTS, SYSTEM_PROMPT, AssistantTurn, ToolAgentDetector, ToolCall
+from stargazer.evaluate import Results
 
 
 class FixedBackend:
@@ -48,6 +49,88 @@ def test_submission_becomes_prediction(lc, fake_tools):
     pred = ToolAgentDetector(FixedBackend(turns)).detect(time, flux, flux_err)
     assert pred.detected and pred.period == 3.0 and pred.t0 == 1.0
     assert pred.extra["stop"] == "submitted" and pred.extra["reasoning"] == "r"
+
+
+def test_text_false_in_a_submission_is_not_a_detection(lc, fake_tools):
+    """A text ``"detected": "False"`` means no detection; the loop must read the coerced value.
+
+    The tools accept the text after coercion, so before this check the agent built a detection
+    from the truthy text and the episode scored as a false alarm.
+    """
+    time, flux, flux_err = lc
+    pred = ToolAgentDetector(FixedBackend([_submit(detected="False", reasoning="r")])).detect(
+        time, flux, flux_err
+    )
+    assert pred.detected is False and pred.extra["stop"] == "submitted"
+    assert fake_tools == [("submit_prediction", {"detected": False, "reasoning": "r"})]
+    assert pred.extra["transcript"][0]["arguments"] == {"detected": "False", "reasoning": "r"}
+
+
+def test_rescore_rebuilds_each_prediction_from_its_accepted_submission():
+    """Rescoring reads the last accepted submission through the coercion of today and scores it again.
+
+    The results file holds a text ``"False"`` that the old harness took as a detection on a null
+    episode, a rejected submission followed by an accepted one on a transit episode, and an
+    episode with no accepted submission. Everything else in each prediction stays.
+    """
+    results = Results(
+        system="tool_agent",
+        config={"period_rtol": 0.01, "epoch_frac": 0.5, "single_event_credit": 0.5},
+        episode_set="set",
+        episode_set_hash="abc",
+        preds={
+            "ep_0000": {
+                "detected": True,
+                "period": None,
+                "t0": None,
+                "duration": None,
+                "depth": None,
+                "stop": "submitted",
+                "usage": {"output_tokens": 5.0},
+                "transcript": [
+                    {
+                        "tool": "submit_prediction",
+                        "arguments": {"detected": "False", "reasoning": "noise"},
+                        "result": {"ok": True},
+                    }
+                ],
+            },
+            "ep_0001": {
+                "detected": False,
+                "stop": "submitted",
+                "transcript": [
+                    {
+                        "tool": "submit_prediction",
+                        "arguments": {"detected": "True"},
+                        "result": {"error": "x"},
+                    },
+                    {
+                        "tool": "submit_prediction",
+                        "arguments": {"detected": "True", "period": "3.0", "t0": "1.0"},
+                        "result": {"ok": True},
+                    },
+                ],
+            },
+            "ep_0002": {"detected": True, "period": 2.0, "stop": "max_turns", "transcript": []},
+        },
+        rows={},
+        summary={},
+    )
+    transit = {"kind": "transit", "snr": 12.0, "n_transits": 5}
+    truth = {
+        "ep_0000": {"kind": "null", "snr": 0.0, "n_transits": 0},
+        "ep_0001": {**transit, "transit": {"period": 3.0, "t0": 1.0, "duration": 0.1, "depth": 0.001}},
+        "ep_0002": {**transit, "transit": {"period": 2.0, "t0": 1.0, "duration": 0.1, "depth": 0.001}},
+    }
+    rescored = ToolAgentDetector.rescore(results, truth, "old.json")
+    assert rescored.rows["ep_0000"]["outcome"] == "true_null"
+    assert rescored.preds["ep_0000"]["usage"] == {"output_tokens": 5.0}
+    assert (
+        rescored.preds["ep_0000"]["reasoning"] == "noise" and rescored.preds["ep_0000"]["stop"] == "submitted"
+    )
+    assert rescored.rows["ep_0001"]["outcome"] == "hit" and rescored.preds["ep_0001"]["period"] == 3.0
+    assert rescored.rows["ep_0002"]["outcome"] == "miss" and rescored.preds["ep_0002"]["stop"] == "max_turns"
+    assert rescored.config["rescored_from"] == "old.json" and rescored.config["period_rtol"] == 0.01
 
 
 def test_loop_ends_after_submission(lc, fake_tools):

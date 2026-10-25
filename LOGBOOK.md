@@ -1154,3 +1154,130 @@ loaded the old code, so the twenty runs of this batch carry them:
    the three-episode checks and false of the full run. `stargazer agent --max-turns`
    now exists beside `--max-tool-calls` and `--max-tokens`; a Kimi rerun with
    `--max-turns 60 --max-tokens 32768` is the next check, after this batch.
+
+## 2026-10-25
+
+**The eight overnight runs, and a harness defect that the rescore repairs.** The eight
+runs that were in flight at the close of 2026-10-16 (base seeds 2 and 3 of Kimi K2.6
+and Qwen3.5-397B, rules seeds 1 and 2 of Inkling and Nemotron 3 Ultra) ended between
+21:50 and 22:20 UTC with no errors, $853 in all, and were committed in `dfbd908`
+without an entry. The handoff said that every run of the batch loaded the code before
+the two fixes. That is true of the base-prompt runs, which started at 21:17 UTC, and
+false of the four rules runs, which started after 21:50 UTC as the second step of each
+chain, when the argument coercion was in the working tree (commit `6736617`, 21:48
+UTC). The `git_commit` field of a results file is read when the file is saved, so it
+does not say which code a run loaded; the tool results in the trajectories do.
+
+The coercion fix had a defect of its own. `call_tool` converted the text `"False"` to
+the boolean, accepted the submission and answered `ok`, but the agent loop built the
+`Prediction` from the arguments as the model wrote them, and `bool("False")` is True.
+Nemotron 3 Ultra writes every boolean as text. In its two rules runs 104 and 102
+of the 200 submissions carried the text `"False"`; each became a detection with no
+period, scored as a false alarm on a null episode or a wrong event on a transit
+episode, and the files report false-alarm rates of 83 and 78 percent and scores of
+0.333 and 0.319. The other six overnight runs loaded the old code, which rejected the
+text and cost the model a turn, as the 2026-10-16 entry describes: Qwen3.5 resubmitted
+in 186 of 200 episodes, and Nemotron 3 Ultra with the base prompt in 177 to 179 of 200, so
+the base-prompt numbers of both models stand but each paid about one turn an episode.
+
+Fix: `coerce_arguments` in `stargazer.tools` is the one place that reads a call's
+arguments as the tool runs them; the agent loop calls it before the tool and builds
+the prediction from its output; the transcript keeps the arguments as the model wrote
+them. `stargazer rescore --results FILE --episodes SET` rebuilds each prediction of
+an agent results file from its last accepted `submit_prediction` call, through the
+current coercion, scores the file again with the tolerances in its config, and writes
+`FILE_rescored.json` with `rescored_from` in the config. Tests:
+`test_text_false_in_a_submission_is_not_a_detection`,
+`test_rescore_rebuilds_each_prediction_from_its_accepted_submission`,
+`test_coerce_arguments_uses_the_named_tool_schema_and_leaves_an_unknown_tool_alone`,
+`test_rescore_command_defaults`. Check: every one of the 22 seed-run files on s98_v3
+rescored to the same summary and the same 200 score rows as its source, except the
+two Nemotron rules files, where 104 and 102 episodes change. The tables below use
+`agent_nemotron3_ultra_s98_v3_rules_seed{1,2}_rescored.json`; the source files stay
+as the record of what the harness did.
+
+**Every seed run of the large models on s98_v3** (`results/full_v9large/`, hash
+`745c6cb5...`, `--workers 8`, two chains for each model at once; the large models
+cost $1,178 in all). Each row is one run of 200 episodes.
+
+| model | prompt | seed | false alarm | completeness | with aliases | mean score | one-transit hits | hits / false alarms / wrong periods | capped episodes | output tokens an episode | cost | minutes |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Inkling | base | 1 | 40.7% | 43.3% | 44.0% | 0.480 | 1 of 17 | 60 / 24 / 41 | 0 | 567 | $53 | 21 |
+| Inkling | base | 2 | 35.6% | 44.0% | 44.7% | 0.502 | 2 of 17 | 61 / 21 / 40 | 0 | 554 | $53 | 41 |
+| Inkling | base | 3 | 44.1% | 42.6% | 42.6% | 0.465 | 0 of 17 | 60 / 26 / 39 | 0 | 523 | $48 | 36 |
+| Inkling | rules | 1 | 8.5% | 41.8% | 44.7% | 0.575 | 2 of 17 | 57 / 5 / 19 | 1 | 520 | $56 | 25 |
+| Inkling | rules | 2 | 18.6% | 43.3% | 45.4% | 0.552 | 2 of 17 | 59 / 11 / 22 | 1 | 496 | $56 | 27 |
+| Nemotron 3 Ultra | base | 1 | 28.8% | 38.3% | 40.4% | 0.486 | 4 of 17 | 51 / 17 / 19 | 0 | 3,236 | $66 | 23 |
+| Nemotron 3 Ultra | base | 2 | 22.0% | 35.5% | 36.2% | 0.482 | 4 of 17 | 46 / 13 / 20 | 0 | 3,357 | $66 | 36 |
+| Nemotron 3 Ultra | base | 3 | 28.8% | 37.6% | 39.7% | 0.478 | 3 of 17 | 52 / 17 / 18 | 0 | 3,377 | $65 | 36 |
+| Nemotron 3 Ultra | rules, rescored | 1 | 6.8% | 39.0% | 41.1% | 0.557 | 4 of 17 | 51 / 4 / 12 | 0 | 2,672 | $54 | 30 |
+| Nemotron 3 Ultra | rules, rescored | 2 | 10.2% | 34.8% | 37.6% | 0.518 | 2 of 17 | 48 / 6 / 7 | 0 | 2,872 | $54 | 29 |
+| Qwen3.5-397B-A17B | base | 1 | 25.4% | 39.7% | 42.6% | 0.505 | 1 of 17 | 56 / 15 / 30 | 0 | 5,028 | $119 | 48 |
+| Qwen3.5-397B-A17B | base | 2 | 33.9% | 39.7% | 42.6% | 0.481 | 2 of 17 | 55 / 20 / 24 | 1 | 4,784 | $123 | 51 |
+| Qwen3.5-397B-A17B | base | 3 | 27.1% | 41.1% | 42.6% | 0.507 | 3 of 17 | 56 / 16 / 27 | 1 | 4,626 | $115 | 52 |
+| Kimi K2.6 | base | 1 | 20.3% | 45.4% | 46.1% | 0.554 | 2 of 17 | 64 / 12 / 24 | 9 | 10,370 | $88 | 36 |
+| Kimi K2.6 | base | 2 | 20.3% | 45.4% | 45.4% | 0.552 | 3 of 17 | 63 / 12 / 30 | 3 | 9,775 | $82 | 64 |
+| Kimi K2.6 | base | 3 | 22.0% | 43.3% | 44.7% | 0.538 | 2 of 17 | 59 / 13 / 32 | 2 | 9,320 | $81 | 63 |
+
+Mean over seeds with the standard deviation in brackets, beside Inkling-Small from the
+2026-10-16 entry and BLS at 5 percent false alarm (completeness 34 percent):
+
+| model | prompt | seeds | false alarm | completeness | with aliases | mean score | one-transit hits | output tokens an episode | cost a run |
+|---|---|---|---|---|---|---|---|---|---|
+| Inkling-Small | rules | 3 | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | 2.7 of 17 | 395 | $12 |
+| Inkling | rules | 2 | 13.6% (7.2) | 42.6% (1.0) | 45.0% (0.5) | 0.564 (0.016) | 2.0 of 17 | 508 | $56 |
+| Nemotron 3 Ultra | rules | 2 | 8.5% (2.4) | 36.9% (3.0) | 39.4% (2.5) | 0.538 (0.028) | 3.0 of 17 | 2,772 | $54 |
+| Kimi K2.6 | base | 3 | 20.9% (1.0) | 44.7% (1.2) | 45.4% (0.7) | 0.548 (0.009) | 2.3 of 17 | 9,822 | $84 |
+| Qwen3.5-397B-A17B | base | 3 | 28.8% (4.5) | 40.2% (0.8) | 42.6% (0.0) | 0.498 (0.014) | 2.0 of 17 | 4,813 | $119 |
+| Inkling-Small | base | 3 | 31.1% (5.2) | 40.4% (3.3) | 42.1% (2.2) | 0.492 (0.034) | 2.7 of 17 | 471 | $13 |
+| Inkling | base | 3 | 40.1% (4.3) | 43.3% (0.7) | 43.7% (1.1) | 0.482 (0.018) | 1.0 of 17 | 548 | $51 |
+| Nemotron 3 Ultra | base | 3 | 26.6% (3.9) | 37.1% (1.5) | 38.8% (2.3) | 0.482 (0.004) | 3.7 of 17 | 3,324 | $65 |
+
+Reading.
+
+- The seed spread of the large models is smaller than the small model's with the base
+  prompt (standard deviation of the score 0.004 to 0.018 against 0.034), so the
+  ranking of 2026-10-16 holds with three seeds: Kimi K2.6 is above every other
+  base-prompt run by more than any spread, and Inkling, Nemotron 3 Ultra and Qwen3.5
+  are within the small model's spread of each other. Kimi's rank comes from the
+  false-alarm side (21 percent against 27 to 40) with the highest completeness.
+- The rules prompt does for Inkling and Nemotron 3 Ultra what it does for
+  Inkling-Small: completeness stays where it was and the false-alarm rate falls, by
+  27 points for Inkling and 18 for Nemotron. Neither reaches the small model's 2
+  percent. Inkling with the rules submits a different set of null hosts in each seed:
+  seed 1 the 0.946-day signal on TIC 55270064 twice and single events on TIC
+  117747153 and TIC 121711742; seed 2 eleven false alarms on seven other hosts, among
+  them the 14.4-day signal on TIC 33831807 in all three of its null episodes, and
+  none on TIC 55270064. Inkling-Small with the rules submits two false alarms or
+  none. The two Inkling rules seeds differ by 10 points of false-alarm rate, the
+  largest spread in the table, so a third seed is needed before the gap to
+  Inkling-Small counts.
+- The false alarms are on the hosts, not spread over the sample. Across the 22 seed
+  runs on s98_v3 (16 large-model runs and 6 of Inkling-Small) there are 291 false
+  alarms on 58 null episodes of 27 hosts, and 128 of them are on three hosts: TIC
+  146420104 (47 of 66 chances, a 15.37-day signal in 27 of them), TIC 33831807 (45 of
+  66, 14.44 days in 28) and TIC 55270064 (36 of 44, 0.946 days in all 36). The same
+  period from runs of five models with two prompts means the signal is in the light
+  curve. The 0.946-day dip on TIC 55270064 passes every tool in the box in every run
+  that reaches it: flat bottom, host density 3.4 g/cc, odd and even depths the same,
+  no secondary, no TOI, no eclipsing-binary entry, no Gaia class, and
+  `ephemeris_match` answers `no_match`. By the benchmark it is a false alarm; by the
+  tools it is a candidate. The 14.4-day and 15.4-day signals, and the 13.9- to
+  14.4-day peaks that lead the false alarms on TIC 279511563, TIC 32816814, TIC
+  146535972 and TIC 117747153, sit at the length of one TESS orbit (half the sector),
+  where the gap and the scattered-light ramps at the orbit ends make a two-event box
+  signal; these are systematics, and a tool that knows the orbit boundaries would name
+  them. Both findings go to the handoff.
+- Capped episodes: Kimi K2.6 hit a cap in 9, 3 and 2 episodes (seed 1 with the
+  `max_tokens` and `model_stopped` cases of the 2026-10-16 entry; seeds 2 and 3 only
+  `max_turns`). Inkling with the rules looped on `fold` and `fit_transit` for 30
+  turns on ep_0049 (seed 1) and ep_0063 (seed 2), both findable planets scored as
+  misses, about $1 each. Qwen3.5 hit `max_turns` once in each of seeds 2 and 3.
+- Cost: Qwen3.5 is the most expensive model at $119 a run for the score of the small
+  model at $13; Kimi K2.6 at $84 buys 0.06 of score over the small model's base
+  prompt and the same score as the rules prompt at seven times the price. With the
+  rules prompt the cost of a large model is $54 to $56 a run.
+
+The eight rules runs that were not launched (rules seed 3 of Inkling and Nemotron 3
+Ultra, rules seeds 1 to 3 of Kimi K2.6 and Qwen3.5-397B) stay unlaunched; about $700
+at the costs above, which needs the owner's yes.

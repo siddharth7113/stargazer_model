@@ -28,6 +28,12 @@ def test_show_command_defaults():
     assert args.width == 120 and args.full is False and args.no_thinking is False
 
 
+def test_rescore_command_defaults():
+    """The rescore needs the results file and its episode set; the output path is derived when unset."""
+    args = build_parser().parse_args(["rescore", "--results", "r.json", "--episodes", "x"])
+    assert args.results == "r.json" and args.episodes == "x" and args.out is None
+
+
 def test_view_command_takes_results():
     """The terminal viewer needs only the results file."""
     assert build_parser().parse_args(["view", "--results", "r"]).results == "r"

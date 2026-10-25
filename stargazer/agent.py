@@ -20,7 +20,9 @@ from typing import Any, Protocol
 
 import numpy as np
 
-from stargazer.tools import call_tool, tool_definitions
+from stargazer.evaluate import Results
+from stargazer.score import score_set
+from stargazer.tools import call_tool, coerce_arguments, tool_definitions
 from stargazer.types import Prediction
 
 BASE_PROMPT = """You are an exoplanet astronomer. You have one TESS light curve of one star. Decide
@@ -207,6 +209,7 @@ class ToolAgentDetector:
     DEFAULT_MAX_TURNS = 30
     DEFAULT_MAX_TOKENS = 400_000
     DEFAULT_MAX_NUDGES = 2
+    SUBMISSION_FIELDS = ("detected", "period", "t0", "duration", "depth", "reasoning")
     NUDGE = (
         "Your last reply contained no tool call, so nothing happened. Reply with a tool call: "
         "continue the analysis, or call submit_prediction with your answer."
@@ -288,15 +291,13 @@ class ToolAgentDetector:
                 continue
             for call in turn.tool_calls:
                 n_calls += 1
-                result = call_tool(call.name, call.arguments, time, flux, context)
+                arguments = coerce_arguments(call.name, call.arguments)
+                result = call_tool(call.name, arguments, time, flux, context)
                 result["calls_remaining"] = self._max_tool_calls - n_calls
                 transcript.append({"tool": call.name, "arguments": call.arguments, "result": result})
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
                 if call.name == "submit_prediction" and "error" not in result:
-                    prediction = Prediction.from_dict(
-                        {key: value for key, value in call.arguments.items() if key != "reasoning"}
-                    )
-                    prediction.extra["reasoning"] = call.arguments.get("reasoning", "")
+                    prediction = self.submitted_prediction(arguments)
                     stop = "submitted"
             if prediction is not None:
                 break
@@ -322,6 +323,76 @@ class ToolAgentDetector:
             }
         )
         return pred
+
+    @staticmethod
+    def submitted_prediction(arguments: dict) -> Prediction:
+        """Return the prediction that an accepted ``submit_prediction`` call makes.
+
+        Parameters
+        ----------
+        arguments : dict
+            The arguments of the call after :func:`stargazer.tools.coerce_arguments`,
+            so ``detected`` is a boolean and the numbers are numbers. ``reasoning``
+            goes to ``Prediction.extra``.
+        """
+        prediction = Prediction.from_dict(
+            {key: value for key, value in arguments.items() if key != "reasoning"}
+        )
+        prediction.extra["reasoning"] = arguments.get("reasoning", "")
+        return prediction
+
+    @classmethod
+    def rescore(cls, results: Results, truth: dict, source: str) -> Results:
+        """Return the results with each prediction rebuilt from its trajectory and scored again.
+
+        Parameters
+        ----------
+        results : Results
+            A results file that this detector wrote. Each prediction holds its
+            ``transcript``, the list of tool calls with the arguments as the model
+            wrote them and the result each returned.
+        truth : dict
+            ``EpisodeSet.truth`` of the episode set the results name.
+        source : str
+            The path of the results file, recorded in the new config under
+            ``rescored_from``.
+
+        Notes
+        -----
+        The prediction of an episode is the last ``submit_prediction`` call whose
+        result has no error, read through the current :func:`coerce_arguments`. An
+        episode with no accepted submission is not detected, as in the loop. The
+        trajectory, the usage and the stop reason stay as they were. The scoring
+        tolerances come from the results config. The new config names the source
+        file under ``rescored_from``; the commit is the one that rescores. This
+        repairs a results file whose predictions the harness misread, for example
+        a submission with the text ``"False"`` that an earlier version took as a
+        detection.
+        """
+        preds = {}
+        for episode_id, pred in results.preds.items():
+            accepted = [
+                entry
+                for entry in pred.get("transcript", [])
+                if entry["tool"] == "submit_prediction" and "error" not in entry["result"]
+            ]
+            rebuilt = (
+                cls.submitted_prediction(coerce_arguments("submit_prediction", accepted[-1]["arguments"]))
+                if accepted
+                else Prediction(detected=False)
+            )
+            kept = {key: value for key, value in pred.items() if key not in cls.SUBMISSION_FIELDS}
+            preds[episode_id] = {**kept, **rebuilt.to_dict()}
+        tolerances = {
+            key: results.config[key]
+            for key in ("period_rtol", "epoch_frac", "single_event_credit")
+            if key in results.config
+        }
+        rows, summary = score_set(preds, truth, **tolerances)
+        config = {**results.config, "rescored_from": source}
+        return Results(
+            results.system, config, results.episode_set, results.episode_set_hash, preds, rows, summary
+        )
 
 
 def _assistant_message(turn: AssistantTurn) -> dict:

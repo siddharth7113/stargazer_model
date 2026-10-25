@@ -118,6 +118,27 @@ prediction:
 | `--period-rtol` | period tolerance |
 | `--out` | output file |
 
+### `stargazer rescore`
+
+```bash
+stargazer rescore --results results/full_v9large/agent_nemotron3_ultra_s98_v3_rules_seed1.json \
+                  --episodes data/episodes/s98_v3
+```
+
+Rebuild the predictions of an agent results file from the trajectories it holds and
+score them again. The prediction of an episode is its last accepted `submit_prediction`
+call, read with the argument coercion of the current code. The command repairs a
+results file that an earlier harness misread, for example one where the text
+`"False"` counted as a detection. The new file names the source under
+`rescored_from` in its config. The trajectories, the usage and the cost stay as they
+were.
+
+| Option | Meaning |
+|---|---|
+| `--results` | the results file of an agent run |
+| `--episodes` | the episode set it ran on; the hash must match |
+| `--out` | output file; default is the results path with `_rescored` before `.json` |
+
 ## Analysis
 
 ### `stargazer calibrate`
