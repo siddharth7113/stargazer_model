@@ -101,7 +101,8 @@ description written for the model. The agent gets the tool only when the test pa
 - [ ] Preregistered predictions: transit times and depths for the next sector, with frozen code and hashes
 
 ### 3d Course notebooks
-- [ ] `examples/`: one Jupyter notebook for each tool, for a human reader, in the STYLE.md register, with plots. Each notebook shows one real episode, the tool's equation, the tool's output and what the plot shows. Added as each tool is finished. Done so far: the episode and summarize, injection, the period search, vetting a candidate (fold, fit_transit, odd_even, secondary_eclipse), single events (LOGBOOK 2026-10-11). To come: scoring; the agent loop.
+- [x] `examples/`: one Jupyter notebook for each tool, for a human reader, in the STYLE.md register, with plots. Each notebook shows one real episode, the tool's equation, the tool's output and what the plot shows. Seven notebooks: the episode and summarize, injection, the period search, vetting a candidate (fold, fit_transit, odd_even, secondary_eclipse), single events, scoring, reading a run (LOGBOOK 2026-10-11; commits 6f9b513, 8a188de; the owner rewrote the text of 01 and 02 and added the figures)
+- [ ] Notebooks for the catalogue tools `ephemeris_match` and `nearby_stars`, and one for each new tool as it is finished
 
 ## Phase 4: Data beyond one TESS sector
 
