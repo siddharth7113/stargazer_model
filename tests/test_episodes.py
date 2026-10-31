@@ -136,7 +136,8 @@ def test_build_without_cached_hosts_raises(fake_cache, tmp_path):
 def test_build_real_writes_catalogue_truth_and_the_flux_as_observed(fake_cache, tmp_path):
     """A real host's episode keeps the cached flux unchanged, its truth holds the TOI period with the epoch
     moved into the window, and the null episodes come from the other targets file; the context must be
-    masked separately.
+    masked separately. The catalogue depth is faint, so the ephemeris check keeps the planet on the
+    catalogue's word although the cached flux holds no transit.
     """
     cache, targets, _ = fake_cache
     host = dict(targets["targets"][0])
@@ -146,7 +147,7 @@ def test_build_real_writes_catalogue_truth_and_the_flux_as_observed(fake_cache, 
         "period": 3.0,
         "epoch_bjd": float(lc.time.min()) + BTJD_OFFSET - 2.0 * 3.0 + 1.0,
         "duration_hours": 2.4,
-        "depth_ppm": 1000.0,
+        "depth_ppm": 100.0,
         "disposition": "CP",
         "alerted": "2019-06-01",
     }
@@ -157,8 +158,9 @@ def test_build_real_writes_catalogue_truth_and_the_flux_as_observed(fake_cache, 
     assert len(episodes) == 4 and truth["ep_0000"]["kind"] == "transit"
     transit = truth["ep_0000"]["transit"]
     assert transit["period"] == 3.0 and transit["t0"] == pytest.approx(1.0) and transit["source"] == "toi"
-    assert transit["duration"] == pytest.approx(0.1) and transit["depth"] == pytest.approx(1e-3)
+    assert transit["duration"] == pytest.approx(0.1) and transit["depth"] == pytest.approx(1e-4)
     assert truth["ep_0000"]["n_transits"] == 9 and truth["ep_0000"]["snr"] > 0
+    assert transit["ephemeris"] == "confirmed" and episodes.config["absent_ephemerides"] == []
     _, flux, _ = episodes.load("ep_0000")
     assert np.allclose(flux, lc.flux)
     assert all(truth[f"ep_000{index}"]["kind"] == "null" for index in (1, 2, 3))
@@ -219,3 +221,15 @@ def test_catalogue_transit_calls_a_strong_ephemeris_absent_when_the_data_show_no
         time, flux, _catalogue_entry(time, 3.0, 1.3, 100.0, 2.4), float(time.min())
     )
     assert faint["ephemeris"] == "confirmed"
+
+
+def test_catalogue_transit_does_not_check_a_planet_with_no_transit_in_the_data(lc):
+    """A 100-day planet whose next transit falls after the data cannot be verified: the word is no_transit,
+    the epoch is the catalogue's and the check fields are empty, so a fit on noise never moves it.
+    """
+    time, flux, _ = lc
+    record, n_transits, _ = catalogue_transit(
+        time, flux, _catalogue_entry(time, 100.0, 40.0, 10000.0, 3.0), float(time.min())
+    )
+    assert record["ephemeris"] == "no_transit" and n_transits == 0
+    assert record["t0"] == pytest.approx(40.0, abs=1e-6) and record["depth_snr"] is None

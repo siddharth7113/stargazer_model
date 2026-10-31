@@ -110,6 +110,19 @@ def verify_ephemeris(time: np.ndarray, flux: np.ndarray, period: float, t0: floa
     }
 
 
+def _transits_and_snr(
+    time: np.ndarray, flux: np.ndarray, period: float, t0: float, duration: float, depth: float
+) -> tuple[int, float]:
+    """Return the number of transits with at least three points and the box signal-to-noise at an epoch."""
+    phase = ((time - t0 + 0.5 * period) % period) - 0.5 * period
+    in_transit = np.abs(phase) < 0.5 * duration
+    epochs = np.round((time[in_transit] - t0) / period).astype(int)
+    _, counts = np.unique(epochs, return_counts=True)
+    scatter = point_scatter(flux)
+    snr = float(depth / scatter * np.sqrt(int(in_transit.sum()))) if scatter > 0 else 0.0
+    return int(np.sum(counts >= 3)), snr
+
+
 def catalogue_transit(
     time: np.ndarray, flux: np.ndarray, planet: dict, t_offset: float
 ) -> tuple[dict, int, float]:
@@ -138,11 +151,13 @@ def catalogue_transit(
     transit and the scatter includes it.
 
     The ephemeris is then checked against the data with :func:`verify_ephemeris`,
-    and the record carries the result under ``ephemeris``: ``confirmed`` when the
-    fitted epoch is within one duration of the catalogue's; ``shifted`` when it is
-    further and the dip is significant, in which case ``t0`` becomes the fitted
-    epoch and ``t0_catalogue`` keeps the catalogue's; ``absent`` when the dip is
-    below ``EPHEMERIS_MIN_SNR`` and the expected signal-to-noise is at least
+    and the record carries the result under ``ephemeris``: ``no_transit`` when the
+    catalogue ephemeris puts no transit in the data, where nothing can be checked;
+    ``confirmed`` when the fitted epoch is within one duration of the catalogue's;
+    ``shifted`` when it is further and the dip is significant, in which case ``t0``
+    becomes the fitted epoch, ``t0_catalogue`` keeps the catalogue's, and the count
+    and the signal-to-noise are those of the refined epoch; ``absent`` when the dip
+    is below ``EPHEMERIS_MIN_SNR`` and the expected signal-to-noise is at least
     ``EPHEMERIS_CHECK_SNR``. The caller leaves an absent planet out of the set.
     """
     period = float(planet["period"])
@@ -150,26 +165,21 @@ def catalogue_transit(
     depth = float(planet["depth_ppm"]) * 1e-6
     epoch = float(planet["epoch_bjd"]) - BTJD_OFFSET
     first = epoch + period * np.ceil((time.min() - epoch) / period)
-    check = verify_ephemeris(time, flux, period, first, duration)
-    cadence = float(np.median(np.diff(time)))
-    expected = float(depth / point_scatter(flux) * np.sqrt(max(duration / cadence, 1.0)))
-    if check["depth_snr"] < EPHEMERIS_MIN_SNR and expected >= EPHEMERIS_CHECK_SNR:
-        word = "absent"
-    elif abs(check["epoch_shift_days"]) > duration and check["depth_snr"] >= EPHEMERIS_MIN_SNR:
-        word = "shifted"
-    else:
-        word = "confirmed"
     t0_catalogue = first
-    if word == "shifted":
-        first = check["t0_fitted"]
-        first = first + period * np.ceil((time.min() - first) / period)
-    phase = ((time - first + 0.5 * period) % period) - 0.5 * period
-    in_transit = np.abs(phase) < 0.5 * duration
-    epochs = np.round((time[in_transit] - first) / period).astype(int)
-    _, counts = np.unique(epochs, return_counts=True)
-    n_transits = int(np.sum(counts >= 3))
-    scatter = point_scatter(flux)
-    snr = float(depth / scatter * np.sqrt(int(in_transit.sum()))) if scatter > 0 else 0.0
+    n_transits, snr = _transits_and_snr(time, flux, period, first, duration, depth)
+    check = {"measured_depth_ppm": None, "depth_snr": None, "epoch_shift_days": None}
+    word = "no_transit"
+    if n_transits > 0:
+        check = verify_ephemeris(time, flux, period, first, duration)
+        if check["depth_snr"] < EPHEMERIS_MIN_SNR and snr >= EPHEMERIS_CHECK_SNR:
+            word = "absent"
+        elif abs(check["epoch_shift_days"]) > duration and check["depth_snr"] >= EPHEMERIS_MIN_SNR:
+            word = "shifted"
+            first = check["t0_fitted"]
+            first = first + period * np.ceil((time.min() - first) / period)
+            n_transits, snr = _transits_and_snr(time, flux, period, first, duration, depth)
+        else:
+            word = "confirmed"
     record = {
         "period": period,
         "t0": float(first - t_offset),
