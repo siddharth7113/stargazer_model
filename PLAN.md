@@ -116,7 +116,7 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] K2: different systematics, the transfer test
 - [ ] One ground-based survey (NGTS or WASP public data): gaps, airmass trends, red noise
 - [ ] Injection into each survey with the same `BuildConfig`; one episode set for each survey
-- [ ] Real confirmed planets mixed into the sets, so a policy cannot learn injection artefacts
+- [x] Real confirmed planets: `stargazer targets --real`, `build --real`, `context --mask-tois`; the set s98_real_v1 (43 confirmed single-planet hosts of sector 98 with the flux as observed, 40 nulls) is built, its first run waits for VizieR (LOGBOOK 2026-10-31)
 - [ ] Vetting labels from ExoFOP dispositions with the disposition date recorded
 
 ## Phase 5: Reinforcement learning on Tinker
@@ -170,13 +170,27 @@ peak field were measured offline and none recovers them, and a rotation-harmonic
 match flags as many hits as false alarms. The toolbox is frozen at twelve tools with
 the segment-edge verdict in the search (LOGBOOK 2026-10-31).
 
-Nothing is running. The next session starts with item 4, which needs the owner's
-yes: the one-seed large-model pass with the rules prompt on s98_v3 as the final table
-of Phase 3 (Inkling, Nemotron 3 Ultra, Qwen3.5-397B, Kimi K2.6; about $300 at the
-2026-10-25 costs), where the segment-edge verdict meets the models that submitted the
-ramps, and the Kimi K2.6 raised-caps run. Then Phase 5: check which sampling models
-Tinker trains, and one short training test on Inkling-Small to measure the cost of a
-step. The Full Frame Image loader (item 3b) can be built alongside without a paid run.
+The large-model pass on the frozen toolbox ran the same evening with the owner's
+yes: Phase 3 closes on its table (LOGBOOK 2026-10-31). The owner then chose the
+real-planet test as the next step, on a sector observed after the models' release
+so that no model can have seen the light curve. The code path exists and the set
+s98_real_v1 is built: 43 confirmed single-planet hosts of sector 98 with the flux as
+observed and the truth from the TOI list, 40 null episodes from the s98_v3 hosts.
+Its context could not be fetched, because every VizieR mirror timed out.
+
+Nothing is running. The next session starts with the real-planet run:
+
+1. `stargazer context --episodes data/episodes/s98_real_v1 --targets
+   data/targets_s98_real.json data/targets_s98_v3.json --mask-tois` once VizieR
+   answers (test with `curl -m 15 https://vizier.cds.unistra.fr/`); check that
+   `context.json` holds no TOI entry and that its source record says `masked`.
+2. `sh results/s98_real_v1/run_reference.sh`: the BLS baseline and Inkling-Small
+   with the rules prompt at seed 1 (about $5). Read the hits by depth: the ten
+   planets under 1,000 ppm are the test, the hot Jupiters are the control. Record
+   the sector's observation dates beside each model's release date.
+3. Then Phase 5: which sampling models Tinker trains, and one short training test on
+   Inkling-Small to measure the cost of a step; the environment wrapper in the
+   cookbook's RL interface. The Full Frame Image loader alongside.
 
 Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
 bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
@@ -219,8 +233,11 @@ freezes.
    Image loader (QLP or TESS-SPOC, 10- and 30-minute cadence) as a `LightCurveCache`
    source, and one small FFI episode set on unvetted stars to test the three-array
    interface on real systematics. Agreed with the owner on 2026-10-25.
-4. When the three tools are in: one large-model pass at one seed with the rules
-   prompt (about $300) as the final table of Phase 3, and the Kimi raised-caps run.
+4. Done 2026-10-31: the large-model pass at one seed with the rules prompt on the
+   frozen toolbox ($247): every model moves the same way, false alarms 9.8 to 6.4
+   percent and score 0.561 to 0.578 on the mean of four, the ramp family gone from
+   the false alarms (LOGBOOK 2026-10-31). The Kimi raised-caps run is dropped; Kimi
+   hit a cap in two episodes.
 5. Phase 5 starts on that toolbox, and it is the experiment the project was built
    for; the owner's $3,000 reserve is for it. Which model trains is an open decision. The case
    for a small model: a training run samples thousands of episodes, and an episode

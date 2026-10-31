@@ -1872,3 +1872,80 @@ segment-edge verdict in the search: `summarize`, `bls_peaks`, `search_signals`,
 `single_events`, `fold`, `orbit_shape`, `fit_transit`, `odd_even`,
 `secondary_eclipse`, `ephemeris_match`, `nearby_stars`, `submit_prediction`. The
 reference rows for the frozen toolbox are the `full_v13edge` runs on both sets.
+
+**The final Phase 3 table: the four large models on the frozen toolbox**
+(`results/full_v14frozen/run_pass.sh`, commit `f7f77f2`, rules prompt, seed 1, s98_v3,
+four processes at eight workers, 22:13 to 22:52 UTC, $247 in all, owner's yes;
+three-episode checks first, `results/smoke/check_frozen.sh`, $3.50, ep_0134, ep_0063,
+ep_0033, no errors). Each row is one run of 200 episodes against the same model's rules
+seed 1 of 2026-10-25 on the box without the segment-edge verdict (Nemotron's is the
+rescored file). Kimi K2.6 hit a cap in two episodes (one `max_tokens`, one
+`max_turns`); every other episode submitted.
+
+| model | toolbox | false alarm | completeness | with aliases | mean score | one-transit hits | hits / false alarms / wrong periods | output tokens an episode | cost |
+|---|---|---|---|---|---|---|---|---|---|
+| Inkling | 2026-10-25 | 8.5% | 41.8% | 44.7% | 0.575 | 2 of 17 | 61 / 5 / 23 | 520 | $56 |
+| Inkling | frozen | 5.1% | 44.0% | 44.7% | 0.591 | 3 of 17 | 63 / 3 / 10 | 431 | $48 |
+| Nemotron 3 Ultra | 2026-10-25 | 6.8% | 39.0% | 41.1% | 0.557 | 4 of 17 | 58 / 4 / 13 | 2,672 | $54 |
+| Nemotron 3 Ultra | frozen | 3.4% | 36.9% | 39.7% | 0.555 | 3 of 17 | 55 / 2 / 7 | 2,167 | $53 |
+| Qwen3.5-397B-A17B | 2026-10-25 | 10.2% | 41.8% | 43.3% | 0.564 | 3 of 17 | 61 / 6 / 26 | 3,416 | $92 |
+| Qwen3.5-397B-A17B | frozen | 10.2% | 44.7% | 45.4% | 0.583 | 3 of 17 | 64 / 6 / 12 | 2,875 | $88 |
+| Kimi K2.6 | 2026-10-25 | 13.6% | 41.1% | 42.6% | 0.550 | 2 of 17 | 60 / 8 / 20 | 6,705 | $60 |
+| Kimi K2.6 | frozen | 6.8% | 43.3% | 44.0% | 0.583 | 3 of 17 | 62 / 4 / 5 | 5,217 | $58 |
+| mean of four | 2026-10-25 | 9.8% | 40.9% | 42.9% | 0.561 | 2.8 of 17 | | 3,328 | $66 |
+| mean of four | frozen | 6.4% | 42.2% | 43.4% | 0.578 | 3.0 of 17 | | 2,673 | $62 |
+
+Reading.
+
+- One seed each, so each row is inside its model's seed spread (3 to 6 points of
+  false-alarm rate on 2026-10-25); the evidence is that the four move together. The
+  score rises for three models by 0.016 to 0.033 and is flat for Nemotron 3 Ultra;
+  the false-alarm rate falls for three (Inkling 8.5 to 5.1, Nemotron 6.8 to 3.4, Kimi
+  13.6 to 6.8) and holds for Qwen; the completeness rises for three by 2 to 3 points
+  and falls for Nemotron by 2. The mean of the four: false alarms 9.8 to 6.4 percent,
+  completeness 40.9 to 42.2, score 0.561 to 0.578. Kimi K2.6 and Qwen3.5 now reach
+  the small model's three-seed score of 0.573 and Inkling passes it.
+- The wrong periods are where the verdict acts: 23 to 10, 13 to 7, 26 to 12 and 20
+  to 5. On 2026-10-25 most of a model's wrong periods were the 14- and 16-day ramps
+  submitted on planet episodes; with the verdict the model skips the ramp, and some
+  of those episodes become hits (the completeness gain) and the rest misses. That is
+  the mechanism the replay predicted: the ramps scored zero either way, and a model
+  that skips them can only gain.
+- The ramp family is gone from the false alarms. On 2026-10-25 the four seed-1 runs
+  held 23 false alarms, 8 of them at 14.4 to 28.3 days on the ramp hosts; on the
+  frozen box they hold 15, none at a ramp period. What remains is the other family:
+  the 1.38-day signal on the rotating star TIC 32816814 (6 of the 15, from three
+  models), single events (6), the 13.79-day residual behind the masked ramp on TIC
+  33831807 (2, Kimi) and a 12.94-day one (Qwen). The 0.946-day pulsator on TIC
+  55270064, 6 false alarms across these four runs on 2026-10-25, gives none here;
+  one seed cannot say whether that is `orbit_shape` or chance.
+- The models saw `at_segment_edges` in 39 to 73 episodes of 200 and read it as
+  intended; the large models write fewer output tokens an episode on the frozen box
+  (Kimi 6,705 to 5,217, Qwen 3,416 to 2,875), so a run is cheaper by $2 to $8.
+
+Phase 3 closes on this table. The toolbox is the twelve tools of commit `f7f77f2`;
+the Kimi K2.6 raised-caps run stays unlaunched, since Kimi hit a cap in only two
+episodes here.
+
+**The real-planet set s98_real_v1** (built 2026-10-31, hash `8e91c3f5b9e3...`). The
+owner's point: an injected set tests the shape the injector drew, and the test that
+matters for discovery is a confirmed planet in the flux as observed, on a sector
+observed after the models' release so that no model can have seen the light curve. A
+new path in the code (commits `e209205`, `fef5f5e`): `stargazer targets --real
+--sector 98` takes the hosts of the sector with exactly one TOI entry whose
+disposition is `CP` or `KP`, brighter than Tmag 12, with a full ephemeris and a
+positive period (TOI-2447.01, a single transit with period zero, is left out): 44 of
+435 TOI hosts among the 13,000 stars with 2-minute data, 43 after the period cut,
+alerted 2018 to 2022 (confirmation takes years; the light curves are from 2025).
+`stargazer fetch` cached all 43. `stargazer build --real --null-targets
+data/targets_s98_v3.json --n-null 40 --seed 1` wrote 43 transit episodes with the
+flux as observed and the truth from the TOI list (period, epoch moved into the
+window, duration, depth), and 40 null episodes drawn from the 36 s98_v3 hosts: 83
+episodes. Six of the 43 planets have no transit in the sector (periods 84 to 225
+days) and are scored as nulls; the others have 1 to 30 transits, depths 160 ppm to
+1.7 percent, estimated signal-to-noise 5 to 496. `stargazer context --mask-tois`
+leaves the hosts' own TOI entries out of the context, so `ephemeris_match` cannot
+return the answer; it could not run tonight, because every VizieR mirror (Strasbourg,
+Harvard, Tokyo) timed out from 22:40 UTC while ExoFOP and MAST answered. The run
+script `results/s98_real_v1/run_reference.sh` (BLS baseline, then Inkling-Small with
+the rules prompt at seed 1) waits for the context.
