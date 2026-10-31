@@ -220,9 +220,9 @@ small committed episode set for tests (Phase 1).
   accuracy on known TOIs before trusting a tier 2 number.
 - GLM-5.3's tokenizer fails with the pinned transformers in the cookbook; retry after an update.
 - Nemotron explores to the turn cap on hard episodes; decide whether that is a prompt problem or a cost to accept.
-- TIC 190310047 in s92_v1 (Tmag 8.2, no TOI): one flat-bottomed 857 ppm, 2.3-hour dip
-  at 10 sigma in 25.7 days, submitted as a 12.84-day planet in all five of its null
-  episodes under the rules prompt. A candidate for the next sector, not a systematic.
+- Closed 2026-10-31: TIC 190310047 in s92_v1, the 12.84-day dip submitted in all five
+  of its null episodes. Its one event sits 0.33 days from a gap edge, the segment-edge
+  verdict names it, and the owner's own check reads it as instrumental.
 - Three null hosts of s98_v3 carry signals that every model submits (TIC 55270064 at
   0.946 days, TIC 146420104 at 15.4 days, TIC 33831807 at 14.4 days). Until each is
   explained, the false-alarm rate on s98_v3 measures these three hosts as much as the

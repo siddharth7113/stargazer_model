@@ -428,6 +428,20 @@ def test_bls_peaks_planet_away_from_the_edges_is_clear(lc, star):
     assert top["n_events_at_segment_edges"] == 0 and top["edge_verdict"] == "clear"
 
 
+def test_bls_peaks_edges_come_from_the_unmasked_light_curve(lc, star):
+    """A 3-day planet with t0 = 1.3 reads clear with no event at an edge. With a 2.9-day signal masked,
+    each masked event leaves a hole in the series; the holes are not segment edges, so the planet's
+    count and verdict do not change.
+    """
+    time, flux, _ = lc
+    relative = time - time.min()
+    injected = inject(relative, flux, make_truth(period=3.0, t0=1.3, depth=0.01, b=0.0, star=star))
+    masks = [{"period": 2.9, "t0": 0.2, "duration": 0.25}]
+    top = tools.bls_peaks(relative, injected, masks=masks)["peaks"][0]
+    assert abs(top["period"] / 3.0 - 1) < 0.01
+    assert top["n_events_at_segment_edges"] == 0 and top["edge_verdict"] == "clear"
+
+
 def test_bls_peaks_mask_reveals_weaker_signal(lc, star):
     """With a 1 percent, 3-day signal masked, a 0.2 percent, 7-day signal becomes the top peak."""
     time, flux, _ = lc

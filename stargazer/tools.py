@@ -170,10 +170,16 @@ def bls_peaks(
     or more land within ``EDGE_MARGIN_DAYS`` of an edge by accident is a few percent
     of the data. The verdict is a property of the peak's events, not of its period,
     so a planet at the orbit period whose transits sit in the middle of the segments
-    reads ``clear``.
+    reads ``clear``. The edges are those of the light curve as given, before the
+    masks and the binning: a masked event leaves a hole of two durations, which a
+    gap test on the masked series would count as a segment break, and every
+    surviving event of a period close to the masked one would then sit beside a
+    hole and read as at an edge (the first measurement run showed this on ep_0029 of
+    s98_v3, LOGBOOK 2026-10-31).
     """
     from astropy.timeseries import BoxLeastSquares
 
+    edges = _segment_edges(time)
     work_time, work_flux = detrend(time, flux, detrend_window_days)
     n_masked = 0
     for mask in masks or []:
@@ -193,7 +199,6 @@ def bls_peaks(
     power = np.asarray(res.power)
     mean, std = float(np.nanmean(power)), float(np.nanstd(power))
     order = np.argsort(-power)
-    edges = _segment_edges(work_time)
     peaks = []
     for index in order:
         period = float(res.period[index])

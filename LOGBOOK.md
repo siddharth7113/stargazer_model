@@ -1580,3 +1580,141 @@ signal-to-noise 66 and 2.13 days, is findable and was missed in both runs, with 
 model declaring the star active after the 0.86-day peak. Whether the 2026-10-16
 toolbox would have found it on this star is not known, because no run without the
 tool exists on this set; the pattern is the one of ep_0029 on s98_v3.
+
+## 2026-10-31
+
+**The segment-edge verdict** (commit `c178235`; `bls_peaks` and `search_signals` break the
+comparison with every earlier run from here, and the tables of 2026-10-16 and 2026-10-25
+stay as the record of their toolbox versions). Item 3 of the working order: the orbit
+boundary flag, measured before it was designed.
+
+What the data show. Every s98_v3 light curve spans 57.4 days in five segments of about
+ten days with gaps of three to six days between them (`summarize` reports four gaps;
+their edges differ by a few tenths of a day from star to star because the pipeline's
+quality mask cuts each ramp differently). The s92_v1 light curves span 25 to 26 days in
+two or three segments. On the null hosts that led the false alarms of 2026-10-25 the
+search peaks put every event within a few tenths of a day of a segment start or end:
+the 14.44-day peak on TIC 33831807 (ep_0134) has its four events at 0.40, 14.84, 29.28
+and 43.72 days, each 0.03 to 0.12 days from an edge; the 14.59-day peak on TIC 146420104
+(ep_0033) 0.02 to 0.40 days; the 28.28-day peak on TIC 13984854 (ep_0098) 0.09 to
+0.42 days; the 14.67-day peak on TIC 317412815 (ep_0198) 0.06 days for both events with
+data. The scattered-light ramp at the start and the end of each segment is the dip,
+and the segments are spaced by one TESS orbit, so a box at that period, or at twice
+it, covers a ramp in every segment. The flag is therefore a property of the events and
+not of the period: for each peak, the number of events with data whose centre lies
+within half a day of a segment edge, where a segment edge is the start or the end of a
+run of data between gaps longer than half a day, the same gaps `summarize` reports.
+
+The margin, measured. At the true period and epoch of every injected planet, no planet
+with two or more transits in the data has every transit within 0.3, 0.5, 0.75 or 1.0
+days of an edge, in either set. Of the planets with one transit in the data, 2 of 17
+on s98_v3 and 5 of 20 on s92_v1 have it within half a day of an edge. Then the same
+count on every detection that a model submitted in the 20 rules-era runs on file (the
+twelve large-model rules runs of 2026-10-25, the six Inkling-Small seed runs of
+2026-10-16 and the two s92_v1 references), at the period, epoch and duration the model
+wrote, with the half-day margin:
+
+| submissions | every event at an edge | at least one event away |
+|---|---|---|
+| periodic false alarms, s98_v3 | 71 | 45 |
+| periodic false alarms, s92_v1 | 7 | 20 |
+| periodic hits, s98_v3 | 4 | 988 |
+| periodic hits, s92_v1 | 0 | 88 |
+| wrong periods, s98_v3 | 206 | 135 |
+| single events on no transit (false alarms and wrong events) | 46 | 37 |
+| single events on the transit | 1 | 91 |
+
+The 71 flagged false alarms are the ramp family of the 2026-10-25 reading: TIC 33831807
+at 14.44 days (20), TIC 146420104 at 15.37 (11), TIC 177077137 at 16.69 (9), TIC
+279511563 at 14.40 (5), TIC 317412815 at 14.67 (4), TIC 178967253 at 14.54 (4), TIC
+13984854 at 28.28 and 29.12 (6), and single ramps submitted as 42- to 52-day periods.
+The 45 unflagged ones are the other family, which this tool does not address: the
+0.946-day pulsator on TIC 55270064 (19), the 0.69-, 0.92- and 1.38-day signals on the
+rotating star TIC 32816814 (13), and TIC 248603283 at 11.23 days (7, two events with
+one at an edge). The four flagged hits are the ramp submitted on episodes whose injected
+planet is unfindable (ep_0167, signal-to-noise 1.3, and ep_0124, 0.8) and whose true
+period happens to lie within 1 percent of the ramp period; no findable planet is
+flagged. The 206 flagged wrong periods are the same ramp submitted on planet episodes,
+TIC 157008710 at 14.42 days in most of them; they score zero either way, and a model
+that skips the ramp there can only gain. On s92_v1 the flag names the 12.84-day signal
+on TIC 190310047 (6 of the 7): its one event sits 0.33 days from the edge of the
+second gap, so the reading of 2026-10-25, which called it a candidate and not a
+systematic the flag would name, is revised. The owner checked the signal on
+2026-10-31 and reads it as instrumental with high probability; the open question is
+closed, and the flag's reading of it is right.
+
+The tool. Each peak of `bls_peaks`, and so each signal of `search_signals`, carries
+`n_events_at_segment_edges` and `edge_verdict`: `at_segment_edges` when every event
+with data is at an edge, `clear` when at least one is not, null when no event has
+data. The margin is `EDGE_MARGIN_DAYS`, 0.5, and the gap definition `SEGMENT_GAP_DAYS`,
+0.5, which `summarize` now uses as well. The tool descriptions say that a peak with
+`at_segment_edges` is the spacecraft's ramps and not the star, and that the search has
+already masked it so the next signal is unaffected. The rules prompt's step 2 gains one
+sentence that says the same, as the event count did on 2026-10-11, so this is a tool
+and prompt change. `single_events` already skips a box within three widths of a
+segment edge and is unchanged. The viewer's peak table shows the two new columns.
+Tests: `test_bls_peaks_flags_a_peak_whose_events_sit_at_segment_edges`,
+`test_bls_peaks_counts_the_gap_edge_as_a_segment_edge`,
+`test_bls_peaks_planet_away_from_the_edges_is_clear`,
+`test_search_signals_carries_the_edge_fields`. One `search_signals` call takes the same
+time as before (4 to 10 seconds on a 57-day light curve, in the box search).
+
+**Three-episode check** (`results/smoke/check_edge.sh`,
+`results/smoke/agent_inkling_small_s98_v3_rules3_edge.json`, Inkling-Small, `tml_v0`,
+rules prompt, seed 1, ids ep_0033, ep_0134, ep_0155, $0.19). Three true nulls, no
+errors, one `submit_prediction` each. On ep_0134 the model read `at_segment_edges` on
+the 14.44-day signal, skipped it, vetted the 13.79-day residual signal (three events,
+none at an edge, `dip_at_other_phase` from `secondary_eclipse`) and declined it; on
+ep_0033 it read `n_events_in_data` 1 and `at_segment_edges` on the 15.37-day peak and
+wrote "a spacecraft ramp systematic" in its reasoning. The harness is clean.
+
+**The measurement** (`results/full_v12edge/run_seeds.sh`, launched 2026-10-31, four
+processes at eight workers: Inkling-Small, rules prompt, seeds 1, 2, 3 on s98_v3
+against the 2026-10-16 table, and seed 1 on s92_v1 against the reference of
+2026-10-25). Results land in `results/full_v12edge/`; the table follows.
+
+**First measurement, and the defect it showed** (`results/full_v12edge/`, commit
+`c178235`, four processes at eight workers, 20:28 to 21:04 UTC, $42 in all, no errors,
+every episode submitted). Against the 2026-10-16 table on s98_v3 and the 2026-10-25
+reference on s92_v1:
+
+| version | set | seeds | false alarm | completeness | with aliases | mean score | one-transit hits |
+|---|---|---|---|---|---|---|---|
+| 2026-10-16 toolbox | s98_v3 | 3 | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | 2.7 of 17 |
+| edge verdict, commit c178235 | s98_v3 | 3 | 0.6% (1.0) | 38.5% (2.5) | 40.7% (2.5) | 0.573 (0.018) | 2.3 of 17 |
+| twelve-tool reference, 2026-10-25 | s92_v1 | 1 | 7.0% | 36.4% | 39.5% | 0.575 | 5 of 20 |
+| edge verdict, commit c178235 | s92_v1 | 1 | 0.0% | 33.3% | 36.4% | 0.580 | 4 of 20 |
+
+The seeds on s98_v3: false alarm 0.0, 1.7 and 0.0 percent, completeness 41.1, 38.3 and
+36.2. The false alarms went as designed: the five on TIC 190310047 in s92_v1 are gone,
+and the one false alarm left on s98_v3 is a single event on TIC 117747153. The
+completeness fell, and the trajectories show why. ep_0029, the 1.685-day planet at
+signal-to-noise 106, was a hit in every 2026-10-16 seed and a miss in every seed here.
+`search_signals` returns three signals on it, the star's 0.93-day rotation first and
+two residuals of it at 0.937 and 0.925 days after the mask; the residuals read
+`at_segment_edges` with 45 of 45 and 23 of 23 events at an edge, which no sub-day
+period can do. The edges were computed from the time array after the masks and the
+binning: a masked event leaves a hole of two durations, half a day at the longest box,
+and a gap test on that series counts every hole as a segment break, so every event of
+a period close to the masked one sits beside a hole. The model read the word, wrote
+"the strongest peaks are systematics at segment edges", and did not search again at
+the 0.3-day window, which is where the 2026-10-16 runs found the planet. The wrong
+word after a mask appears in 20, 18 and 15 episodes of the three s98_v3 seeds, 17, 15
+and 13 of them findable planets, with 6, 5 and 4 misses among those; and in 4 episodes
+of the s92_v1 run, all hits. The three-episode check could not show it, because the
+check episodes have no second signal. Fix (commit follows): the edges come from the
+light curve as given, before the masks; `test_bls_peaks_edges_come_from_the_unmasked_light_curve`
+covers a masked search. On ep_0029 the residuals now read `clear` with 3 and 1
+events at an edge, and the ramp episodes read as before. These four runs measured a
+defective tool and do not count; they stay on file as the record. The cycle runs again
+on the fixed code.
+
+Two readings from these runs that stand whatever the rerun shows. On s92_v1 ep_0003,
+a single transit at signal-to-noise 106 sits 0.24 days from the edge of the first gap,
+and the one-event verdict named it a ramp; the model declined it where the reference
+submitted it. That is the one-event cost the margin measurement predicted (5 of the
+20 one-transit planets of s92_v1 have the transit within half a day of an edge). On
+s92_v1 ep_0183 the model saw `clear` with no event at an edge on the 11.3-day signal
+and still wrote that an event sat at a segment edge, then submitted the single event
+for half marks; the small model over-applies a new word, which is the pattern of the
+`variable` verdict on 2026-10-25 at a smaller scale.
