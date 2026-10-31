@@ -92,7 +92,7 @@ description written for the model. The agent gets the tool only when the test pa
 - [ ] Centroid motion from the target pixel file: does the dip come from the target or a neighbour?
 - [ ] Difference imaging: in-transit minus out-of-transit image, where is the signal?
 - [x] Gaia neighbours within the aperture and the dilution they imply; `nearby_stars` (LOGBOOK 2026-10-11)
-- [ ] Systematics: momentum dumps, scattered light, and the Earth-and-Moon windows in TESS; first the orbit boundaries, because peaks at 13.9 to 15.4 days (one TESS orbit) lead the false alarms on five null hosts of s98_v3 (LOGBOOK 2026-10-25)
+- [x] Systematics, first the segment edges: `edge_verdict` on each peak of `bls_peaks` and `search_signals`, `at_segment_edges` when every event with data lies within half a day of the start or the end of a data segment, where the scattered-light ramps are; a replay over 20 runs showed it names 71 of 116 periodic false alarms and 46 of 47 single events on no transit, and no findable planet with two or more events. Null on Inkling-Small with the rules prompt (false alarms 2.3 to 0.6 percent, completeness 39.2 to 38.1, score 0.573 to 0.568 on s98_v3; 7.0 to 0.0 percent and 0.575 to 0.590 on s92_v1), because that model was not submitting the ramps; kept for the large-model pass. The first measurement was of a defective version (edges computed after the masks) and is on file as such (LOGBOOK 2026-10-31). Still open: momentum dumps and the Earth-and-Moon windows
 - [x] Orbit shape verdict, `orbit_shape`: flat, or variable at the period as a pulsating or rotating star is, from a long-window fold with a period contrast; names the 0.946-day pulsator on TIC 55270064 and the 0.92-day rotation of TIC 32816814, reads all 96 injected planets with five orbits as flat. As a field of `fold` it cost Inkling-Small 3 points of completeness, because the model stopped at the first `variable` word, so it is a separate tool; no gain measured on the small model, its test is the large-model pass and s92_v1 (LOGBOOK 2026-10-25)
 - [ ] Stellar context: rotation period, flares, variability class from the light curve
 - [ ] TRICERATOPS or an equivalent false-positive probability as the final number
@@ -136,31 +136,41 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] Independent re-analysis of each survivor from the public data with a different model
 - [ ] Submit as community TOIs on ExoFOP; request follow-up where warranted
 
-## Handoff: state on 2026-10-25
+## Handoff: state on 2026-10-31
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The day, in order. The eight overnight runs of 2026-10-16 went into the LOGBOOK, and
-their traces showed a harness defect: the argument coercion let the agent loop take
-the text `"False"` as a detection. Fixed in `coerce_arguments` and the loop;
-`stargazer rescore` rebuilds a results file's predictions from its trajectories, and
-the two Nemotron rules files have `_rescored` twins. The eight missing rules runs
-ran with the owner's yes, so the large-model series on s98_v3 is complete at 30
-runs, five models, two prompts, three seeds: with the rules prompt every model lands
-between 0.54 and 0.57 and the small model is at the top, so the toolbox is the
-ceiling and no large model runs again until it freezes. The false alarms under the
-rules are the same few null hosts for every model: one- and two-orbit periods, and
-two short-period variables. The 0.946-day signal on TIC 55270064 is a pulsator, and
-a verdict for it was built, measured twice on the small model, found to cost
-completeness as a field of `fold`, and moved into its own tool `orbit_shape`. The
-held-out set s92_v1 was built from sector 92 with the s98_v3 settings, with its BLS
-baseline and the Inkling-Small reference with both prompts, and the numbers match
-s98_v3 within a few points. The owner read the Tinker balance, $4,697, and keeps
-$3,000 for Phase 5.
+The day, in order. Item 3 of the working order, the orbit boundary flag, was measured
+before it was designed: on the null hosts that led the false alarms, every event of
+the 14- and 28-day search peaks sits within a few tenths of a day of the start or the
+end of a data segment, where the scattered-light ramps are, so the flag is a property
+of a peak's events and not of its period. `bls_peaks` and `search_signals` now carry
+`n_events_at_segment_edges` and `edge_verdict` on each peak, the rules prompt's step
+2 says what the word means, and a replay over the 20 rules-era runs on file showed the
+verdict names 71 of 116 periodic false alarms and 46 of 47 single events on no
+transit, with no findable planet of two or more events. The first measurement
+(`results/full_v12edge/`) was of a defective version: the edges were computed after
+the masks, so a masked hole read as a gap and residuals of a masked signal read as
+ramps; the model then stopped searching on ep_0029 in every seed. Fixed (edges from
+the unmasked light curve, a test on a masked search) and rerun
+(`results/full_v13edge/`): on s98_v3 false alarms 2.3 to 0.6 percent, completeness
+39.2 to 38.1, score 0.573 to 0.568, all within the seed spread; on s92_v1 false alarms
+7.0 to 0.0 percent and score 0.575 to 0.590. Null on the small model, which was not
+submitting the ramps, and kept for the large-model pass, where the ramps are the
+false alarms. The owner checked the 12.84-day dip on TIC 190310047 and reads it as
+instrumental; the verdict agrees; the open question is closed. Lesson for the next
+tool: the three-episode check must include an episode where the search masks a
+signal and finds a second one, because a check on single-signal episodes cannot show
+a masked-search defect.
 
 Nothing is running. The two Kimi K2.6 runs with `--max-turns 60 --max-tokens 32768`
-wait for the frozen toolbox. The next session starts with the orbit boundary flag
-(item 3 below): a three-episode check, three seeds on s98_v3, one seed on s92_v1.
+wait for the frozen toolbox. The next session starts with the rotation item (the last
+tool before the freeze, item 3 below): read the shared misses ep_0042, ep_0043,
+ep_0049, ep_0059 of s98_v3 first, design the tool from them and from the 0.69-, 0.92-
+and 1.38-day signals on TIC 32816814 and the 0.946-day pulsator on TIC 55270064
+(the unflagged false-alarm family), then a check on three episodes of which one has
+a masked second signal, three seeds on s98_v3 against the `full_v13edge` rows, one
+seed on s92_v1 against its `full_v13edge` row. Cost about $46 a cycle.
 
 Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
 bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
@@ -170,7 +180,8 @@ freezes.
 1. No large-model run until the toolbox freezes. The two Kimi K2.6 raised-caps runs
    wait as well.
 2. The held-out set s92_v1 exists (LOGBOOK 2026-10-25). Each tool below is measured
-   on s98_v3 with three seeds and then confirmed on s92_v1 with one seed. A tool
+   on s98_v3 with three seeds and then confirmed on s92_v1 with one seed. The reference
+   rows for the next tool are the `full_v13edge` runs on both sets (LOGBOOK 2026-10-31). A tool
    that moves s98_v3 and not s92_v1 is fitted to s98_v3 and does not stay. The
    reference on s92_v1 exists: Inkling-Small, both prompts, one seed, twelve tools
    (LOGBOOK 2026-10-25); the numbers match s98_v3 within a few points.
@@ -180,10 +191,10 @@ freezes.
    - the orbit shape verdict: done as the separate tool `orbit_shape`; measured
      twice on the small model with no gain and, as a fold field, a loss (LOGBOOK
      2026-10-25). Not to be revisited on the small model;
-   - the orbit boundary flag, a `summarize` field or a verdict in `bls_peaks` and
-     `search_signals` for a period within a few percent of one TESS orbit or the
-     sector length; test: the 14.4- and 15.4-day peaks on TIC 33831807 and TIC
-     146420104 (ep_0033, ep_0134, ep_0143, ep_0155);
+   - the orbit boundary flag: done as `edge_verdict`, a property of a peak's events
+     and not of its period; measured 2026-10-31, null on the small model as the orbit
+     shape verdict was, kept because the ramps are the large models' false alarms
+     (LOGBOOK 2026-10-31). Not to be revisited on the small model;
    - rotation-aware detrending or a `stellar_variability` tool for the spotted hosts;
      test: the shared misses ep_0042, ep_0043, ep_0049, ep_0059.
    Each tool breaks the comparison with the earlier runs; record the break in the

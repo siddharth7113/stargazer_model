@@ -1718,3 +1718,60 @@ s92_v1 ep_0183 the model saw `clear` with no event at an edge on the 11.3-day si
 and still wrote that an event sat at a segment edge, then submitted the single event
 for half marks; the small model over-applies a new word, which is the pattern of the
 `variable` verdict on 2026-10-25 at a smaller scale.
+
+**The measurement on the fixed code** (`results/full_v13edge/run_seeds.sh`, commit
+`f7f77f2`, four processes at eight workers, 21:08 to 21:25 UTC, $41 in all, no errors,
+every episode submitted, no signal under 8 days flagged on s98_v3).
+
+| version | set | seeds | false alarm | completeness | with aliases | mean score | one-transit hits |
+|---|---|---|---|---|---|---|---|
+| 2026-10-16 toolbox | s98_v3 | 3 | 2.3% (2.0) | 39.2% (0.8) | 41.4% (0.8) | 0.573 (0.000) | 2.7 of 17 |
+| edge verdict, defective, commit c178235 | s98_v3 | 3 | 0.6% (1.0) | 38.5% (2.5) | 40.7% (2.5) | 0.573 (0.018) | 2.3 of 17 |
+| edge verdict, fixed, commit f7f77f2 | s98_v3 | 3 | 0.6% (1.0) | 38.1% (1.1) | 40.0% (1.5) | 0.568 (0.007) | 2.3 of 17 |
+| twelve-tool reference, 2026-10-25 | s92_v1 | 1 | 7.0% | 36.4% | 39.5% | 0.575 | 5 of 20 |
+| edge verdict, fixed, commit f7f77f2 | s92_v1 | 1 | 0.0% | 35.7% | 37.2% | 0.590 | 5 of 20 |
+
+The seeds on s98_v3 (false alarm, completeness, score): 0.0%, 38.3%, 0.573; 1.7%,
+39.0%, 0.571; 0.0%, 36.9%, 0.560. Output tokens an episode 337 against 395 on
+2026-10-16, cost $11 a run.
+
+Reading.
+
+- By the rule of the PLAN the change does not count on the small model: the
+  false-alarm rate falls by 1.7 points on s98_v3, under the 3-point bar, and the
+  completeness by 1.1 points, at the 1-point bar and against the tool, within the seed
+  spread. The score is 0.568 against 0.573, within the spread of the new runs. On the
+  held-out set the false-alarm rate falls by 7 points, the completeness by 0.7 and the
+  score rises from 0.575 to 0.590. Both sets move the same way on both rates, so the
+  tool does not fail the direction test either; it is a null result on this model, as
+  the orbit-shape verdict was, and for the same reason: Inkling-Small with the rules
+  prompt was not submitting the ramps. Its three 2026-10-16 seeds hold four false
+  alarms in 600 episodes, one of them a ramp period (41.93 days on TIC 121711742,
+  twice); the fixed tool leaves one, a single event on TIC 117747153. The family the
+  tool addresses is the large models' (71 of 116 periodic false alarms in the twelve
+  rules runs), and that is where its measurement lies: the large-model pass at the end
+  of Phase 3.
+- The flag itself costs about one planet in 600 episodes. Among the findable planets
+  (signal-to-noise 10 or more) where the model saw `at_segment_edges`, 28 stayed hits,
+  4 stayed single-event hits, 1 hit and 1 single-event hit became misses (ep_0027,
+  which `orbit_shape` reads as variable, and ep_0109, a one-transit planet at 38.9
+  days whose only search peaks are ramps), and 3 wrong periods became misses, which
+  score the same. The other thirteen lost hits were on episodes where the model never
+  saw the flag: it declined on odd-even, on a secondary at another phase, on
+  `orbit_shape` or on an active star, the restraint variance of 2026-10-25. Seed 3 is
+  a low run (36.9 percent) on this version as seed 3 was the low run on 2026-10-16.
+  On s92_v1 the five false alarms on TIC 190310047 are gone and nothing replaced
+  them; four planets were lost on the same restraint grounds, three of them with no
+  flag in sight, and ep_0122 was gained.
+- The small model reads the word correctly now (no episode of the rerun carries the
+  wrong word) and still over-applies it: on s98_v3 ep_0095 it wrote that a 17.4-day
+  signal "has events at segment edges" where the verdict read `clear`, in two seeds.
+  The pattern of `variable`, at a smaller scale.
+
+Decision. The verdict stays in `bls_peaks` and `search_signals`: it is right on the
+physics, it removes the ramp family from every model that submits it at no measurable
+cost on the one that does not, and no second version is built on the small model. The
+owner may reverse this with a revert of commits `c178235` and `f7f77f2`; the earlier
+tables stay as the record of the twelve-tool box. The comparison from here is the
+`full_v13edge` rows on both sets. The next tool is the rotation item, the last before
+the freeze.
