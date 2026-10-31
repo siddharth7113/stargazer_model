@@ -65,7 +65,9 @@ You cannot see the data. You see tool results. Follow this procedure:
    rest is noise. Treat every signal as a hypothesis, not a result. If residual_sde is near
    min_sde, bls_peaks with the signals in masks shows what is left. Read n_events_in_data:
    a signal with 1 is one dip paired with empty time, so it is a single event and not a
-   period; go to step 6 for it.
+   period; go to step 6 for it. Read edge_verdict: at_segment_edges means every event sits
+   at the start or the end of a data segment, where the spacecraft's scattered-light ramps
+   are; the signal is a systematic and not a planet, so skip it.
 3. For each signal, strongest first: fold at phase_half_width 0.5, then 0.05, then fit_transit,
    then odd_even, then secondary_eclipse. fit_transit must say density plausible; an
    implausible density or a v_shaped shape means an eclipsing binary or a wrong period.

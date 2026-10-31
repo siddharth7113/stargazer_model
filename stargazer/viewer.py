@@ -96,6 +96,8 @@ PEAK_COLUMNS = (
     ("depth_ppm", "depth", "{:,.0f}"),
     ("sde", "sde", "{:.2f}"),
     ("n_events_in_data", "events", "{}"),
+    ("n_events_at_segment_edges", "at edges", "{}"),
+    ("edge_verdict", "edge", "{}"),
     ("half_period", "half", "{:.4f}"),
     ("double_period", "double", "{:.4f}"),
 )

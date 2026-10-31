@@ -19,6 +19,25 @@ SEGMENT_BREAK_CADENCES = 5
 """A gap longer than this many cadences splits a light curve into segments. The same
 value is the ``break_tolerance`` of the detrending filter in :func:`stargazer.baseline.detrend`."""
 
+SEGMENT_GAP_DAYS = 0.5
+"""A step in time longer than this many days is a gap between two data segments. The
+TESS pipeline stops collecting at the data downlink in the middle of each sector and
+at the momentum dumps, so a sector arrives as two or more segments with a gap of hours
+to days between them. :func:`summarize` reports these gaps, and
+:func:`_segment_edges` gives the start and the end of each segment."""
+
+EDGE_MARGIN_DAYS = 0.5
+"""An event whose centre lies within this many days of the start or the end of a data
+segment is at a segment edge. Scattered light from the Earth and the Moon ramps the
+flux up or down over the first and the last half day of each segment, and the ramps
+of every segment fall at the same phase when the period is the segment spacing, one
+TESS orbit of about 13.7 days, or a multiple of it. A box search then finds a two- or
+four-event signal with nothing in the star. On the 200 episodes of s98_v3, at this
+margin, no injected planet with two or more transits in the data has every transit at
+an edge, and 2 of the 17 with one transit do; across 20 agent runs, 71 of the 116
+periodic false alarms and 46 of the 47 single events submitted on no transit have
+every event at an edge, and 1 of the 92 correct single events (LOGBOOK 2026-10-31)."""
+
 MAD_TO_SIGMA = 1.4826
 """Factor from the median absolute deviation to the standard deviation of a normal
 distribution, ``1 / Phi^-1(3/4)`` [1]_.
@@ -44,13 +63,14 @@ def summarize(time: np.ndarray, flux: np.ndarray) -> dict:
     Notes
     -----
     The point scatter is :func:`stargazer.inject.point_scatter` in parts per million.
-    A gap is a step in ``time`` longer than 0.5 days. TESS has one such gap in each
-    sector, at the data downlink between the two orbits.
+    A gap is a step in ``time`` longer than ``SEGMENT_GAP_DAYS``. TESS has one such
+    gap in each sector, at the data downlink between the two orbits, and sometimes
+    more at the momentum dumps.
     """
     from stargazer.inject import point_scatter
 
     dt = np.diff(time)
-    gap_idx = np.where(dt > 0.5)[0]
+    gap_idx = np.where(dt > SEGMENT_GAP_DAYS)[0]
     return {
         "n_points": len(time),
         "span_days": round(float(time.max() - time.min()), 3),
@@ -62,15 +82,28 @@ def summarize(time: np.ndarray, flux: np.ndarray) -> dict:
     }
 
 
-def _events_with_data(
+def _event_times(
     time: np.ndarray, period: float, t0: float, duration: float, min_points: int = 3
-) -> int:
-    """Return the number of transit epochs with at least ``min_points`` points within half a duration."""
+) -> np.ndarray:
+    """Return the centre time of each transit epoch with at least ``min_points`` points in transit."""
     phase = ((time - t0 + 0.5 * period) % period) - 0.5 * period
     in_transit = np.abs(phase) < 0.5 * duration
     epochs = np.round((time[in_transit] - t0) / period).astype(int)
-    _, counts = np.unique(epochs, return_counts=True)
-    return int(np.sum(counts >= min_points))
+    unique, counts = np.unique(epochs, return_counts=True)
+    return t0 + period * unique[counts >= min_points]
+
+
+def _segment_edges(time: np.ndarray) -> np.ndarray:
+    """Return the start and the end of each data segment, split at gaps longer than ``SEGMENT_GAP_DAYS``."""
+    gap_idx = np.where(np.diff(time) > SEGMENT_GAP_DAYS)[0]
+    return np.concatenate([[time[0]], time[gap_idx], time[gap_idx + 1], [time[-1]]])
+
+
+def _edge_verdict(n_events: int, n_at_edges: int) -> str | None:
+    """Return ``at_segment_edges`` when every event is at an edge, ``clear`` otherwise, None with no event."""
+    if n_events == 0:
+        return None
+    return "at_segment_edges" if n_at_edges == n_events else "clear"
 
 
 def bls_peaks(
@@ -103,13 +136,18 @@ def bls_peaks(
     -------
     dict
         ``peaks``: a list of ``period, t0, duration, depth_ppm, sde, n_events_in_data,
-        half_period, double_period`` for the strongest peaks, each at least 2 percent
-        apart in period. ``n_periods_searched`` and ``n_points_masked``. The alias
-        periods and the event count are derived here so the model does not do
-        arithmetic on them. ``n_events_in_data`` counts the transit epochs with at
-        least three points in transit, so an epoch that falls in a gap does not
-        count; a peak with one such event is one dip that the fold pairs with empty
-        time, which is the single-event case and not a period.
+        n_events_at_segment_edges, edge_verdict, half_period, double_period`` for
+        the strongest peaks, each at least 2 percent apart in period.
+        ``n_periods_searched`` and ``n_points_masked``. The alias periods and the
+        event counts are derived here so the model does not do arithmetic on them.
+        ``n_events_in_data`` counts the transit epochs with at least three points in
+        transit, so an epoch that falls in a gap does not count; a peak with one such
+        event is one dip that the fold pairs with empty time, which is the
+        single-event case and not a period. ``n_events_at_segment_edges`` counts the
+        events among those whose centre lies within ``EDGE_MARGIN_DAYS`` of the start
+        or the end of a data segment. ``edge_verdict`` is ``at_segment_edges`` when
+        every event with data is at an edge, ``clear`` when at least one is not, and
+        None when no event has data.
 
     Notes
     -----
@@ -122,6 +160,17 @@ def bls_peaks(
     a single strong dip dominates the power at every window, and a second, shallower
     periodic signal only appears once the first is removed. The mask half-width is
     one full duration, twice the transit, so ingress and egress are removed too.
+
+    The edge verdict names the systematic that the LOGBOOK of 2026-10-25 found under
+    most of the false alarms on s98_v3. The flux ramps at the start and the end of
+    each data segment, where scattered light enters the camera, and the segments are
+    spaced by one TESS orbit, so a box at the orbit period, or at twice it, covers a
+    ramp in every segment and nothing else. Such a peak has every event at a segment
+    edge. A planet's events fall where its orbit puts them, and the chance that two
+    or more land within ``EDGE_MARGIN_DAYS`` of an edge by accident is a few percent
+    of the data. The verdict is a property of the peak's events, not of its period,
+    so a planet at the orbit period whose transits sit in the middle of the segments
+    reads ``clear``.
     """
     from astropy.timeseries import BoxLeastSquares
 
@@ -144,12 +193,15 @@ def bls_peaks(
     power = np.asarray(res.power)
     mean, std = float(np.nanmean(power)), float(np.nanstd(power))
     order = np.argsort(-power)
+    edges = _segment_edges(work_time)
     peaks = []
     for index in order:
         period = float(res.period[index])
         if any(abs(period / peak["period"] - 1) < 0.02 for peak in peaks):
             continue
         epoch = float(res.transit_time[index])
+        events = _event_times(work_time, period, epoch, float(res.duration[index]))
+        n_at_edges = int(np.sum(np.min(np.abs(events[:, None] - edges[None, :]), axis=1) <= EDGE_MARGIN_DAYS))
         peaks.append(
             {
                 "period": round(period, 5),
@@ -157,7 +209,9 @@ def bls_peaks(
                 "duration": round(float(res.duration[index]), 3),
                 "depth_ppm": round(float(res.depth[index]) * 1e6, 1),
                 "sde": round((float(power[index]) - mean) / std, 2),
-                "n_events_in_data": _events_with_data(work_time, period, epoch, float(res.duration[index])),
+                "n_events_in_data": int(events.size),
+                "n_events_at_segment_edges": n_at_edges,
+                "edge_verdict": _edge_verdict(int(events.size), n_at_edges),
                 "half_period": round(period / 2, 5),
                 "double_period": round(period * 2, 5),
             }
@@ -1442,10 +1496,13 @@ TOOLS: tuple[ToolSpec, ...] = (
             "Use after summarize to find candidate periods; rerun with detrend_window_days 0.3 if the star "
             "is active and the peaks look like variability. Returns the five strongest distinct "
             "peaks, each with period (days), t0 (days from start), duration (days), depth_ppm, sde, "
-            "n_events_in_data and the alias periods half_period and double_period. Read sde: on real "
-            "stars noise alone reaches 10 to 14; treat a peak as a candidate only when it also folds to "
-            "a clean dip and passes odd_even. Rerun with a different max_period only to search long "
-            "periods."
+            "n_events_in_data, n_events_at_segment_edges, edge_verdict and the alias periods "
+            "half_period and double_period. Read sde: on real stars noise alone reaches 10 to 14; "
+            "treat a peak as a candidate only when it also folds to a clean dip and passes odd_even. "
+            "Read edge_verdict: at_segment_edges means every event sits within half a day of the "
+            "start or end of a data segment, where the spacecraft's scattered-light ramps are; such "
+            "a peak, usually near 14 or 28 days, is a systematic and not the star, so skip it. "
+            "Rerun with a different max_period only to search long periods."
         ),
         parameters={
             "type": "object",
@@ -1500,10 +1557,12 @@ TOOLS: tuple[ToolSpec, ...] = (
             "Run the full periodic search in one call: find the strongest peak, mask it, search again, "
             "and stop when the strongest remaining peak has sde below min_sde or after max_signals. "
             "Returns signals in order (each with period, t0, duration, depth_ppm, sde, "
-            "n_events_in_data and the alias periods), residual_sde (the strongest peak left, so a "
-            "value near min_sde means a third signal may hide there) and stop. Each signal is a "
-            "hypothesis: fold and odd_even it before you submit. Use this in place of repeated "
-            "bls_peaks calls with masks."
+            "n_events_in_data, n_events_at_segment_edges, edge_verdict and the alias periods), "
+            "residual_sde (the strongest peak left, so a value near min_sde means a third signal may "
+            "hide there) and stop. Each signal is a hypothesis: fold and odd_even it before you "
+            "submit. A signal with edge_verdict at_segment_edges is the spacecraft's ramps at the "
+            "segment edges, not the star: skip it; the search has already masked it, so the next "
+            "signal is unaffected. Use this in place of repeated bls_peaks calls with masks."
         ),
         parameters={
             "type": "object",

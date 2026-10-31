@@ -389,6 +389,45 @@ def test_bls_peaks_event_count_skips_an_epoch_in_the_gap(lc, star):
     assert abs(top["period"] / 3.0 - 1) < 0.01 and top["n_events_in_data"] == 8
 
 
+def test_bls_peaks_flags_a_peak_whose_events_sit_at_segment_edges(lc):
+    """Two 1 percent dips a quarter day inside the start and the end of the data make a two-event
+    peak with both events at a segment edge, which is what the scattered-light ramps look like to a
+    box search, so the verdict names it and the counts agree.
+    """
+    time, flux, _ = lc
+    relative = time - time.min()
+    for centre in (0.25, relative.max() - 0.25):
+        flux = np.where(np.abs(relative - centre) < 0.05, flux - 0.01, flux)
+    top = tools.bls_peaks(relative, flux, max_period=27.0)["peaks"][0]
+    assert top["n_events_in_data"] == 2 and top["n_events_at_segment_edges"] == 2
+    assert top["edge_verdict"] == "at_segment_edges"
+
+
+def test_bls_peaks_counts_the_gap_edge_as_a_segment_edge(lc, star):
+    """A 3-day planet with t0 = 0.7 has one event at day 12.7, 0.3 days before the gap that starts at
+    day 13, and every other event more than half a day from the start, the gap and the end. The count
+    is 1, so the gap counts as an edge, and the verdict is clear because the other events are not.
+    """
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=3.0, t0=0.7, depth=0.01, b=0.0, star=star)
+    top = tools.bls_peaks(relative, inject(relative, flux, truth))["peaks"][0]
+    assert abs(top["period"] / 3.0 - 1) < 0.01
+    assert top["n_events_at_segment_edges"] == 1 and top["edge_verdict"] == "clear"
+
+
+def test_bls_peaks_planet_away_from_the_edges_is_clear(lc, star):
+    """A 3-day planet with t0 = 1.3 has its day-13.3 event inside the gap and every other event more
+    than half a day from the start, the gap and the end, so the count is zero and the verdict is clear.
+    """
+    time, flux, _ = lc
+    relative = time - time.min()
+    truth = make_truth(period=3.0, t0=1.3, depth=0.01, b=0.0, star=star)
+    top = tools.bls_peaks(relative, inject(relative, flux, truth))["peaks"][0]
+    assert abs(top["period"] / 3.0 - 1) < 0.01
+    assert top["n_events_at_segment_edges"] == 0 and top["edge_verdict"] == "clear"
+
+
 def test_bls_peaks_mask_reveals_weaker_signal(lc, star):
     """With a 1 percent, 3-day signal masked, a 0.2 percent, 7-day signal becomes the top peak."""
     time, flux, _ = lc
@@ -420,6 +459,17 @@ def test_search_signals_finds_two_signals_in_order(lc, star):
     periods = [signal["period"] for signal in result["signals"]]
     assert abs(periods[0] / 3.0 - 1) < 0.01 and abs(periods[1] / 7.0 - 1) < 0.01
     assert [signal["rank"] for signal in result["signals"]][:2] == [1, 2]
+
+
+def test_search_signals_carries_the_edge_fields(lc, star):
+    """Each signal of the multi-signal search has the edge count and verdict of a peak, so the model
+    reads them in the one call the procedure makes. With t0 = 1.3 no event is at an edge.
+    """
+    time, flux, _ = lc
+    relative = time - time.min()
+    injected = inject(relative, flux, make_truth(period=3.0, t0=1.3, depth=0.01, b=0.0, star=star))
+    signal = tools.search_signals(relative, injected, max_signals=1)["signals"][0]
+    assert signal["n_events_at_segment_edges"] == 0 and signal["edge_verdict"] == "clear"
 
 
 def test_search_signals_stops_on_noise(lc):

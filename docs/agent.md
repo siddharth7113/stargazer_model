@@ -40,8 +40,8 @@ On each turn:
 | Tool | Arguments | Returns |
 |---|---|---|
 | `summarize` | none | cadence, point scatter, flux range, gaps |
-| `bls_peaks` | `min_period`, `max_period`, `detrend_window_days`, `masks` | the five strongest distinct BLS peaks with SDE, depth, duration, alias periods and event counts |
-| `search_signals` | `min_period`, `max_period`, `detrend_window_days`, `min_sde`, `max_signals` | the signals found in turn by search, mask and search again, with the residual SDE and the stop reason |
+| `bls_peaks` | `min_period`, `max_period`, `detrend_window_days`, `masks` | the five strongest distinct BLS peaks with SDE, depth, duration, alias periods, event counts and a segment-edge verdict |
+| `search_signals` | `min_period`, `max_period`, `detrend_window_days`, `min_sde`, `max_signals` | the signals found in turn by search, mask and search again, each with the fields of `bls_peaks`, with the residual SDE and the stop reason |
 | `single_events` | `detrend_window_days` | the strongest individual dips, ranked by the single-event statistic, with the noise at each event's timescale |
 | `fold` | `period`, `t0`, `phase_half_width`, `detrend_window_days` | a 40-bin phase curve and its depth |
 | `orbit_shape` | `period`, `t0`, `detrend_window_days` | whether the flux varies through the whole orbit at the period: `flat` or `variable`, with the refined period, the amplitude and the rise fraction |
@@ -55,6 +55,14 @@ On each turn:
 `masks` takes a list of `{period, t0, duration}` objects. The masked points are removed
 before the search, so a weaker periodic signal can appear once a stronger one is
 removed.
+
+`edge_verdict` names the spacecraft systematic that produced most of the false alarms
+on `s98_v3`. The flux ramps over the first and the last half day of each data segment,
+where scattered light enters the camera, and the segments are spaced by one TESS
+orbit, so a box at the orbit period or at twice it covers a ramp in every segment. A
+peak whose every event with data lies within half a day of a segment start or end
+reads `at_segment_edges`; a peak with at least one event away from the edges reads
+`clear`. `n_events_at_segment_edges` is the count behind the word.
 
 The single-event statistic of a box of width $d$ is
 
