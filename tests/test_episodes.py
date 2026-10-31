@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 from stargazer.context import BTJD_OFFSET
-from stargazer.episodes import BuildConfig, EpisodeSet
+from stargazer.episodes import BuildConfig, EpisodeSet, catalogue_transit
+from stargazer.inject import inject, make_truth
 
 
 def _build(fake_cache, tmp_path, name="a", **kwargs):
@@ -163,3 +164,58 @@ def test_build_real_writes_catalogue_truth_and_the_flux_as_observed(fake_cache, 
     assert all(truth[f"ep_000{index}"]["kind"] == "null" for index in (1, 2, 3))
     assert all(truth[f"ep_000{index}"]["tic"] != host["tic"] for index in (1, 2, 3))
     assert episodes.config["build"]["real"] is True
+
+
+def _catalogue_entry(lc_time, period, t0_relative, depth_ppm, duration_hours):
+    """A TOI entry whose epoch is two periods before the start of the data plus ``t0_relative``."""
+    return {
+        "toi": "1.01",
+        "period": period,
+        "epoch_bjd": float(lc_time.min()) + BTJD_OFFSET - 2 * period + t0_relative,
+        "duration_hours": duration_hours,
+        "depth_ppm": depth_ppm,
+        "disposition": "CP",
+        "alerted": "2019-06-01",
+    }
+
+
+def test_catalogue_transit_confirms_an_ephemeris_that_lands_on_the_dip(lc, star):
+    """A 1 percent planet at 3 days with epoch 1.3 is injected; the catalogue entry names the same epoch,
+    so the check reads confirmed with the fitted epoch within the duration and the truth keeps the epoch.
+    """
+    time, flux, _ = lc
+    truth = make_truth(period=3.0, t0=float(time.min()) + 1.3, depth=0.01, b=0.0, star=star)
+    flux = inject(time, flux, truth)
+    entry = _catalogue_entry(time, 3.0, 1.3, 10000.0, truth.duration * 24)
+    record, n_transits, snr = catalogue_transit(time, flux, entry, float(time.min()))
+    assert record["ephemeris"] == "confirmed" and abs(record["epoch_shift_days"]) < truth.duration
+    assert record["t0"] == pytest.approx(1.3, abs=1e-6) and record["depth_snr"] > 5
+    assert n_transits == 8 and snr > 10
+
+
+def test_catalogue_transit_moves_a_shifted_epoch_to_the_dip(lc, star):
+    """The planet is at epoch 1.3 but the catalogue says 1.8, half a day off, more than the duration: the
+    check reads shifted, the truth epoch becomes the fitted one near 1.3 and the catalogue epoch is kept.
+    """
+    time, flux, _ = lc
+    truth = make_truth(period=3.0, t0=float(time.min()) + 1.3, depth=0.01, b=0.0, star=star)
+    flux = inject(time, flux, truth)
+    entry = _catalogue_entry(time, 3.0, 1.8, 10000.0, truth.duration * 24)
+    record, _, _ = catalogue_transit(time, flux, entry, float(time.min()))
+    assert record["ephemeris"] == "shifted"
+    assert abs(record["t0"] - 1.3) < 0.02 and record["t0_catalogue"] == pytest.approx(1.8, abs=1e-6)
+
+
+def test_catalogue_transit_calls_a_strong_ephemeris_absent_when_the_data_show_nothing(lc):
+    """No transit is injected and the catalogue claims a 1 percent dip, which would be obvious: the check
+    reads absent, so the build leaves the host out; a faint catalogue depth is kept on the catalogue's word.
+    """
+    time, flux, _ = lc
+    record, _, _ = catalogue_transit(
+        time, flux, _catalogue_entry(time, 3.0, 1.3, 10000.0, 2.4), float(time.min())
+    )
+    assert record["ephemeris"] == "absent"
+    faint, _, _ = catalogue_transit(
+        time, flux, _catalogue_entry(time, 3.0, 1.3, 100.0, 2.4), float(time.min())
+    )
+    assert faint["ephemeris"] == "confirmed"

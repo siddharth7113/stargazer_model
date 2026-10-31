@@ -53,6 +53,63 @@ def _has_finite(record: dict, *keys: str) -> bool:
     return all(record.get(key) is not None and np.isfinite(float(record[key])) for key in keys)
 
 
+EPHEMERIS_MIN_SNR = 5.0
+"""Box-fit depth significance below which a catalogue ephemeris with an expected
+signal-to-noise of ``EPHEMERIS_CHECK_SNR`` or more is judged absent: the catalogue says
+the transit should be plain and the data at that period show nothing. A TOI ephemeris
+from 2019 to 2021 can be hours off by 2025, or its period wrong; on sector 98 two of 37
+were (LOGBOOK 2026-11-01)."""
+
+EPHEMERIS_CHECK_SNR = 10.0
+"""Expected signal-to-noise above which the absence test applies. A fainter planet is
+kept on the catalogue's word, as an injected planet below the findable line is kept."""
+
+
+def verify_ephemeris(time: np.ndarray, flux: np.ndarray, period: float, t0: float, duration: float) -> dict:
+    """Fit a box at a fixed period and return the measured depth, its significance and the epoch shift.
+
+    Parameters
+    ----------
+    time, flux : ndarray
+        The light curve in the episode's time base.
+    period, t0, duration : float
+        The catalogue ephemeris, days.
+
+    Returns
+    -------
+    dict
+        ``measured_depth_ppm``, ``depth_snr``, ``epoch_shift_days`` (the fitted epoch
+        minus ``t0``, wrapped to half a period) and ``t0_fitted``.
+
+    Notes
+    -----
+    The flux is filtered with the window of the box search at six durations and
+    binned to ten minutes, then the Box Least Squares of astropy evaluates the one
+    period with the catalogue duration and an epoch grid fifty times finer than the
+    duration; the epoch with the most power is the fitted epoch. The depth
+    significance is astropy's ``depth_snr``, the depth over its error from the bin
+    errors. The filter removes part of a deep transit's depth, so the measured depth
+    is a lower bound and the significance, not the depth, decides presence.
+    """
+    from astropy.timeseries import BoxLeastSquares
+
+    from stargazer.baseline import bin_lc, detrend
+
+    work_time, work_flux = detrend(time, flux, max(0.75, 6.0 * duration))
+    bin_time, bin_flux, bin_err = bin_lc(work_time, work_flux, 10.0)
+    result = BoxLeastSquares(bin_time, bin_flux, bin_err).power(
+        np.array([period]), np.array([duration]), oversample=50
+    )
+    t0_fitted = float(result.transit_time[0])
+    shift = ((t0_fitted - t0 + 0.5 * period) % period) - 0.5 * period
+    return {
+        "measured_depth_ppm": round(float(result.depth[0]) * 1e6, 1),
+        "depth_snr": round(float(result.depth_snr[0]), 1),
+        "epoch_shift_days": round(float(shift), 4),
+        "t0_fitted": t0_fitted,
+    }
+
+
 def catalogue_transit(
     time: np.ndarray, flux: np.ndarray, planet: dict, t_offset: float
 ) -> tuple[dict, int, float]:
@@ -79,12 +136,33 @@ def catalogue_transit(
     ``depth / scatter * sqrt(n_in)``, with the catalogue depth and duration; on a
     real transit it is an estimate, because the light curve already holds the
     transit and the scatter includes it.
+
+    The ephemeris is then checked against the data with :func:`verify_ephemeris`,
+    and the record carries the result under ``ephemeris``: ``confirmed`` when the
+    fitted epoch is within one duration of the catalogue's; ``shifted`` when it is
+    further and the dip is significant, in which case ``t0`` becomes the fitted
+    epoch and ``t0_catalogue`` keeps the catalogue's; ``absent`` when the dip is
+    below ``EPHEMERIS_MIN_SNR`` and the expected signal-to-noise is at least
+    ``EPHEMERIS_CHECK_SNR``. The caller leaves an absent planet out of the set.
     """
     period = float(planet["period"])
     duration = float(planet["duration_hours"]) / 24.0
     depth = float(planet["depth_ppm"]) * 1e-6
     epoch = float(planet["epoch_bjd"]) - BTJD_OFFSET
     first = epoch + period * np.ceil((time.min() - epoch) / period)
+    check = verify_ephemeris(time, flux, period, first, duration)
+    cadence = float(np.median(np.diff(time)))
+    expected = float(depth / point_scatter(flux) * np.sqrt(max(duration / cadence, 1.0)))
+    if check["depth_snr"] < EPHEMERIS_MIN_SNR and expected >= EPHEMERIS_CHECK_SNR:
+        word = "absent"
+    elif abs(check["epoch_shift_days"]) > duration and check["depth_snr"] >= EPHEMERIS_MIN_SNR:
+        word = "shifted"
+    else:
+        word = "confirmed"
+    t0_catalogue = first
+    if word == "shifted":
+        first = check["t0_fitted"]
+        first = first + period * np.ceil((time.min() - first) / period)
     phase = ((time - first + 0.5 * period) % period) - 0.5 * period
     in_transit = np.abs(phase) < 0.5 * duration
     epochs = np.round((time[in_transit] - first) / period).astype(int)
@@ -102,6 +180,11 @@ def catalogue_transit(
         "toi": planet.get("toi"),
         "disposition": planet.get("disposition"),
         "alerted": planet.get("alerted"),
+        "ephemeris": word,
+        "t0_catalogue": float(t0_catalogue - t_offset),
+        "measured_depth_ppm": check["measured_depth_ppm"],
+        "depth_snr": check["depth_snr"],
+        "epoch_shift_days": check["epoch_shift_days"],
     }
     return record, n_transits, snr
 
@@ -318,8 +401,10 @@ class EpisodeSet:
         through :func:`catalogue_transit`. Then ``n_null`` null episodes are drawn
         with replacement from the cached null hosts. A host whose planet has no
         transit in the sector keeps ``n_transits`` 0 and is scored as a null, as an
-        injection with no transit is. The context of such a set must be written with
-        the TOI entries masked.
+        injection with no transit is. A host whose catalogue ephemeris the data do
+        not show (``absent`` from :func:`catalogue_transit`) is left out and listed
+        in ``config.json`` under ``absent_ephemerides``. The context of such a set
+        must be written with the TOI entries masked.
         """
         rng = np.random.default_rng(seed)
         out_dir = Path(out_dir)
@@ -333,10 +418,14 @@ class EpisodeSet:
             raise RuntimeError("no cached light curves for the real hosts or the null hosts; run fetch first")
         truth = {}
         index = 0
+        absent = []
         for star in real_hosts:
             lc = cache.load(star["tic"], star["sector"])
             t_offset = float(lc.time.min())
             transit, n_transits, snr = catalogue_transit(lc.time, lc.flux, star["planet"], t_offset)
+            if transit["ephemeris"] == "absent":
+                absent.append({"tic": star["tic"], "toi": transit["toi"], "depth_snr": transit["depth_snr"]})
+                continue
             truth[f"ep_{index:04d}"] = {
                 "kind": "transit",
                 "tic": star["tic"],
@@ -371,7 +460,8 @@ class EpisodeSet:
             "created": utc_timestamp(),
             "git_commit": str(GitState.current()),
             "stargazer_version": __version__,
-            "build": {"real": True, "seed": seed, "n_null": n_null, "n_real": len(real_hosts)},
+            "build": {"real": True, "seed": seed, "n_null": n_null, "n_real": len(real_hosts) - len(absent)},
+            "absent_ephemerides": absent,
             "targets_file": str(targets_path) if targets_path else None,
             "targets_sha256": Digest.of_file(targets_path).hex if targets_path else None,
             "null_targets_file": str(null_targets_path) if null_targets_path else None,
