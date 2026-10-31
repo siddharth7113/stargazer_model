@@ -48,7 +48,7 @@ from pathlib import Path
 
 import numpy as np
 
-from stargazer.context import GAIA_CLASS_CATALOGUE, TESS_EB_CATALOGUE, CatalogueFetcher
+from stargazer.context import GAIA_CLASS_CATALOGUE, TESS_EB_CATALOGUE, CatalogueFetcher, ToiList
 from stargazer.provenance import Digest, utc_timestamp
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
@@ -221,6 +221,83 @@ def select_targets(
         "rejected": rejected,
         "removed_binaries": binaries,
         "targets": chosen,
+    }
+
+
+REAL_DISPOSITIONS: tuple[str, ...] = ("CP", "KP")
+"""The TESS Follow-up Observing Program Working Group dispositions that mean a confirmed
+planet: ``CP`` (confirmed planet) and ``KP`` (known planet). A real-planet episode set
+takes only hosts with one TOI entry that carries one of these, so the hidden answer is
+a planet that follow-up has established and not a candidate."""
+
+
+def select_real_targets(
+    sector: int,
+    tmag_max: float = 12.0,
+    dispositions: tuple[str, ...] = REAL_DISPOSITIONS,
+    toi_list: ToiList | None = None,
+) -> dict:
+    """Pick the confirmed-planet hosts of a sector for a real-planet episode set.
+
+    Parameters
+    ----------
+    sector : int
+        TESS sector.
+    tmag_max : float
+        Faint limit in TESS magnitude, from the TOI list.
+    dispositions : tuple of str
+        The dispositions that count as a confirmed planet, see ``REAL_DISPOSITIONS``.
+    toi_list : ToiList, optional
+        A parsed TOI list. None downloads it.
+
+    Returns
+    -------
+    dict
+        A targets file in the form of :func:`select_targets`, with ``real`` True and,
+        in each target, ``planet``: the TOI entry (``toi, period, epoch_bjd,
+        duration_hours, depth_ppm, disposition, alerted``) that is the episode's
+        hidden answer.
+
+    Notes
+    -----
+    The stars are those with a 120 s light curve in the sector whose TOI list holds
+    exactly one entry with a disposition in ``dispositions``, so that one planet is
+    the answer and no second signal competes with it. The alert date of each entry
+    is recorded, so a reader can compare it with a model's release date; the light
+    curve's own date is the sector's. The TIC parameters are fetched for the hosts
+    that pass, as in :func:`select_targets`.
+    """
+    toi_list = toi_list or ToiList.download()
+    toi_time = utc_timestamp()
+    all_tics = sector_two_minute_tics(sector)
+    chosen = []
+    for tic in all_tics:
+        entries = toi_list.entries(tic)
+        if len(entries) != 1 or entries[0]["disposition"] not in dispositions:
+            continue
+        planet = entries[0]
+        if any(planet[key] is None for key in ("period", "epoch_bjd", "duration_hours", "depth_ppm")):
+            continue
+        if planet["tmag"] is None or planet["tmag"] > tmag_max:
+            continue
+        chosen.append((tic, planet))
+    params = tic_params([tic for tic, _ in chosen])
+    targets = []
+    for tic, planet in chosen:
+        star = params.get(tic)
+        if star is None:
+            continue
+        targets.append({"tic": tic, "sector": sector, **star, "planet": planet})
+    return {
+        "real": True,
+        "sector": sector,
+        "tmag_max": tmag_max,
+        "dispositions": list(dispositions),
+        "n_two_minute_in_sector": len(all_tics),
+        "n_single_confirmed": len(chosen),
+        "n_selected": len(targets),
+        "toi_csv": {"url": TOI_URL, "sha256": toi_list.sha256, "downloaded": toi_time},
+        "targets": targets,
     }
 
 

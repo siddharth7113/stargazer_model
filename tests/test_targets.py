@@ -1,8 +1,8 @@
 """Unit tests for stargazer.targets: catalogue cell parsing and the selection cuts, network stubbed."""
 
 import stargazer.targets as targets_module
-from stargazer.context import CatalogueFetcher
-from stargazer.targets import _cell, remove_binaries, select_targets
+from stargazer.context import CatalogueFetcher, ToiList
+from stargazer.targets import _cell, remove_binaries, select_real_targets, select_targets
 
 
 class _Masked:
@@ -143,3 +143,33 @@ def test_select_targets_is_seeded(monkeypatch):
     first = [target["tic"] for target in select_targets(98, 5, seed=1)["targets"]]
     assert first == [target["tic"] for target in select_targets(98, 5, seed=1)["targets"]]
     assert first != [target["tic"] for target in select_targets(98, 5, seed=2)["targets"]]
+
+
+REAL_TOI_CSV = (
+    "TIC ID,TOI,Period (days),Epoch (BJD),Duration (hours),Depth (ppm),"
+    "TFOPWG Disposition,TESS Mag,Date TOI Alerted (UTC)\n"
+    """1,100.01,3.5,2459000.5,2.1,800,CP,10.0,2019-06-01
+2,200.01,5.0,2459001.0,3.0,1500,PC,10.0,2020-01-01
+3,300.01,2.0,2459002.0,1.5,900,KP,13.0,2019-06-01
+4,400.01,4.0,2459003.0,2.0,700,CP,9.0,2019-06-01
+4,400.02,9.0,2459004.0,2.5,300,PC,9.0,2021-06-01
+5,500.01,,2459005.0,2.0,600,KP,9.0,2019-06-01
+"""
+)
+
+
+def test_select_real_targets_keeps_single_confirmed_bright_hosts_with_a_full_ephemeris(monkeypatch):
+    """Of five TOI hosts in the sector only TIC 1 passes: TIC 2 is a candidate, TIC 3 is too faint, TIC 4
+    has a second TOI and TIC 5 has no period. The target carries the TOI entry as the planet and the file
+    is marked real.
+    """
+    monkeypatch.setattr(targets_module, "sector_two_minute_tics", lambda sector: [1, 2, 3, 4, 5, 6])
+    monkeypatch.setattr(targets_module, "tic_params", lambda tics: {tic: dict(GOOD) for tic in tics})
+    selection = select_real_targets(98, tmag_max=12.0, toi_list=ToiList(REAL_TOI_CSV))
+    assert selection["real"] is True and [target["tic"] for target in selection["targets"]] == [1]
+    planet = selection["targets"][0]["planet"]
+    assert planet["toi"] == "100.01" and planet["period"] == 3.5 and planet["alerted"] == "2019-06-01"
+    assert (
+        selection["n_single_confirmed"] == 1
+        and selection["toi_csv"]["sha256"] == ToiList(REAL_TOI_CSV).sha256
+    )

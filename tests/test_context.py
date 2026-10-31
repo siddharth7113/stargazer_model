@@ -121,3 +121,23 @@ def test_binary_evidence_is_empty_for_a_rotational_variable():
         _QueryCountingFetcher([], ["RS", "SOLAR_LIKE"]).binary_evidence({"tic": 5, "ra": 1.0, "dec": 2.0})
         == []
     )
+
+
+def test_writer_masks_the_toi_entries_when_asked(tmp_path):
+    """With ``mask_tois`` the context of a real-planet set carries no TOI entry and names the source as
+    masked, so ``ephemeris_match`` cannot hand the hidden answer to the model; the other fields stay.
+    """
+    truth = {"ep_0000": {"kind": "transit", "tic": 123, "sector": 98, "t_offset": 100.0}}
+    (tmp_path / "truth.json").write_text(json.dumps(truth))
+    targets = {"targets": [{"tic": 123, "ra": 1.0, "dec": 2.0}]}
+
+    class FetcherWithToi(FakeFetcher):
+        def context_for(self, star, sector, t_offset):
+            context = super().context_for(star, sector, t_offset)
+            context.tois = [{"toi": "1.01", "period": 3.0}]
+            context.sources = {"toi": {"url": "x"}, "gaia_classes": "y"}
+            return context
+
+    written = json.loads(ContextWriter(FetcherWithToi(), mask_tois=True).write(tmp_path, targets).read_text())
+    assert written["ep_0000"]["tois"] == [] and written["ep_0000"]["sources"]["toi"] == "masked"
+    assert written["ep_0000"]["sources"]["gaia_classes"] == "y" and written["ep_0000"]["tic"] == 123

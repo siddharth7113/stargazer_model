@@ -162,6 +162,28 @@ An episode file holds only `time`, `flux` and `flux_err`, with the time counted 
 zero. It holds no TIC ID, sector, coordinates or stellar parameters, so a detector
 cannot look up the star.
 
+## Real-planet sets
+
+An injected set measures recovery of transits whose shape the injector drew. A
+real-planet set measures recovery of planets that follow-up has confirmed, with the
+flux as the pipeline delivered it. `stargazer targets --real --sector N` selects the
+hosts of the sector that have exactly one TOI entry with the disposition `CP` or `KP`
+(confirmed planet or known planet), brighter than the magnitude limit, with a full
+ephemeris; the TOI entry, its alert date included, is written into each target as
+`planet`. `stargazer build --real --targets REAL --null-targets NULLS --n-null N`
+writes one transit episode for each cached host with no injection and the truth from
+the catalogue (period, epoch moved into the window, duration, depth), then `N` null
+episodes drawn from a targets file of hosts with no TOI. `stargazer context
+--mask-tois` writes the catalogue context without the hosts' own TOI entries, so
+`ephemeris_match` cannot return the answer; the source record says `masked`.
+
+Two cautions for the reader of such a set. The signal-to-noise in the truth is an
+estimate from the catalogue depth and duration against the light curve's scatter,
+which already holds the transit. And a model could know a famous planet from its
+training data; the episode carries no name, so the knowledge would have to come
+from the light curve itself, and the alert date beside the sector's observation date
+lets a reader compare the two with the model's release.
+
 ## Sets built so far
 
 | Set | Seed | Periods | Hosts | Transits in 57 days |

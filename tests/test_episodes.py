@@ -5,6 +5,7 @@ import json
 import numpy as np
 import pytest
 
+from stargazer.context import BTJD_OFFSET
 from stargazer.episodes import BuildConfig, EpisodeSet
 
 
@@ -129,3 +130,36 @@ def test_build_without_cached_hosts_raises(fake_cache, tmp_path):
     targets = {"targets": [{"tic": 999, "sector": 98, "logg": 4.4, "radius_rsun": 1.0}]}
     with pytest.raises(RuntimeError, match="fetch"):
         EpisodeSet.build(targets, cache, tmp_path / "a", BuildConfig(n_episodes=1, seed=1))
+
+
+def test_build_real_writes_catalogue_truth_and_the_flux_as_observed(fake_cache, tmp_path):
+    """A real host's episode keeps the cached flux unchanged, its truth holds the TOI period with the epoch
+    moved into the window, and the null episodes come from the other targets file; the context must be
+    masked separately.
+    """
+    cache, targets, _ = fake_cache
+    host = dict(targets["targets"][0])
+    lc = cache.load(host["tic"], host["sector"])
+    host["planet"] = {
+        "toi": "100.01",
+        "period": 3.0,
+        "epoch_bjd": float(lc.time.min()) + BTJD_OFFSET - 2.0 * 3.0 + 1.0,
+        "duration_hours": 2.4,
+        "depth_ppm": 1000.0,
+        "disposition": "CP",
+        "alerted": "2019-06-01",
+    }
+    real = {"real": True, "targets": [host], "toi_csv": {"sha256": "abc"}}
+    nulls = {"targets": targets["targets"][1:]}
+    episodes = EpisodeSet.build_real(real, nulls, cache, tmp_path / "real", seed=1, n_null=3)
+    truth = episodes.truth
+    assert len(episodes) == 4 and truth["ep_0000"]["kind"] == "transit"
+    transit = truth["ep_0000"]["transit"]
+    assert transit["period"] == 3.0 and transit["t0"] == pytest.approx(1.0) and transit["source"] == "toi"
+    assert transit["duration"] == pytest.approx(0.1) and transit["depth"] == pytest.approx(1e-3)
+    assert truth["ep_0000"]["n_transits"] == 9 and truth["ep_0000"]["snr"] > 0
+    _, flux, _ = episodes.load("ep_0000")
+    assert np.allclose(flux, lc.flux)
+    assert all(truth[f"ep_000{index}"]["kind"] == "null" for index in (1, 2, 3))
+    assert all(truth[f"ep_000{index}"]["tic"] != host["tic"] for index in (1, 2, 3))
+    assert episodes.config["build"]["real"] is True

@@ -165,6 +165,8 @@ class ToiList:
         "duration_hours": "Duration (hours)",
         "depth_ppm": "Depth (ppm)",
         "disposition": "TFOPWG Disposition",
+        "tmag": "TESS Mag",
+        "alerted": "Date TOI Alerted (UTC)",
     }
 
     def __init__(self, text: str):
@@ -190,7 +192,7 @@ class ToiList:
         entry: dict[str, Any] = {}
         for key, column in self.COLUMNS.items():
             value = row.get(column, "")
-            if key in ("toi", "disposition"):
+            if key in ("toi", "disposition", "alerted"):
                 entry[key] = value or None
                 continue
             try:
@@ -382,11 +384,21 @@ class ContextWriter:
     every episode of that star receives it with its own time offset.
     """
 
-    def __init__(self, fetcher: CatalogueFetcher):
+    def __init__(self, fetcher: CatalogueFetcher, mask_tois: bool = False):
         self._fetcher = fetcher
+        self._mask_tois = mask_tois
 
     def write(self, episode_dir: Path, targets: dict) -> Path:
-        """Fetch the contexts, write ``context.json`` and return its path."""
+        """Fetch the contexts, write ``context.json`` and return its path.
+
+        Notes
+        -----
+        With ``mask_tois`` the TOI entries of every host are left out of the context
+        and the source record says ``"masked"``. A real-planet episode set needs this:
+        its hidden answer is the host's own TOI, which ``ephemeris_match`` would
+        otherwise hand to the model. The eclipsing-binary entries, the Gaia classes
+        and the neighbours stay.
+        """
         truth = json.loads((episode_dir / "truth.json").read_text())
         stars = {tic_id(target["tic"]): target for target in targets["targets"]}
         cache: dict[tuple[int, int], EpisodeContext] = {}
@@ -400,6 +412,9 @@ class ContextWriter:
                 cache[key] = self._fetcher.context_for(stars[key[0]], key[1], float(record["t_offset"]))
             context = EpisodeContext.from_dict(cache[key].to_dict())
             context.t_offset = float(record["t_offset"])
+            if self._mask_tois:
+                context.tois = []
+                context.sources = {**context.sources, "toi": "masked"}
             contexts[episode_id] = context.to_dict()
         path = episode_dir / "context.json"
         path.write_text(json.dumps(contexts, indent=1, sort_keys=True))

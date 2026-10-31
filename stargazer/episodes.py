@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from stargazer import __version__
+from stargazer.context import BTJD_OFFSET
 from stargazer.data import LightCurveCache
 from stargazer.inject import expected_snr, inject, point_scatter, sample_truth, transit_count
 from stargazer.provenance import Digest, GitState, Manifest, utc_timestamp
@@ -50,6 +51,59 @@ class BuildConfig:
 
 def _has_finite(record: dict, *keys: str) -> bool:
     return all(record.get(key) is not None and np.isfinite(float(record[key])) for key in keys)
+
+
+def catalogue_transit(
+    time: np.ndarray, flux: np.ndarray, planet: dict, t_offset: float
+) -> tuple[dict, int, float]:
+    """Return the truth record, the transit count and the expected signal-to-noise of a catalogue planet.
+
+    Parameters
+    ----------
+    time : ndarray
+        BTJD days of the light curve.
+    flux : ndarray
+        Normalised flux, as observed.
+    planet : dict
+        A TOI entry: ``period`` (days), ``epoch_bjd``, ``duration_hours``, ``depth_ppm``.
+    t_offset : float
+        BTJD of the first point; the record's ``t0`` is in days from it.
+
+    Notes
+    -----
+    The epoch is moved by whole periods to the first transit centre at or after the
+    start of the data, so ``t0`` lies in the episode's window as an injected epoch
+    does. The count is the number of transit centres with at least three points
+    within half a duration, as :func:`stargazer.inject.transit_count` counts. The
+    signal-to-noise is the box statistic of :func:`stargazer.inject.expected_snr`,
+    ``depth / scatter * sqrt(n_in)``, with the catalogue depth and duration; on a
+    real transit it is an estimate, because the light curve already holds the
+    transit and the scatter includes it.
+    """
+    period = float(planet["period"])
+    duration = float(planet["duration_hours"]) / 24.0
+    depth = float(planet["depth_ppm"]) * 1e-6
+    epoch = float(planet["epoch_bjd"]) - BTJD_OFFSET
+    first = epoch + period * np.ceil((time.min() - epoch) / period)
+    phase = ((time - first + 0.5 * period) % period) - 0.5 * period
+    in_transit = np.abs(phase) < 0.5 * duration
+    epochs = np.round((time[in_transit] - first) / period).astype(int)
+    _, counts = np.unique(epochs, return_counts=True)
+    n_transits = int(np.sum(counts >= 3))
+    scatter = point_scatter(flux)
+    snr = float(depth / scatter * np.sqrt(int(in_transit.sum()))) if scatter > 0 else 0.0
+    record = {
+        "period": period,
+        "t0": float(first - t_offset),
+        "duration": duration,
+        "depth": depth,
+        "rp_rs": float(np.sqrt(depth)),
+        "source": "toi",
+        "toi": planet.get("toi"),
+        "disposition": planet.get("disposition"),
+        "alerted": planet.get("alerted"),
+    }
+    return record, n_transits, snr
 
 
 class EpisodeSet:
@@ -224,3 +278,116 @@ class EpisodeSet:
         (out_dir / "config.json").write_text(json.dumps(config, indent=2))
         Manifest.of_directory(out_dir).write(out_dir)
         return cls(out_dir)
+
+    @classmethod
+    def build_real(
+        cls,
+        targets: dict,
+        null_targets: dict,
+        cache: LightCurveCache,
+        out_dir: Path,
+        seed: int,
+        n_null: int,
+        targets_path: Path | None = None,
+        null_targets_path: Path | None = None,
+    ) -> EpisodeSet:
+        """Build an episode set of real planets: catalogue truth, no injection.
+
+        Parameters
+        ----------
+        targets : dict
+            Output of :func:`stargazer.targets.select_real_targets`; each target
+            carries a ``planet`` entry.
+        null_targets : dict
+            A targets file of hosts with no TOI, from :func:`stargazer.targets.select_targets`,
+            for the null episodes.
+        cache : LightCurveCache
+            Must already contain the light curves of both files.
+        out_dir : Path
+        seed : int
+            Seed of the draw of the null hosts.
+        n_null : int
+            Number of null episodes.
+        targets_path, null_targets_path : Path, optional
+            Recorded with their hashes in ``config.json``.
+
+        Notes
+        -----
+        One transit episode is written for each cached real host, in the order of
+        the targets file, with the flux as observed and the truth from the TOI entry
+        through :func:`catalogue_transit`. Then ``n_null`` null episodes are drawn
+        with replacement from the cached null hosts. A host whose planet has no
+        transit in the sector keeps ``n_transits`` 0 and is scored as a null, as an
+        injection with no transit is. The context of such a set must be written with
+        the TOI entries masked.
+        """
+        rng = np.random.default_rng(seed)
+        out_dir = Path(out_dir)
+        ep_dir = out_dir / "episodes"
+        ep_dir.mkdir(parents=True, exist_ok=True)
+        real_hosts = [target for target in targets["targets"] if cache.has(target["tic"], target["sector"])]
+        null_hosts = [
+            target for target in null_targets["targets"] if cache.has(target["tic"], target["sector"])
+        ]
+        if not real_hosts or not null_hosts:
+            raise RuntimeError("no cached light curves for the real hosts or the null hosts; run fetch first")
+        truth = {}
+        index = 0
+        for star in real_hosts:
+            lc = cache.load(star["tic"], star["sector"])
+            t_offset = float(lc.time.min())
+            transit, n_transits, snr = catalogue_transit(lc.time, lc.flux, star["planet"], t_offset)
+            truth[f"ep_{index:04d}"] = {
+                "kind": "transit",
+                "tic": star["tic"],
+                "sector": star["sector"],
+                "t_offset": t_offset,
+                "n_points": len(lc.time),
+                "star": {key: star.get(key) for key in ("teff", "logg", "radius_rsun", "tmag", "mass_msun")},
+                "point_scatter": point_scatter(lc.flux),
+                "snr": snr,
+                "n_transits": n_transits,
+                "transit": transit,
+            }
+            cls._write_episode(ep_dir, f"ep_{index:04d}", lc, t_offset)
+            index += 1
+        for _ in range(n_null):
+            star = null_hosts[int(rng.integers(len(null_hosts)))]
+            lc = cache.load(star["tic"], star["sector"])
+            t_offset = float(lc.time.min())
+            truth[f"ep_{index:04d}"] = {
+                "kind": "null",
+                "tic": star["tic"],
+                "sector": star["sector"],
+                "t_offset": t_offset,
+                "n_points": len(lc.time),
+                "star": {key: star.get(key) for key in ("teff", "logg", "radius_rsun", "tmag", "mass_msun")},
+                "point_scatter": point_scatter(lc.flux),
+            }
+            cls._write_episode(ep_dir, f"ep_{index:04d}", lc, t_offset)
+            index += 1
+        (out_dir / "truth.json").write_text(json.dumps(truth, indent=1, sort_keys=True))
+        config = {
+            "created": utc_timestamp(),
+            "git_commit": str(GitState.current()),
+            "stargazer_version": __version__,
+            "build": {"real": True, "seed": seed, "n_null": n_null, "n_real": len(real_hosts)},
+            "targets_file": str(targets_path) if targets_path else None,
+            "targets_sha256": Digest.of_file(targets_path).hex if targets_path else None,
+            "null_targets_file": str(null_targets_path) if null_targets_path else None,
+            "null_targets_sha256": Digest.of_file(null_targets_path).hex if null_targets_path else None,
+            "toi_csv": targets.get("toi_csv"),
+        }
+        (out_dir / "config.json").write_text(json.dumps(config, indent=2))
+        Manifest.of_directory(out_dir).write(out_dir)
+        return cls(out_dir)
+
+    @staticmethod
+    def _write_episode(ep_dir: Path, ep_id: str, lc, t_offset: float) -> None:
+        """Write one episode file: relative time, the flux as observed, the flux error."""
+        np.savez_compressed(
+            ep_dir / f"{ep_id}.npz",
+            time=(lc.time - t_offset).astype(np.float64),
+            flux=lc.flux.astype(np.float64),
+            flux_err=lc.flux_err.astype(np.float64),
+        )

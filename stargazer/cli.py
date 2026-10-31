@@ -15,8 +15,16 @@ from pathlib import Path
 
 def cmd_targets(args: argparse.Namespace) -> None:
     """Select host stars for a sector and save the targets file."""
-    from stargazer.targets import save_targets, select_targets
+    from stargazer.targets import save_targets, select_real_targets, select_targets
 
+    if args.real:
+        selection = select_real_targets(args.sector, tmag_max=args.tmag_max)
+        save_targets(selection, args.out)
+        print(
+            f"selected {selection['n_selected']} confirmed single-planet hosts of "
+            f"{selection['n_two_minute_in_sector']} 2-min stars -> {args.out}"
+        )
+        return
     selection = select_targets(args.sector, args.n, args.seed, tmag_max=args.tmag_max)
     save_targets(selection, args.out)
     print(f"selected {selection['n_selected']} / {selection['n_requested']} targets -> {args.out}")
@@ -66,6 +74,19 @@ def cmd_build(args: argparse.Namespace) -> None:
     from stargazer.episodes import BuildConfig, EpisodeSet
     from stargazer.targets import load_targets
 
+    if args.real:
+        es = EpisodeSet.build_real(
+            load_targets(args.targets),
+            load_targets(args.null_targets),
+            LightCurveCache(args.cache),
+            Path(args.out),
+            args.seed,
+            args.n_null,
+            Path(args.targets),
+            Path(args.null_targets),
+        )
+        print(f"built {len(es)} episodes -> {es.root}\nepisode set hash {es.hash}")
+        return
     cfg = BuildConfig(
         n_episodes=args.n,
         seed=args.seed,
@@ -110,7 +131,9 @@ def cmd_context(args: argparse.Namespace) -> None:
     from stargazer.targets import load_targets
 
     episode_dir = Path(args.episodes)
-    path = ContextWriter(CatalogueFetcher()).write(episode_dir, load_targets(args.targets))
+    path = ContextWriter(CatalogueFetcher(), mask_tois=args.mask_tois).write(
+        episode_dir, load_targets(args.targets)
+    )
     Manifest.of_directory(episode_dir).write(episode_dir)
     n_contexts = len(json.loads(path.read_text()))
     print(
@@ -320,6 +343,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--tmag-max", type=float, default=12.0)
     parser.add_argument("--out", default=None)
+    parser.add_argument(
+        "--real",
+        action="store_true",
+        help="select the confirmed single-planet TOI hosts of the sector instead",
+    )
     parser.set_defaults(func=cmd_targets)
 
     parser = sub.add_parser("remove-binaries", help="drop the known eclipsing binaries from a targets file")
@@ -343,11 +371,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-period", type=float, default=20.0)
     parser.add_argument("--min-depth", type=float, default=1e-4)
     parser.add_argument("--max-depth", type=float, default=1e-2)
+    parser.add_argument("--real", action="store_true", help="real planets: catalogue truth, no injection")
+    parser.add_argument(
+        "--null-targets", default=None, help="with --real: a targets file of hosts with no TOI"
+    )
+    parser.add_argument("--n-null", type=int, default=60, help="with --real: number of null episodes")
     parser.set_defaults(func=cmd_build)
 
     parser = sub.add_parser("context", help="fetch catalogue rows for the hosts of an episode set")
     parser.add_argument("--episodes", required=True)
     parser.add_argument("--targets", required=True)
+    parser.add_argument(
+        "--mask-tois", action="store_true", help="leave the hosts' TOI entries out (real-planet sets)"
+    )
     parser.set_defaults(func=cmd_context)
 
     parser = sub.add_parser("baseline", help="run the BLS baseline on an episode set and score it")
