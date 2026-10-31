@@ -131,9 +131,8 @@ def cmd_context(args: argparse.Namespace) -> None:
     from stargazer.targets import load_targets
 
     episode_dir = Path(args.episodes)
-    path = ContextWriter(CatalogueFetcher(), mask_tois=args.mask_tois).write(
-        episode_dir, load_targets(args.targets)
-    )
+    targets = {"targets": [target for file in args.targets for target in load_targets(file)["targets"]]}
+    path = ContextWriter(CatalogueFetcher(), mask_tois=args.mask_tois).write(episode_dir, targets)
     Manifest.of_directory(episode_dir).write(episode_dir)
     n_contexts = len(json.loads(path.read_text()))
     print(
@@ -380,7 +379,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = sub.add_parser("context", help="fetch catalogue rows for the hosts of an episode set")
     parser.add_argument("--episodes", required=True)
-    parser.add_argument("--targets", required=True)
+    parser.add_argument(
+        "--targets", required=True, nargs="+", help="one or more targets files that together name every host"
+    )
     parser.add_argument(
         "--mask-tois", action="store_true", help="leave the hosts' TOI entries out (real-planet sets)"
     )

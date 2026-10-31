@@ -239,6 +239,8 @@ def test_remove_binaries_command_reads_one_targets_file_and_writes_another(monke
 
 
 def test_context_command_takes_an_episode_set_and_a_targets_file():
-    """The context command names the set to annotate and the targets file that holds the positions."""
-    args = build_parser().parse_args(["context", "--episodes", "x", "--targets", "t.json"])
-    assert args.episodes == "x" and args.targets == "t.json"
+    """The context command names the set to annotate and the targets files that hold the positions; a
+    real-planet set needs two, the real hosts and the null hosts, and the TOI mask is off by default.
+    """
+    args = build_parser().parse_args(["context", "--episodes", "x", "--targets", "t.json", "n.json"])
+    assert args.episodes == "x" and args.targets == ["t.json", "n.json"] and args.mask_tois is False
