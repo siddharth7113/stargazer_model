@@ -154,16 +154,17 @@ REAL_TOI_CSV = (
 4,400.01,4.0,2459003.0,2.0,700,CP,9.0,2019-06-01
 4,400.02,9.0,2459004.0,2.5,300,PC,9.0,2021-06-01
 5,500.01,,2459005.0,2.0,600,KP,9.0,2019-06-01
+6,600.01,0.0,2459006.0,2.0,600,CP,9.0,2019-06-01
 """
 )
 
 
 def test_select_real_targets_keeps_single_confirmed_bright_hosts_with_a_full_ephemeris(monkeypatch):
-    """Of five TOI hosts in the sector only TIC 1 passes: TIC 2 is a candidate, TIC 3 is too faint, TIC 4
-    has a second TOI and TIC 5 has no period. The target carries the TOI entry as the planet and the file
-    is marked real.
+    """Of six TOI hosts in the sector only TIC 1 passes: TIC 2 is a candidate, TIC 3 is too faint, TIC 4
+    has a second TOI, TIC 5 has no period and TIC 6 a period of zero (a single transit). The target
+    carries the TOI entry as the planet and the file is marked real.
     """
-    monkeypatch.setattr(targets_module, "sector_two_minute_tics", lambda sector: [1, 2, 3, 4, 5, 6])
+    monkeypatch.setattr(targets_module, "sector_two_minute_tics", lambda sector: [1, 2, 3, 4, 5, 6, 7])
     monkeypatch.setattr(targets_module, "tic_params", lambda tics: {tic: dict(GOOD) for tic in tics})
     selection = select_real_targets(98, tmag_max=12.0, toi_list=ToiList(REAL_TOI_CSV))
     assert selection["real"] is True and [target["tic"] for target in selection["targets"]] == [1]

@@ -262,7 +262,8 @@ def select_real_targets(
     -----
     The stars are those with a 120 s light curve in the sector whose TOI list holds
     exactly one entry with a disposition in ``dispositions``, so that one planet is
-    the answer and no second signal competes with it. The alert date of each entry
+    the answer and no second signal competes with it. A single-transit TOI, whose
+    period the list gives as zero, is left out. The alert date of each entry
     is recorded, so a reader can compare it with a model's release date; the light
     curve's own date is the sector's. The TIC parameters are fetched for the hosts
     that pass, as in :func:`select_targets`.
@@ -277,6 +278,8 @@ def select_real_targets(
             continue
         planet = entries[0]
         if any(planet[key] is None for key in ("period", "epoch_bjd", "duration_hours", "depth_ppm")):
+            continue
+        if planet["period"] <= 0:
             continue
         if planet["tmag"] is None or planet["tmag"] > tmag_max:
             continue
