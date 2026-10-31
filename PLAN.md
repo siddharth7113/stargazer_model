@@ -94,7 +94,7 @@ description written for the model. The agent gets the tool only when the test pa
 - [x] Gaia neighbours within the aperture and the dilution they imply; `nearby_stars` (LOGBOOK 2026-10-11)
 - [x] Systematics, first the segment edges: `edge_verdict` on each peak of `bls_peaks` and `search_signals`, `at_segment_edges` when every event with data lies within half a day of the start or the end of a data segment, where the scattered-light ramps are; a replay over 20 runs showed it names 71 of 116 periodic false alarms and 46 of 47 single events on no transit, and no findable planet with two or more events. Null on Inkling-Small with the rules prompt (false alarms 2.3 to 0.6 percent, completeness 39.2 to 38.1, score 0.573 to 0.568 on s98_v3; 7.0 to 0.0 percent and 0.575 to 0.590 on s92_v1), because that model was not submitting the ramps; kept for the large-model pass. The first measurement was of a defective version (edges computed after the masks) and is on file as such (LOGBOOK 2026-10-31). Still open: momentum dumps and the Earth-and-Moon windows
 - [x] Orbit shape verdict, `orbit_shape`: flat, or variable at the period as a pulsating or rotating star is, from a long-window fold with a period contrast; names the 0.946-day pulsator on TIC 55270064 and the 0.92-day rotation of TIC 32816814, reads all 96 injected planets with five orbits as flat. As a field of `fold` it cost Inkling-Small 3 points of completeness, because the model stopped at the first `variable` word, so it is a separate tool; no gain measured on the small model, its test is the large-model pass and s92_v1 (LOGBOOK 2026-10-25)
-- [ ] Stellar context: rotation period, flares, variability class from the light curve
+- [ ] Stellar context: rotation period, flares, variability class from the light curve. Not built before the freeze: the spotted-host misses are red-noise limited or need a transit-shaped search, and a rotation-harmonic match is unsafe as a verdict (LOGBOOK 2026-10-31)
 - [ ] TRICERATOPS or an equivalent false-positive probability as the final number
 
 ### 3c Reporting
@@ -163,14 +163,20 @@ tool: the three-episode check must include an episode where the search masks a
 signal and finds a second one, because a check on single-signal episodes cannot show
 a masked-search defect.
 
-Nothing is running. The two Kimi K2.6 runs with `--max-turns 60 --max-tokens 32768`
-wait for the frozen toolbox. The next session starts with the rotation item (the last
-tool before the freeze, item 3 below): read the shared misses ep_0042, ep_0043,
-ep_0049, ep_0059 of s98_v3 first, design the tool from them and from the 0.69-, 0.92-
-and 1.38-day signals on TIC 32816814 and the 0.946-day pulsator on TIC 55270064
-(the unflagged false-alarm family), then a check on three episodes of which one has
-a masked second signal, three seeds on s98_v3 against the `full_v13edge` rows, one
-seed on s92_v1 against its `full_v13edge` row. Cost about $46 a cycle.
+Later the same day the rotation item was read and closed with no tool: the four
+shared misses are two red-noise limited planets and two that the filter and the box
+search lose; harmonic prewhitening, flare clipping, a biweight filter and a red-noise
+peak field were measured offline and none recovers them, and a rotation-harmonic
+match flags as many hits as false alarms. The toolbox is frozen at twelve tools with
+the segment-edge verdict in the search (LOGBOOK 2026-10-31).
+
+Nothing is running. The next session starts with item 4, which needs the owner's
+yes: the one-seed large-model pass with the rules prompt on s98_v3 as the final table
+of Phase 3 (Inkling, Nemotron 3 Ultra, Qwen3.5-397B, Kimi K2.6; about $300 at the
+2026-10-25 costs), where the segment-edge verdict meets the models that submitted the
+ramps, and the Kimi K2.6 raised-caps run. Then Phase 5: check which sampling models
+Tinker trains, and one short training test on Inkling-Small to measure the cost of a
+step. The Full Frame Image loader (item 3b) can be built alongside without a paid run.
 
 Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
 bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
@@ -195,14 +201,20 @@ freezes.
      and not of its period; measured 2026-10-31, null on the small model as the orbit
      shape verdict was, kept because the ramps are the large models' false alarms
      (LOGBOOK 2026-10-31). Not to be revisited on the small model;
-   - rotation-aware detrending or a `stellar_variability` tool for the spotted hosts;
-     test: the shared misses ep_0042, ep_0043, ep_0049, ep_0059.
+   - the rotation item: closed 2026-10-31 with no tool. The shared misses are two
+     red-noise limited planets (ep_0042, ep_0043 at 4.8 against the noise at the
+     transit timescale) and two that the filter and the box search lose (ep_0049,
+     ep_0059); harmonic prewhitening, flare clipping, a biweight filter and a
+     red-noise peak field were each measured offline and none recovers them; a
+     rotation-harmonic match flags as many hits as false alarms (LOGBOOK 2026-10-31).
    Each tool breaks the comparison with the earlier runs; record the break in the
    LOGBOOK and keep the earlier tables as the record of their toolbox version. Each
    tool gets one measurement cycle: three seeds on s98_v3, one on s92_v1. A tool
    that does not move both sets in the same direction goes, with no second version
-   on the small model. The toolbox freezes after the rotation item whether or not
-   the score moved; the remaining gain is the policy's job in Phase 5.
+   on the small model. The toolbox froze on 2026-10-31 after the rotation item, at
+   twelve tools with the segment-edge verdict in the search; the reference rows are
+   the `full_v13edge` runs on both sets. The remaining gain is the policy's job in
+   Phase 5.
 3b. Beside the tools, started early because Phase 6 lives there: the Full Frame
    Image loader (QLP or TESS-SPOC, 10- and 30-minute cadence) as a `LightCurveCache`
    source, and one small FFI episode set on unvetted stars to test the three-array

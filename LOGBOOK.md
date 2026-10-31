@@ -1775,3 +1775,100 @@ owner may reverse this with a revert of commits `c178235` and `f7f77f2`; the ear
 tables stay as the record of the twelve-tool box. The comparison from here is the
 `full_v13edge` rows on both sets. The next tool is the rotation item, the last before
 the freeze.
+
+**The rotation item, read before it is designed** (offline, no run). The handoff's test
+cases are the four shared misses ep_0042, ep_0043, ep_0049 and ep_0059 (signal-to-noise
+12 to 18, two to five transits, 1,300 to 4,000 ppm, missed by every model in every
+run) and the unflagged false-alarm family, the 0.69-, 0.92- and 1.38-day signals on
+the rotating star TIC 32816814 and the 0.946-day pulsator on TIC 55270064.
+
+What the eight light curves show. The spot modulation is large and smooth: 6.5 percent
+peak to peak at 5.79 days on TIC 21505902 (ep_0042, ep_0043), 1.9 percent at 11.9 days
+on TIC 43603155 (ep_0049), 3 percent at 5.67 days plus a 20 percent flare on TIC
+156836091 (ep_0059). The Savitzky-Golay filter at 0.75 days removes the modulation;
+what remains in the residual is flares and the filter's overshoot after each one,
+which the box search and the single-event tool report as dips (the 17.3-day,
+5,000-ppm "signal" on TIC 21505902 that the models fold and reject is such a set).
+The injected transits lose depth where they sit on a steep part of the spot curve:
+on ep_0059 the two 4,019-ppm transits come out at 2,851 and 2,477 ppm after the
+filter, and on ep_0042 the four 1,324-ppm transits at 1,924, 283, 1,193 and 894. In
+the single-event statistic the true transits score 3 to 7 against the nominal 12 to
+18, and the box search puts the true period in the top five only on ep_0049 (rank 2,
+SDE 6.8).
+
+The noise at the transit timescale, measured as the single-event tool measures it
+(1.4826 times the median absolute deviation of the box means after the filter), is
+the reason. Over the 84 findable planets of s98_v3 (white signal-to-noise 10 or more)
+the ratio of that noise to the white noise is 1.15 at the median and 10.4 at the
+worst; with the depth against this noise, times the square root of the transits, 10
+of the 84 are below 7 (ep_0031, ep_0032, ep_0042, ep_0043, ep_0087, ep_0121, ep_0174,
+ep_0181 among them) and 72 are at 10 or more. On s92_v1, 3 of 67. ep_0042 and
+ep_0043 are at 4.8: red-noise limited, out of reach of any detrending. ep_0049 and
+ep_0059 are at 14 and 16, so those two are findable in principle and the toolbox
+loses them.
+
+Three detrending variants, each tested offline on the six episodes with the box
+search at the 0.75-day window, with the planet's rank among the five peaks and the
+single-event rank of the true transits as the measure:
+
+- Harmonic prewhitening: a Lomb-Scargle period and a fit of two or four harmonics,
+  subtracted before the filter, one or three periods, whole curve or by segment. No
+  change on any of the four planets (the filter already removes the smooth
+  modulation); on TIC 32816814 three periods bring the top SDE from 14.4 to 8.4,
+  on the pulsator nothing (its Lomb-Scargle power is 0.01, the amplitude is 0.1
+  percent).
+- Flare clipping: points above 3 or 4 sigma of the residual after a 0.3-day filter,
+  and 5 or 15 cadences after each, removed before the filter. No planet gained; at 3
+  sigma the removal of 300 to 550 points costs the single-event ranks.
+- A sliding-window biweight location (Tukey, tuning 5, two iterations, by segment)
+  in place of the polynomial: keeps more depth on ep_0049 (2,770, 1,423 and 3,245
+  ppm against 2,110, 864 and 2,104) and the true transits rise from single-event
+  ranks 1 and 2 at 5.6 to 6.6 and 6.1; on ep_0059 the second transit comes out
+  negative beside a flare; no planet enters the top five of the box search. About
+  0.8 seconds a call.
+
+A rotation match as a verdict (the submitted period within 2 percent of 1/3, 1/2,
+2/3, 1, 3/2, 2 or 3 times the Lomb-Scargle period of the light curve), replayed over
+every periodic submission on file (the 20 runs of the edge replay and the four of
+`full_v13edge`): with a power floor of 0.1 it names 17 of 116 periodic false alarms
+on s98_v3 (TIC 32816814 twelve times) and 106 of 1,147 hits, because on a planet
+episode the strongest periodicity is the planet; at a floor of 0.3, 17 against 21.
+It is not safe as a verdict and is not built. The gap it would have filled is in
+`orbit_shape`, whose two-harmonic model does not follow three cycles of a 0.46-day
+variation folded at 1.38 days.
+
+What is left for the item is the statistic, not the filter: on an active star the
+periodogram's floor is higher, so a planet with white signal-to-noise 12 gets an SDE
+of 7 and `search_signals` drops it below `min_sde`, while its depth against the
+noise at its own timescale is above 10. The offline measurement of that ratio as a
+field of each peak, on every episode of both sets, follows.
+
+**The depth against the red noise as a peak field: measured offline, not built.** For
+every episode of both sets, `bls_peaks` at the 0.75-day window with, for each peak,
+the box depth times the square root of its events with data over the noise at the
+box timescale (1.4826 times the median absolute deviation of the box means on the
+filtered series, the single-event tool's noise). Planets: the rank and the values at
+the true period among the five peaks; nulls: the peaks that are not at segment edges.
+
+| set | findable planets | true period in top five | nulls with a clear peak at SDE 10 or more | at red-noise ratio 10 or more | at 15 | at 20 | planets gained at ratio 10 with SDE under 10 |
+|---|---|---|---|---|---|---|---|
+| s98_v3 | 84 | 58 (52 at rank 1) | 6 of 58 | 27 of 58 | 19 | 16 | 3 (ep_0012, ep_0028, ep_0029) |
+| s92_v1 | 67 | 48 (45 at rank 1) | 2 of 58 | 25 of 58 | 6 | 2 | 2 (ep_0082, ep_0176) |
+
+The ratio is a worse separator than the SDE: the five peaks of a null episode are the
+maxima of the periodogram, and on an active star their box depths are large against
+a noise that the median absolute deviation measures as if the dips were typical.
+Among the four misses only ep_0049 is in the top five, at rank 2 with an SDE of 6.8
+and a ratio of 8.7 once the filter's depth loss is counted. The field is not built.
+
+Decision on the rotation item. No tool. The four shared misses are two red-noise
+limited planets and two that the filter and the box search together lose, which a
+transit-shaped search (the open TLS item) might recover and which no detrending
+variant tested here does; the false-alarm family on the rotating and pulsating stars
+is not submitted by the small model under the rules prompt, so a tool for it cannot
+be measured by the rule. The item closes with the measurements above as its record.
+By the working order of 2026-10-25 the toolbox freezes here, at twelve tools with the
+segment-edge verdict in the search: `summarize`, `bls_peaks`, `search_signals`,
+`single_events`, `fold`, `orbit_shape`, `fit_transit`, `odd_even`,
+`secondary_eclipse`, `ephemeris_match`, `nearby_stars`, `submit_prediction`. The
+reference rows for the frozen toolbox are the `full_v13edge` runs on both sets.
