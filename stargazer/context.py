@@ -54,6 +54,14 @@ TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output
 TESS_EB_CATALOGUE = "J/ApJS/258/16/tess-ebs"
 GAIA_CLASS_CATALOGUE = "I/358/vclassre"
 GAIA_SOURCE_CATALOGUE = "I/355/gaiadr3"
+
+GAIA_SOURCES: dict[str, str] = {
+    "vizier": GAIA_SOURCE_CATALOGUE,
+    "mast": "MAST Catalogs Gaia DR3 (catalog=Gaia, version=3)",
+}
+"""Where the Gaia sources of a context can come from, by name. Vizier is the default;
+MAST holds a copy of Gaia DR3 and answered on 2026-11-01 while every Vizier mirror had
+been down for days (LOGBOOK 2026-11-01)."""
 BTJD_OFFSET = 2457000.0
 """Days subtracted from a Barycentric Julian Date to give TESS Barycentric TESS Julian
 Date (BTJD), the time base of the cached light curves."""
@@ -210,6 +218,9 @@ class CatalogueFetcher:
     toi_list : ToiList, optional
         A parsed TOI list. None downloads it on first use.
 
+    gaia_source : str
+        ``"vizier"`` (the default) or ``"mast"``, see ``GAIA_SOURCES``.
+
     Notes
     -----
     The TOI list is one file and is read once. The eclipsing-binary entries and the
@@ -217,11 +228,18 @@ class CatalogueFetcher:
     :data:`TARGET_MATCH_ARCSEC` for the target's own entries and
     :data:`NEIGHBOUR_RADIUS_ARCSEC` for the neighbours. The neighbour list records
     each source's G magnitude difference to the target; the tools derive the flux
-    fraction from it.
+    fraction from it. With ``gaia_source`` ``"mast"`` the Gaia sources come from the
+    copy of Gaia DR3 at MAST instead, and the two catalogues that only Vizier serves,
+    the variability classes and the TESS eclipsing binaries, are left empty with
+    their source recorded as unavailable; the context then says nothing about them
+    rather than something wrong.
     """
 
-    def __init__(self, toi_list: ToiList | None = None):
+    def __init__(self, toi_list: ToiList | None = None, gaia_source: str = "vizier"):
+        if gaia_source not in GAIA_SOURCES:
+            raise ValueError(f"gaia_source must be one of {sorted(GAIA_SOURCES)}, not {gaia_source!r}")
         self._toi_list = toi_list
+        self._gaia_source = gaia_source
 
     @property
     def toi_list(self) -> ToiList:
@@ -244,8 +262,23 @@ class CatalogueFetcher:
         tic = tic_id(star.get("tic"))
         if tic is None:
             raise ValueError(f"target record has no valid TIC identifier: {star.get('tic')!r}")
-        eclipsing_binaries = self._eclipsing_binaries(tic)
-        gaia_classes, neighbours, target_gmag = self._gaia(float(star["ra"]), float(star["dec"]))
+        ra, dec = float(star["ra"]), float(star["dec"])
+        if self._gaia_source == "vizier":
+            eclipsing_binaries = self._eclipsing_binaries(tic)
+            gaia_classes, neighbours, target_gmag = self._gaia(ra, dec)
+            sources = {
+                "eclipsing_binaries": TESS_EB_CATALOGUE,
+                "gaia_classes": GAIA_CLASS_CATALOGUE,
+                "gaia_sources": GAIA_SOURCE_CATALOGUE,
+            }
+        else:
+            eclipsing_binaries, gaia_classes = [], []
+            neighbours, target_gmag = self._gaia_mast(ra, dec)
+            sources = {
+                "eclipsing_binaries": "unavailable (Vizier not used)",
+                "gaia_classes": "unavailable (Vizier not used)",
+                "gaia_sources": GAIA_SOURCES["mast"],
+            }
         return EpisodeContext(
             tic=tic,
             sector=int(sector),
@@ -259,12 +292,7 @@ class CatalogueFetcher:
             neighbours=neighbours,
             target_gmag=target_gmag,
             fetched=utc_timestamp(),
-            sources={
-                "toi": {"url": TOI_URL, "sha256": self.toi_list.sha256},
-                "eclipsing_binaries": TESS_EB_CATALOGUE,
-                "gaia_classes": GAIA_CLASS_CATALOGUE,
-                "gaia_sources": GAIA_SOURCE_CATALOGUE,
-            },
+            sources={"toi": {"url": TOI_URL, "sha256": self.toi_list.sha256}, **sources},
         )
 
     def binary_evidence(self, star: dict) -> list[str]:
@@ -345,7 +373,29 @@ class CatalogueFetcher:
             for row in table:
                 position = SkyCoord(float(row["RAJ2000"]), float(row["DEJ2000"]), unit="deg")
                 rows.append((float(coord.separation(position).arcsec), _float_or_none(row["Gmag"])))
-        rows.sort()
+        neighbours, target_gmag = self._neighbours_from_rows(rows)
+        return classes, neighbours, target_gmag
+
+    def _gaia_mast(self, ra: float, dec: float) -> tuple[list[dict], float | None]:
+        """Return the neighbours and the target's G magnitude from the Gaia DR3 copy at MAST."""
+        import astropy.units as units
+        from astropy.coordinates import SkyCoord
+        from astroquery.mast import Catalogs
+
+        coord = SkyCoord(ra, dec, unit="deg")
+        table = Catalogs.query_region(
+            coord, radius=NEIGHBOUR_RADIUS_ARCSEC * units.arcsec, catalog="Gaia", version=3
+        )
+        rows = []
+        for row in table:
+            position = SkyCoord(float(row["ra"]), float(row["dec"]), unit="deg")
+            rows.append((float(coord.separation(position).arcsec), _float_or_none(row["phot_g_mean_mag"])))
+        return self._neighbours_from_rows(rows)
+
+    @staticmethod
+    def _neighbours_from_rows(rows: list[tuple[float, float | None]]) -> tuple[list[dict], float | None]:
+        """Split (separation, G) rows into the target's magnitude and the neighbour list."""
+        rows = sorted(rows)
         target_gmag = next(
             (gmag for sep, gmag in rows if sep <= TARGET_MATCH_ARCSEC and gmag is not None), None
         )
@@ -358,7 +408,7 @@ class CatalogueFetcher:
             for sep, gmag in rows
             if sep > TARGET_MATCH_ARCSEC
         ]
-        return classes, neighbours, target_gmag
+        return neighbours, target_gmag
 
 
 def _float_or_none(value: object) -> float | None:
@@ -384,9 +434,10 @@ class ContextWriter:
     every episode of that star receives it with its own time offset.
     """
 
-    def __init__(self, fetcher: CatalogueFetcher, mask_tois: bool = False):
+    def __init__(self, fetcher: CatalogueFetcher, mask_tois: bool = False, reuse: Path | None = None):
         self._fetcher = fetcher
         self._mask_tois = mask_tois
+        self._reuse = Path(reuse) if reuse else None
 
     def write(self, episode_dir: Path, targets: dict) -> Path:
         """Fetch the contexts, write ``context.json`` and return its path.
@@ -397,11 +448,18 @@ class ContextWriter:
         and the source record says ``"masked"``. A real-planet episode set needs this:
         its hidden answer is the host's own TOI, which ``ephemeris_match`` would
         otherwise hand to the model. The eclipsing-binary entries, the Gaia classes
-        and the neighbours stay.
+        and the neighbours stay. With ``reuse``, a context file of another episode
+        set, every star and sector found there is taken from it with its source
+        record extended by ``reused_from``, and only the other stars are fetched.
         """
         truth = json.loads((episode_dir / "truth.json").read_text())
         stars = {tic_id(target["tic"]): target for target in targets["targets"]}
         cache: dict[tuple[int, int], EpisodeContext] = {}
+        if self._reuse is not None:
+            for record in json.loads(self._reuse.read_text()).values():
+                context = EpisodeContext.from_dict(record)
+                context.sources = {**context.sources, "reused_from": str(self._reuse)}
+                cache.setdefault((context.tic, context.sector), context)
         contexts = {}
         for episode_id, record in truth.items():
             tic = tic_id(record.get("tic"))

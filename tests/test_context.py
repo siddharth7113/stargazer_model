@@ -141,3 +141,58 @@ def test_writer_masks_the_toi_entries_when_asked(tmp_path):
     written = json.loads(ContextWriter(FetcherWithToi(), mask_tois=True).write(tmp_path, targets).read_text())
     assert written["ep_0000"]["tois"] == [] and written["ep_0000"]["sources"]["toi"] == "masked"
     assert written["ep_0000"]["sources"]["gaia_classes"] == "y" and written["ep_0000"]["tic"] == 123
+
+
+def test_fetcher_with_mast_gaia_uses_no_vizier_and_records_what_is_unavailable(monkeypatch):
+    """With ``gaia_source`` mast the neighbours come from the MAST query, no Vizier query runs, and the
+    two Vizier-only catalogues are empty with their source marked unavailable, so a reader knows they
+    were not checked.
+    """
+    fetcher = CatalogueFetcher(toi_list=ToiList(TOI_CSV), gaia_source="mast")
+
+    def no_vizier(*args, **kwargs):
+        raise AssertionError("Vizier was queried")
+
+    monkeypatch.setattr(fetcher, "_eclipsing_binaries", no_vizier)
+    monkeypatch.setattr(fetcher, "_gaia", no_vizier)
+    monkeypatch.setattr(fetcher, "_gaia_mast", lambda ra, dec: ([{"separation_arcsec": 5.0}], 10.0))
+    context = fetcher.context_for({"tic": 456, "ra": 1.0, "dec": 2.0}, 98, 100.0)
+    assert context.neighbours == [{"separation_arcsec": 5.0}] and context.target_gmag == 10.0
+    assert context.eclipsing_binaries == [] and context.gaia_classes == []
+    assert context.sources["gaia_sources"].startswith("MAST")
+    assert "unavailable" in context.sources["gaia_classes"]
+    assert context.tois[0]["toi"] == "200.01"
+
+
+def test_neighbours_from_rows_splits_the_target_from_the_neighbours():
+    """The source within the match radius is the target and sets the magnitude differences of the rest."""
+    rows = [(20.0, 14.0), (1.0, 10.0), (40.0, None)]
+    neighbours, target_gmag = CatalogueFetcher._neighbours_from_rows(rows)
+    assert target_gmag == 10.0
+    assert neighbours == [
+        {"separation_arcsec": 20.0, "gmag": 14.0, "delta_gmag": 4.0},
+        {"separation_arcsec": 40.0, "gmag": None, "delta_gmag": None},
+    ]
+
+
+def test_writer_reuses_the_contexts_of_another_set_and_fetches_only_the_rest(tmp_path):
+    """A star found in the reused file is copied with its own time offset and a ``reused_from`` source,
+    and the fetcher is asked only for the star that is not there.
+    """
+    old = EpisodeContext(
+        tic=123, sector=98, ra=1.0, dec=2.0, tmag=None, t_offset=50.0, gaia_classes=["RS"], sources={"x": "y"}
+    )
+    (tmp_path / "old_context.json").write_text(json.dumps({"ep_0009": old.to_dict()}))
+    truth = {
+        "ep_0000": {"kind": "null", "tic": 123, "sector": 98, "t_offset": 100.0},
+        "ep_0001": {"kind": "null", "tic": 999, "sector": 98, "t_offset": 101.0},
+    }
+    (tmp_path / "truth.json").write_text(json.dumps(truth))
+    targets = {"targets": [{"tic": 123, "ra": 1.0, "dec": 2.0}, {"tic": 999, "ra": 3.0, "dec": 4.0}]}
+    fetcher = FakeFetcher()
+    writer = ContextWriter(fetcher, reuse=tmp_path / "old_context.json")
+    written = json.loads(writer.write(tmp_path, targets).read_text())
+    assert fetcher.calls == 1
+    assert written["ep_0000"]["gaia_classes"] == ["RS"] and written["ep_0000"]["t_offset"] == 100.0
+    assert written["ep_0000"]["sources"]["reused_from"].endswith("old_context.json")
+    assert written["ep_0001"]["tic"] == 999 and "reused_from" not in written["ep_0001"]["sources"]

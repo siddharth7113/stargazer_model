@@ -132,7 +132,12 @@ def cmd_context(args: argparse.Namespace) -> None:
 
     episode_dir = Path(args.episodes)
     targets = {"targets": [target for file in args.targets for target in load_targets(file)["targets"]]}
-    path = ContextWriter(CatalogueFetcher(), mask_tois=args.mask_tois).write(episode_dir, targets)
+    writer = ContextWriter(
+        CatalogueFetcher(gaia_source=args.gaia_source),
+        mask_tois=args.mask_tois,
+        reuse=Path(args.reuse) if args.reuse else None,
+    )
+    path = writer.write(episode_dir, targets)
     Manifest.of_directory(episode_dir).write(episode_dir)
     n_contexts = len(json.loads(path.read_text()))
     print(
@@ -384,6 +389,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mask-tois", action="store_true", help="leave the hosts' TOI entries out (real-planet sets)"
+    )
+    parser.add_argument("--gaia-source", choices=["vizier", "mast"], default="vizier")
+    parser.add_argument(
+        "--reuse", default=None, help="a context.json whose stars are copied instead of fetched"
     )
     parser.set_defaults(func=cmd_context)
 
