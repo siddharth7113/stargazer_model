@@ -206,10 +206,11 @@ Nothing is running.
 
 First three steps of the next session:
 
-1. Decide the checkpoint store with the owner (asked on 2026-11-01, answer open):
-   paid storage at $0.10 per GB a month and a checkpoint every 10 steps, or the free
-   store with a checkpoint every 25 steps and the training state discarded after the
-   run, the sampler weights kept. Write the choice here and in the run script.
+1. Checkpoints, decided with the owner on 2026-11-01: the real runs keep a
+   checkpoint every 10 steps and the final one (`--save-every 10`), on paid storage
+   at $0.10 per GB a month (about 33 GB a checkpoint). The owner switches the store
+   to paid in the Tinker console before the first run; until then a training client
+   is refused once five checkpoints exist, so check the console first.
 2. Decide the reward shaping and record it in PLAN.md: the plain score (today), or
    partial credit for the procedure's steps on a hard planet, or a false-alarm
    penalty below zero. Write the chosen reward as a class beside `EpisodeReward`
