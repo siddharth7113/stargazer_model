@@ -50,7 +50,12 @@ uv venv && uv pip install -e ".[dev,docs,tinker,view]"
 .venv/bin/ruff format . && .venv/bin/ruff check .
 .venv/bin/python scripts/check_names.py stargazer/*.py
 .venv/bin/sphinx-build -q -b html docs docs/_build/html
+.venv/bin/stargazer train --help                  # RL on Tinker; log directory data/train/ is not committed
 ```
+
+The cookbook's training loop needs transformers, huggingface-hub and datasets that
+agree with each other (transformers 5.5.4, huggingface-hub 1.33, datasets 5.1 on
+2026-11-01); resolve the three together when `stargazer train` fails at import.
 
 Keys live in `.env` (copy `.env.example`); the CLI loads it. `stargazer agent` runs a
 model on an episode set; start with `--limit 3` and read the trajectory with
@@ -76,7 +81,14 @@ each model.
   or a prompt from the failures on `s92_v1`. A change counts when it moves the
   false-alarm rate by more than 3 points or the completeness by more than 1 point on
   `s98_v3`, and in the same direction on `s92_v1`.
-- No large-model run until the toolbox freezes; the owner's yes is needed for one.
+- The toolbox froze on 2026-10-31. Runs on the small model need no ask (the owner
+  reads the console; said on 2026-11-01); say so, with the estimate, before a run on a
+  big model (Inkling, Kimi K2.6, Qwen3.5-397B, Nemotron Ultra), and wait for the
+  explicit go above about $300 in one batch.
+- A training run's record is `record.json` in its log directory (the cookbook
+  overwrites `config.json`); copy it and `metrics.jsonl` under `results/train/` with
+  the LOGBOOK entry. A run stops on the first failed rollout; do not restore the
+  cookbook's skip-the-group default without saying so in the record.
 - End a session by updating the Handoff section of PLAN.md: what is running, where
   results will land, the first three steps for the next session.
 

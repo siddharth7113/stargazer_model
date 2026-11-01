@@ -62,8 +62,12 @@ a set.
 | 2, vetting | a candidate, target pixels, Gaia neighbours | planet, eclipsing binary, blend or systematic | injection and ExoFOP dispositions |
 | 3, agentic | a star and a toolbox | a vetting report with a verdict | tiers 1 and 2 combined |
 
-Tier 3 is the reinforcement-learning environment. Tier 1 is implemented; tiers 2 and 3
-are planned. The checklist is in {doc}`plan`.
+Tier 1 is implemented and is the benchmark of the LOGBOOK. Of tier 2, the catalogue
+context is implemented (`stargazer context`, the tools `ephemeris_match` and
+`nearby_stars`); the pixel data are not. Tier 3 is the reinforcement-learning
+environment, implemented in {mod}`stargazer.environment` on the Tinker cookbook with
+the tier 1 score as the reward (`stargazer train`); the vetting report is planned. The
+checklist is in {doc}`plan`.
 
 ## Components
 

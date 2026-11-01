@@ -180,7 +180,10 @@ TOI list is not downloaded. The eclipsing-binary entries can come from a copy of
 catalogue on disk, `--eclipsing-binaries data/catalogues/hlsp_tess-ebs_..._cat.csv`
 (the MAST CSV of the same catalogue, committed), and every Vizier query can go to a
 mirror, `--vizier-server vizier.cfa.harvard.edu`, so a context does not wait on
-Strasbourg. Each field's source record names where it came from.
+Strasbourg. Each field's source record names where it came from. The TESS catalogue
+lists transiting planets among its eclipsing signals, so with `--mask-tois` an entry
+at the hidden planet's period, or at an alias of it, is left out as well and counted
+in the source record.
 
 Two cautions for the reader of such a set. The signal-to-noise in the truth is an
 estimate from the catalogue depth and duration against the light curve's scatter,

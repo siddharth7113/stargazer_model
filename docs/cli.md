@@ -56,6 +56,26 @@ Inject transits and write an episode set. See {doc}`episode_sets`.
 | `--min-period`, `--max-period` | 0.5, 20.0 | period range in days |
 | `--min-depth`, `--max-depth` | 1e-4, 1e-2 | depth range |
 
+### `stargazer context`
+
+Fetch the catalogue rows of each host and write `context.json` into an episode set:
+the star's TOI entries, its TESS eclipsing-binary entries, its Gaia variability
+classes and the Gaia sources within three pixels. The tools `ephemeris_match` and
+`nearby_stars` read it. See {doc}`episode_sets`.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--episodes` | required | episode set |
+| `--targets` | required | one or more targets files that together name every host |
+| `--mask-tois` | off | leave out the hosts' own TOI entries and any eclipsing-binary entry at the hidden planet's period (real-planet sets); the TOI list is not downloaded |
+| `--gaia-source` | `vizier` | `vizier` or `mast`; MAST holds a copy of Gaia DR3 for the sources, not the classes |
+| `--eclipsing-binaries` | | a CSV copy of the TESS eclipsing-binary catalogue from MAST, `data/catalogues/`; with it no Vizier query runs for the binaries |
+| `--vizier-server` | Strasbourg | a Vizier mirror, for example `vizier.cfa.harvard.edu`, for every Vizier query |
+| `--reuse` | | a `context.json` of another set whose stars are copied instead of fetched |
+
+Each field of a context records where it came from, so a reader of a results file
+sees which catalogues the model could have read.
+
 ### `stargazer verify`
 
 ```bash
@@ -91,6 +111,7 @@ Run {class}`~stargazer.agent.ToolAgentDetector`. See {doc}`agent`.
 | `--api-key-env` | `OPENROUTER_API_KEY` | environment variable that holds the key |
 | `--model-path` | | `tinker://` path of a trained checkpoint |
 | `--renderer` | | Tinker cookbook renderer |
+| `--prompt` | `base` | `base` states the task, the scoring and the units; `rules` adds the procedure and the decision rules |
 | `--temperature` | model card value | sampling temperature |
 | `--max-tokens` | model card value | output cap for each turn, thinking included; 8192 for a thinking renderer |
 | `--seed` | 0 | sampling seed |
@@ -138,6 +159,46 @@ were.
 | `--results` | the results file of an agent run |
 | `--episodes` | the episode set it ran on; the hash must match |
 | `--out` | output file; default is the results path with `_rescored` before `.json` |
+
+## Training
+
+### `stargazer train`
+
+Train a LoRA policy on an episode set through the Tinker cookbook's
+reinforcement-learning loop. The episode is the observation, each tool call an action,
+the benchmark score of the submission the reward. See {doc}`architecture` and
+{class}`~stargazer.environment.TrainingRun`.
+
+```bash
+stargazer train --episodes data/episodes/s98_v3 --test-episodes data/episodes/s92_v1 \
+    --model thinkingmachines/Inkling-Small --renderer tml_v0 --prompt rules \
+    --batch-size 8 --group-size 4 --steps 30 --learning-rate 5e-5 \
+    --log-path data/train/<run>
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--episodes` | required | the training episode set |
+| `--test-episodes` | | a held-out set evaluated every `--eval-every` steps, one rollout for each episode |
+| `--model` | required | Tinker base model |
+| `--renderer` | required | Tinker cookbook renderer of the model family |
+| `--prompt` | `rules` | the system prompt, as for `stargazer agent` |
+| `--batch-size` | 8 | episode groups in one training step |
+| `--group-size` | 4 | rollouts of the same episode in a group; the loss centres each reward on its group's mean |
+| `--learning-rate` | required | LoRA learning rate; the cookbook has no calibrated value for Inkling |
+| `--lora-rank` | 32 | LoRA rank |
+| `--max-tokens` | 4096 | output cap for each sampled turn |
+| `--max-turns`, `--max-tool-calls` | 30, 40 | the detector's safety stops, applied by the cookbook |
+| `--max-trajectory-tokens` | 60 000 | conversation length at which the episode ends |
+| `--temperature` | 1.0 | sampling temperature during training; the cookbook's default, hotter than the model card |
+| `--steps` | one pass | training steps |
+| `--eval-every`, `--save-every` | 0, 20 | steps between evaluations and between checkpoints; 0 means never |
+| `--seed` | 0 | order of the episodes |
+| `--log-path` | required | directory for the run's `record.json`, the cookbook's `metrics.jsonl`, `config.json` and checkpoints; `data/train/` is not committed |
+
+A rollout that raises stops the run, so a run never trains on fewer groups than its
+record says. The checkpoint is evaluated with `stargazer agent --backend tinker
+--model-path tinker://...` on the same tools.
 
 ## Analysis
 

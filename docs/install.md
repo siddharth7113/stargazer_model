@@ -4,8 +4,9 @@
 
 - Python 3.13
 - [uv](https://docs.astral.sh/uv/) or pip
-- Network access to MAST and ExoFOP to build an episode set. The test suite and the
-  scoring of an existing set run offline.
+- Network access to MAST and ExoFOP to build an episode set, and to Vizier (or the
+  catalogue copy under `data/catalogues/`) for the catalogue context. The test suite
+  and the scoring of an existing set run offline.
 
 ## Install from source
 
@@ -25,11 +26,22 @@ uv pip install -e ".[dev,docs,tinker,view]"
 | `dev` | pytest, ruff, pre-commit | tests and the commit hooks |
 | `docs` | Sphinx, MyST, furo, sphinx-design, sphinxcontrib-mermaid | building this documentation |
 | `openai` | openai | `stargazer agent --backend openai` (OpenRouter, vLLM, Ollama) |
-| `tinker` | tinker, tinker-cookbook | `stargazer agent --backend tinker` and RL training |
+| `tinker` | tinker, tinker-cookbook | `stargazer agent --backend tinker` and `stargazer train` |
 | `view` | textual | `stargazer view` |
 
 The core dependencies are numpy, astropy, lightkurve, batman-package, PyYAML,
 python-dotenv and rich.
+
+The cookbook's training loop imports `datasets`, `transformers` and
+`huggingface-hub`, whose releases constrain each other. The set that works on
+2026-11-01 is transformers 5.5.4, huggingface-hub 1.33 and datasets 5.1; an older
+`datasets` fails to import against pyarrow 26, and an older `transformers` refuses
+huggingface-hub 2. When `stargazer train` fails at import, resolve the three
+together:
+
+```bash
+uv pip install -U "transformers>=4.57.6,<=5.5.4" datasets tokenizers huggingface-hub
+```
 
 ## API keys
 

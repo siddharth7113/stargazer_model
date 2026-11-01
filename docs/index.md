@@ -13,6 +13,10 @@ The package contains:
 - a classical Box Least Squares (BLS) detector as a baseline;
 - analysis tools that a language model calls through a JSON Schema interface;
 - an agent loop with backends for OpenAI-compatible servers and for Tinker;
+- the catalogue context of each host star, for the tools that check a candidate
+  against the TOI list, the eclipsing-binary catalogue and the Gaia neighbours;
+- a reinforcement-learning environment on the Tinker cookbook, with the benchmark
+  score as the reward and `stargazer train` to run it;
 - a terminal viewer for the saved trajectories.
 
 ::::{grid} 1 2 2 3

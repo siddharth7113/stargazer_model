@@ -61,6 +61,23 @@ for this reason.
 
 {func}`~stargazer.compare.compare` refuses results files from different episode sets.
 
+A context file (`context.json`, written by `stargazer context`) is part of the
+episode set and of its hash. Each field records its source: the TOI list by URL and
+SHA-256 or `masked`, the eclipsing-binary entries by catalogue identifier or by the
+URL and SHA-256 of the disk copy, the Gaia catalogues by identifier with the mirror
+when one was used, and `unavailable` when a catalogue could not be read, so the
+context says nothing rather than something wrong.
+
+## Contents of a training run
+
+`stargazer train` writes `record.json` into the log directory before the first step:
+the git commit, the training and test sets by hash, the prompt name and hash, the
+tool names, the model, renderer, learning rate, LoRA rank, group and batch sizes,
+caps, temperature and seed. The cookbook adds its own `config.json`, `metrics.jsonl`
+(one row for each step with the mean reward, the one-hot outcome fractions, the
+token counts and the timing) and `checkpoints.jsonl` with the `tinker://` paths. The
+LOGBOOK entry of a run copies `record.json` and `metrics.jsonl` under `results/train/`.
+
 ## Tests
 
 - `pytest` runs without network access, on synthetic white-noise light curves with

@@ -80,11 +80,16 @@ language-model agent on it, and compare the two. The recording was made with
 stargazer targets  --sector 98 --n 60 --seed 1               # host stars with no TOI
 stargazer fetch    --targets data/targets_s98.json           # cache light curves, write a manifest
 stargazer build    --targets data/targets_s98.json --n 200 --seed 1 --out data/episodes/s98_v1
+stargazer context  --episodes data/episodes/s98_v1 --targets data/targets_s98.json \
+                   --eclipsing-binaries data/catalogues/hlsp_tess-ebs_tess_lcf-ffi_s0001-s0026_tess_v1.0_cat.csv
 stargazer baseline --episodes data/episodes/s98_v1           # Box Least Squares floor
 stargazer agent    --episodes data/episodes/s98_v1 --backend tinker \
                    --model Qwen/Qwen3.8-27B --renderer qwen3_8_disable_thinking --limit 3
 stargazer view     --results results/<run>.json              # read the trajectories
 stargazer compare  results/baseline_bls_s98_v1_sde7.json results/full/agent_*.json
+stargazer train    --episodes data/episodes/s98_v3 --test-episodes data/episodes/s92_v1 \
+                   --model thinkingmachines/Inkling-Small --renderer tml_v0 --prompt rules \
+                   --steps 30 --learning-rate 5e-5 --log-path data/train/first   # RL on Tinker
 ```
 
 ## Method
@@ -235,6 +240,51 @@ with the same settings. No tool or prompt is designed on it; it confirms a chang
 completeness with the rules prompt and 31 and 38 percent with the base prompt, against
 BLS at 32 percent completeness for 5 percent false alarms, the same picture as on
 `s98_v3` (LOGBOOK 2026-10-25).
+
+The toolbox froze on 2026-10-31 at twelve tools, with a segment-edge verdict in the
+search that names the spacecraft's scattered-light ramps; on the frozen toolbox every
+large model moved the same way, false alarms from 10 to 6 percent on the mean of four
+(LOGBOOK 2026-10-31). The rules prompt gained one sentence on 2026-11-01: two or more
+transits of one parity are still a period, for the planet whose every even transit
+falls in a data gap. The reference rows on the frozen toolbox with that prompt are the
+`results/full_v15parity/` runs: on `s98_v3`, Inkling-Small at three seeds gives 0.6
+percent false alarms and 38.5 percent completeness (score 0.573); on `s92_v1`, 0.0 and
+34.9 percent.
+
+### Real confirmed planets
+
+Episode set `s98_real_v2` holds 41 confirmed single-planet hosts of sector 98 with the
+flux as observed and the truth from the TOI list, each catalogue ephemeris verified
+against the data (two absent ones left out, three epochs refined), with 40 null
+episodes from the `s98_v3` hosts. The context masks the hosts' own TOI entries and the
+eclipsing-binary entries at the planet's period, so no tool can hand the model the
+answer. 35 planets have a transit in the sector.
+
+| system, s98_real_v2 | false alarm | completeness | mean score |
+|---|---|---|---|
+| Box Least Squares at SDE 7 | 80% | 74% | 0.432 |
+| Box Least Squares at 2 percent false alarm | 2% | 66% | 0.840 |
+| Inkling-Small, rules prompt | 0% | 77% | 0.901 |
+
+The model finds every planet deeper than 5,000 ppm, 3 of 5 between 1,000 and 5,000,
+and 4 of 10 under 1,000 ppm, the same rate at the bottom as on the injected sets;
+it declines 46 of 46 clean episodes, where the default Box Least Squares threshold
+reports 37 false alarms on the systematics of real stars. Nothing points at memorised
+planets: the misses are the faint ones, the light curves are from 2025 and the
+episodes carry no name (LOGBOOK 2026-11-01).
+
+## Training
+
+The same episodes, tools and score form a reinforcement-learning environment on the
+Tinker cookbook (`stargazer/environment.py`): the rendered conversation is the
+observation, each tool call an action, the benchmark score of the submission the
+reward, paid once at the end of the episode. `stargazer train` runs a LoRA training
+on an episode set with a held-out set as the test set and records the sets by hash,
+the prompt hash and every setting beside the cookbook's metrics. A step of 8 stars
+sampled 4 times takes about 90 seconds on Inkling-Small. The first measurement showed
+that 22 of 24 such groups gave one reward on all four rollouts, so the next step is
+the group size, the temperature and the reward that make the groups informative
+(LOGBOOK 2026-11-01).
 
 ## Toolbox
 

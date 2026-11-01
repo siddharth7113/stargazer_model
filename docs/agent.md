@@ -92,6 +92,19 @@ which includes residual stellar variability.
 The single-event form is for a planet with one transit in the data, which has no
 measurable period. See {doc}`scoring` for the credit of each form.
 
+## Prompts
+
+Two system prompts exist, `--prompt base` and `--prompt rules`. The base prompt
+states the task, the scoring and the units and nothing else; it is the control that
+shows what a procedure adds. The rules prompt adds the seven-step procedure and the
+decision rules: a periodic planet is one clean dip in the zoomed fold, a plausible
+host density, a shape that is not V-shaped, an odd-even verdict that is consistent
+(or `insufficient_data` with two or more events of one parity, which happens when
+every even transit falls in a data gap), and no secondary eclipse. The LOGBOOK
+measures every change to the rules prompt on `s98_v3`, `s92_v1` and `s98_real_v2`
+before it stays; a results file records the prompt's hash, so a run names the exact
+text it used.
+
 ## Backends
 
 A backend implements one method, `complete(messages, tools)`, that returns an
@@ -112,7 +125,10 @@ Renderers used so far:
 |---|---|
 | `Qwen/Qwen3.8-27B` | `qwen3_8_disable_thinking`, `qwen3_8_xhigh_reasoning` |
 | `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16` | `nemotron3_disable_thinking` |
-| `thinkingmachines/Inkling-Small` | `tml_v0` |
+| `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16` | `nemotron3_ultra` |
+| `Qwen/Qwen3.5-397B-A17B` | `qwen3_5` |
+| `moonshotai/Kimi-K2.6` | `kimi_k26` |
+| `thinkingmachines/Inkling-Small`, `thinkingmachines/Inkling` | `tml_v0` |
 
 ## Sampling
 
@@ -123,9 +139,12 @@ The defaults follow the Qwen3 model cards {cite:p}`qwen2025`:
 | non-thinking | 0.7 | 0.8 | 20 | 2048 |
 | thinking | 0.6 | 0.95 | 20 | 8192 |
 
-Temperature 0 is not used: the model cards discourage greedy decoding, and it does not
-make a hosted model deterministic. The seed is recorded in the results file. To
-measure run-to-run variance, repeat a run with different `--seed` values.
+The Inkling renderer `tml_v0` takes the thinking row. Temperature 0 is not used: the
+model cards discourage greedy decoding, and it does not make a hosted model
+deterministic. The seed is recorded in the results file. To measure run-to-run
+variance, repeat a run with different `--seed` values. Training through
+`stargazer train` samples at the cookbook's default temperature of 1.0 unless
+`--temperature` says otherwise, hotter than evaluation.
 
 ## Limits
 
@@ -137,6 +156,14 @@ The limits stop a model that loops. They are not part of the task.
 | turns | 30 | `max_turns` |
 | input plus output tokens | 400 000 | `max_tokens` |
 | reminders after a turn without a tool call | 2 | `model_stopped` |
+
+## Training
+
+{mod}`stargazer.environment` turns the same loop into a reinforcement-learning
+environment: the cookbook renders the conversation and parses each sampled turn with
+the renderer above, the twelve tools run through `call_tool` with the same
+`calls_remaining` field and the same caps, and the score of the submission is the
+reward. `stargazer train` runs it; see {doc}`cli` and {doc}`architecture`.
 
 ## Cost
 
