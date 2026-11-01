@@ -179,12 +179,27 @@ data, and the verified set s98_real_v2 gives Inkling-Small 71 percent completene
 at 2.2 percent false alarms, all deep planets found, the faint ones as on the
 injected sets. Notebook 8 shows the variability classes on real light curves.
 
-Nothing is running. Open items from the real-planet run, for the prompt or the
-policy and not for the frozen toolbox: the rules prompt's sentence on `odd_even`
-`insufficient_data` reads four transits of one parity as a single dip when the
-period is half the gap spacing (TOI-2184.01); the `variable` stop on active hosts;
-and the eclipsing-binary context, empty while VizieR is down, which would have named
-TOI-1338's host. The next session starts Phase 5:
+Nothing is running. Three items from the real-planet run, decided with the owner
+on 2026-11-01:
+
+- The rules prompt's sentence on `odd_even` `insufficient_data` reads four transits
+  of one parity as a single dip when the period is half the gap spacing
+  (TOI-2184.01). Fix: one sentence, "with two or more events of one parity the
+  signal is still a period". A prompt change breaks the comparison with every rules
+  run, so it gets a tool's measurement first: three seeds on s98_v3 against the
+  `full_v13edge` rows, one seed on s92_v1, and s98_real_v2 again (about $50, 45
+  minutes). First thing next session.
+- The `variable` stop on active hosts: the prompt route was tried on 2026-10-25 and
+  the small model ignored it; a tool change is frozen. Left to Phase 5, where a
+  missed planet costs reward; ep_0029 of s98_v3 and TOI-540's host are the test cases.
+- The eclipsing-binary and Gaia-class fields of the 43 real hosts are empty while
+  VizieR is down. When `curl -m 15 https://vizier.cds.unistra.fr/` answers, run
+  `stargazer context --episodes data/episodes/s98_real_v2 --targets
+  data/targets_s98_real.json data/targets_s98_v3.json --mask-tois` with the default
+  source, record the new hash, and repeat the $5 reference run. Later, a copy of the
+  TESS eclipsing-binary catalogue on disk, so a target list never waits on VizieR.
+
+Then Phase 5:
 
 1. Check which of the sampling models Tinker also trains, and read the cookbook's
    RL interface (an environment with an observation, actions and a reward).
