@@ -2351,3 +2351,59 @@ per step is a lower bound by about a tenth), its reward numbers do not. Lesson f
 the working method: the first run under a new loop must be read from its rollout
 export, trajectory by trajectory, not from its summary metrics; the stop reason of
 every trajectory is the harness check.
+
+**The checkpoint store.** The rerun of the four lever measurements under the right
+caps (`results/train_group_signal_v2.sh`, first launch 11:55 UTC) failed at the
+creation of the training client with Tinker's error 402, "Free checkpoint storage
+limit reached (bytes or checkpoint count)". The cookbook saves a final checkpoint
+whatever `save_every` says, and the five Inkling-Small runs of the day (the two
+launches of the cost test and the three one-step runs) had left five pairs of
+checkpoints, 25.2 GB of training state and 8.4 GB of sampler weights each, about
+170 GB, the only checkpoints on the account (the 15 older training runs of the
+account hold none). The ten were deleted through
+`RestClient.delete_checkpoint_from_tinker_path`, the store read 0 afterwards, and
+`TrainingRun` now discards the final checkpoint of a run with `save_every` 0 after the
+loop, recording the paths in `discarded.txt` (commit `3eb2900`; test
+`test_training_run_discards_the_checkpoints_of_a_run_without_saving`). A real
+training run keeps its checkpoints by setting `save_every`; the store's limit is the
+number to learn from the console before the first one.
+
+**The group signal, measured under the right caps** (`results/train_group_signal_v2.sh`,
+commit `3eb2900`, 11:58 to 12:06 UTC, four one-step runs side by side on the same
+eight stars of s98_v3 (seed 0, batch 0: six planets, two nulls), Inkling-Small, rules
+prompt; no rollout cut, every episode submitted, turns up to 15 and 9 on average, so
+the 10-turn preset would have cut about a third; metrics and records under
+`results/train/group_signal2_*`; the final checkpoints discarded, eight paths in
+`discarded.txt`).
+
+| setting | episodes | reward mean | transit hit | false alarm | mixed groups of 8 | which | entropy | sampling |
+|---|---|---|---|---|---|---|---|---|
+| group 4, temperature 1.0 | 32 | 0.750 | 67% | 0% | 0 | | 0.31 | 207 s |
+| group 8, temperature 1.0 | 64 | 0.672 | 62% | 3% | 2 | one planet, one null | 0.25 | 332 s |
+| group 16, temperature 1.0 | 128 | 0.703 | 62% | 1% | 3 | one planet, two nulls | 0.25 | 419 s |
+| group 4, temperature 1.3 | 32 | 0.688 | 67% | 6% | 3 | one planet, one null, one hard planet | 0.48 | 217 s |
+
+Reading.
+
+- At the training temperature of 1.0 and group 4 the eight stars give no gradient:
+  four planets found in every rollout, two planets (groups 6 and 7) missed in every
+  rollout, two nulls declined in every rollout. The policy is close to deterministic
+  on a star at this temperature.
+- Group size adds signal slowly and in the wrong place. At 8 and 16 the mixed groups
+  are the planet of group 1 (a rollout in four misses it) and the null stars, where a
+  rollout in eight or sixteen submits a false alarm: the signal says "do not submit
+  here", which the rules prompt already enforces. The two hard planets stay at zero
+  in all 16 rollouts; group size does not reach them.
+- Temperature reaches them. At 1.3 the hard planet of group 6 is found in one
+  rollout of four, which is the first gradient toward a planet the policy misses;
+  the price is the entropy (0.48 against 0.31) and 6 percent false alarms on the
+  nulls, which the reward must then pay for. The planet of group 7 stays at zero in
+  every setting; it is one of the red-noise limited planets the rotation item closed
+  (LOGBOOK 2026-10-31), and no sampling setting will find it.
+- The decision for the first real run: temperature above 1.0 is the lever, with a
+  reward that keeps the false-alarm cost explicit (the plain score already gives 0
+  for a false alarm against 1 for a decline, so the gradient on a null group is the
+  right sign; the shaping question is whether a hard planet's partial progress, a
+  fold that shows the dip, should earn credit). Group 8 at temperature 1.2 is the
+  setting to start from; a larger group buys little beyond 8. Cost of a step at
+  group 8: about 2.6 million prompt tokens, 332 seconds at eight groups side by side.

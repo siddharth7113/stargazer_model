@@ -188,31 +188,38 @@ weights README suggests LoRA learning rates near 5e-4.
 
 Phase 5 steps 1 to 3 are done the same day (LOGBOOK 2026-11-01): every sampling
 model trains; the environment is `stargazer/environment.py` with `stargazer train`
-(seven offline tests with a stub model; a run stops on the first failed rollout and
-writes `record.json` with the sets by hash); the cost test ran three steps of 8
-groups of 4 on Inkling-Small at 5e-5 (`results/train/cost_test_inkling_small_s98_v3_*`):
-about 90 seconds and about one dollar a step, no false alarm, and 22 of 24 groups
-with one reward on all four rollouts, so the groups carry almost no gradient. The
-owner's standing rule since 2026-11-01: small-model runs need no ask; say so before a
-big-model run.
+(nine offline tests with a stub model; the detector's caps set on the runner and the
+environment through an explicit `RolloutConfig`, because the cookbook's Inkling
+preset cut rollouts at 10 turns unscored; a run stops on the first failed rollout;
+`record.json` with the sets by hash; a run with `--save-every 0` discards its final
+checkpoint). The cost test: a step of 8 groups of 4 on Inkling-Small is about 90
+seconds and about a dollar. The group-signal measurement under the right caps
+(`results/train/group_signal2_*`): at temperature 1.0 and group 4 no group of the
+eight stars is mixed; group 8 and 16 add mixed groups on a planet and on the null
+stars; temperature 1.3 is the lever that reaches a hard planet (found in 1 of 4
+rollouts), at 6 percent false alarms and entropy 0.48. The owner's standing rule
+since 2026-11-01: small-model runs need no ask; say so before a big-model run. The
+Tinker free checkpoint store held five final checkpoints (about 170 GB) and refused
+a sixth training client; it is empty now.
 
 Nothing is running.
 
 First three steps of the next session:
 
-1. Measure the group signal before any shaping: one batch each at group size 8 and
-   16, and one at temperature 1.3 with group 4, on s98_v3 (about $2 to $5 each),
-   reading `by_group/frac_mixed`. The lever that gives mixed groups on the hard
-   planets at the least sampling is the one to train with.
+1. Decide the checkpoint store with the owner (asked on 2026-11-01, answer open):
+   paid storage at $0.10 per GB a month and a checkpoint every 10 steps, or the free
+   store with a checkpoint every 25 steps and the training state discarded after the
+   run, the sampler weights kept. Write the choice here and in the run script.
 2. Decide the reward shaping and record it in PLAN.md: the plain score (today), or
-   partial credit for the procedure's steps, or a false-alarm penalty below zero;
-   write the chosen reward as a class beside `EpisodeReward` with its own tests, so
-   the plain score stays available as the control.
+   partial credit for the procedure's steps on a hard planet, or a false-alarm
+   penalty below zero. Write the chosen reward as a class beside `EpisodeReward`
+   with its own tests, so the plain score stays available as the control.
 3. The first real run: Inkling-Small, rules prompt, s98_v3 as the training set and
-   s92_v1 as the test set (`--test-episodes`, `--eval-every`), 30 to 50 steps,
-   a checkpoint every 10; then evaluate the checkpoint through
-   `TinkerBackend(model_path=...)` with `stargazer agent` on s92_v1 and s98_real_v2,
-   against the `full_v15parity` rows.
+   s92_v1 as the test set (`--test-episodes`, `--eval-every 10`), group 8 at
+   temperature 1.2, learning rate 5e-5, 30 to 50 steps (about $3 and 6 minutes a
+   step), checkpoints by the decision of step 1; then evaluate the checkpoint
+   through `TinkerBackend(model_path=...)` with `stargazer agent` on s92_v1 and
+   s98_real_v2, against the `full_v15parity` rows.
 
 Still open from before: the `variable` stop on active hosts (Phase 5, above); the
 Gaia classes of the 43 real hosts (rerun the refill with `--vizier-server` when a

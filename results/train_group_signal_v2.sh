@@ -1,6 +1,6 @@
 #!/bin/sh
-# Group-signal measurement, second version: the detector's caps now reach the rollout runner (commit after
-# 7d0b2ac... see LOGBOOK 2026-11-01; the first version ran under the cookbook's 10-turn preset and up to a third of
+# Group-signal measurement, second version: the detector's caps now reach the rollout runner (commit 06c7d9b;
+# LOGBOOK 2026-11-01; the first version ran under the cookbook's 10-turn preset and up to a third of
 # the rollouts were cut unscored). One training step each on the same eight stars of s98_v3 (seed 0, batch 0),
 # Inkling-Small, rules prompt, learning rate 5e-5 (one step; the gradient is not the measurement). Read
 # env/all/by_group/frac_mixed in each metrics.jsonl. Four runs side by side: group 4 at the cookbook's training
