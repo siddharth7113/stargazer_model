@@ -2209,3 +2209,57 @@ here on, and `agent_inkling_small_s98_real_v2_rules_seed1_ebmasked.json` is its
 reference row; the parity run on the empty field and the leak run are kept as the
 record of the two earlier contexts. The field would matter for a model that calls the
 tool, which the base prompt and the large models do.
+
+**Phase 5, step 1: which models Tinker trains.** `tinker.ServiceClient().get_server_capabilities()`
+at 11:25 UTC (tinker 0.33.1, cookbook 0.5.7) lists 35 models, every one of them
+`trainable` except the two `:sampling-nvfp4` variants. All five sampling models of the
+benchmark train: `thinkingmachines/Inkling-Small` (context 65,536; a `:peft:262144`
+variant with 262,144), `thinkingmachines/Inkling`, `moonshotai/Kimi-K2.6` (32,768;
+`:peft:131072`), `Qwen/Qwen3.5-397B-A17B` and
+`nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16` (65,536 each; `:peft:262144`). The
+small-model case of Phase 5 stands.
+
+**Phase 5, step 2: the tier 3 environment** (`stargazer/environment.py`, commit
+`fd2d7dc`). The benchmark is mapped onto the cookbook's interface with no parsing of
+its own. `EpisodeTools` holds one episode's arrays, context, call count and
+submission and runs every call through `call_tool` with `calls_remaining` as the
+detector adds it; `EpisodeTool` wraps each of the twelve `ToolSpec`s in the
+cookbook's `Tool` protocol (the work runs in a thread; an accepted
+`submit_prediction` stops the episode); `EpisodeReward` pays `score_episode` of the
+submission once at the end, with the outcome as one-hot metrics
+(`outcome/false_alarm`, `outcome/miss`, ...) so the training log splits the reward;
+`EpisodeGroupBuilder` (strings and numbers only, so it pickles) builds `group_size`
+environments of one episode through `build_agent_tool_env`, with the initial messages
+from `create_conversation_prefix_with_tools` and the detector's caps (30 turns, 40
+calls) in place of the cookbook's `agentic` preset (10 turns); `EpisodeDataset` and
+`EpisodeDatasetBuilder` give one group for each episode in a seeded order and a
+held-out set as the test set; `TrainingRun` builds `rl.train.Config` and writes
+`config.json` (git commit, sets by hash, prompt hash, tools, every number) into the
+log directory before the loop starts. `stargazer train` is the command; its log
+directory `data/train/` is not committed. Tests (`tests/test_environment.py`, seven,
+offline with a stub model that feeds parsed assistant messages into the cookbook's
+message environment): the call count and the coerced submission; the reward as the
+benchmark score for a declined null, a false alarm and no submission; the pickled
+builder and the three initial messages (`system`, `tool_declare`, `user`); a stub
+trajectory `summarize` then `submit_prediction` that ends on the submission with
+reward 1; a found planet at the truth period with `outcome/hit`; the token-level
+initial observation; the dataset batches and the record by hash. The Inkling
+renderer loads offline in 2.6 seconds and pickles.
+
+Cost of a step, from the sampling side (the `full_v15parity` runs on s98_v3,
+Inkling-Small, rules prompt): 600 episodes at $0.054 each by the price table, 37,400
+prompt tokens and 340 sampled tokens for each episode on average. A step of 8 groups
+of 4 is 32 episodes, about $1.75 of sampling plus the training tokens; the training
+price is in the next entry with the owner's decision on the test.
+
+**Tinker training prices** (https://thinkingmachines.ai/tinker/pricing, "as of
+October 19, 2026", US dollars per million tokens; the 64K rows of the Inkling models
+are marked 50 percent off with the discount in the price). Inkling-Small at 64K:
+prefill 0.58, cached prefill 0.116, sample 1.44, train 1.73; at 256K (`:peft:262144`)
+train 3.47. Inkling at 64K: 1.87, 0.374, 4.68, 5.61. Kimi-K2.6 at 32K: 2.205, 0.441,
+5.49, 4.84. Qwen3.5-397B at 64K: 1.65, 0.33, 7.50, 6.60. The page does not say what
+counts as a training token. Estimate for one episode of Inkling-Small at 64K: a
+trajectory of about 7,000 tokens trained ($0.012), 37,400 prompt tokens prefilled
+across the turns ($0.022 before the cache), 340 tokens sampled: about $0.04, so a
+step of 8 groups of 4 is about $1.30 and a test of three steps under $5. The number
+to measure is the bill of that test against this estimate.
