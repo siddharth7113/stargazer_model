@@ -22,6 +22,7 @@ from stargazer.environment import (
     EpisodeGroupBuilder,
     EpisodeReward,
     EpisodeTools,
+    PenalisedEpisodeReward,
     TrainingRun,
 )
 from stargazer.episodes import BuildConfig, EpisodeSet
@@ -300,3 +301,49 @@ def test_checkpoint_pruner_keeps_every_sampler_and_only_the_newest_state(tmp_pat
     assert rest.deleted == ["tinker://r/weights/000010", "tinker://r/weights/000020"]
     assert all("sampler" not in path for path in rest.deleted)
     assert (tmp_path / "pruned.txt").read_text().splitlines() == rest.deleted
+
+
+def test_penalised_reward_pays_a_false_alarm_below_zero_and_keeps_the_score_in_the_metrics(episodes):
+    """The penalised reward differs from the plain score on one outcome only: a submission on a null star
+    pays -1 instead of 0, while a decline pays 1 and a found planet 1; ``metrics["score"]`` stays the
+    benchmark score, so the training log still reports the LOGBOOK's number.
+    """
+    null_id, transit_id = _null_and_transit(episodes)
+    time, flux, _ = episodes.load(null_id)
+    alarm = EpisodeTools(time, flux, None, 40)
+    alarm.run(
+        "submit_prediction", {"detected": True, "period": 3.0, "t0": 1.0, "duration": 0.1, "depth": 0.001}
+    )
+    reward, metrics = asyncio.run(PenalisedEpisodeReward(alarm, episodes.truth[null_id])([]))
+    assert reward == -1.0 and metrics["score"] == 0.0 and metrics["reward"] == -1.0
+    declined = EpisodeTools(time, flux, None, 40)
+    declined.run("submit_prediction", {"detected": False})
+    assert asyncio.run(PenalisedEpisodeReward(declined, episodes.truth[null_id])([]))[0] == 1.0
+    truth = episodes.truth[transit_id]["transit"]
+    time, flux, _ = episodes.load(transit_id)
+    found = EpisodeTools(time, flux, None, 40)
+    found.run("submit_prediction", {"detected": True, "period": truth["period"], "t0": truth["t0"]})
+    assert asyncio.run(PenalisedEpisodeReward(found, episodes.truth[transit_id])([]))[0] == 1.0
+    missed = EpisodeTools(time, flux, None, 40)
+    missed.run("submit_prediction", {"detected": False})
+    assert asyncio.run(PenalisedEpisodeReward(missed, episodes.truth[transit_id])([]))[0] == 0.0
+
+
+def test_group_builder_and_dataset_carry_the_reward_name_and_refuse_an_unknown_one(episodes):
+    """The reward is chosen by name, recorded in the dataset's record and refused when unknown, so a run's
+    record always says which reward trained it.
+    """
+    null_id, _ = _null_and_transit(episodes)
+    with pytest.raises(ValueError, match="reward"):
+        EpisodeGroupBuilder(str(episodes.root), null_id, MODEL, RENDERER, PROMPTS["rules"], 1, reward="bonus")
+    builder = EpisodeDatasetBuilder(
+        episode_dir=str(episodes.root), model_name=MODEL, renderer_name=RENDERER, reward="penalised"
+    )
+    train, _ = asyncio.run(builder())
+    assert train.get_batch(0)[0].reward == "penalised" and builder.record["reward"] == "penalised"
+    assert (
+        EpisodeDatasetBuilder(
+            episode_dir=str(episodes.root), model_name=MODEL, renderer_name=RENDERER
+        ).record["reward"]
+        == "score"
+    )

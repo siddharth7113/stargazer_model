@@ -213,7 +213,51 @@ class EpisodeReward:
         }
         for outcome in self.OUTCOMES:
             metrics[f"outcome/{outcome}"] = float(row["outcome"] == outcome)
-        return float(row["score"]), metrics
+        reward = self.reward_of(row)
+        metrics["reward"] = reward
+        return reward, metrics
+
+    def reward_of(self, row: dict) -> float:
+        """The reward of one scored row: the benchmark score itself."""
+        return float(row["score"])
+
+
+class PenalisedEpisodeReward(EpisodeReward):
+    """The benchmark score with a false alarm paid below zero.
+
+    Parameters
+    ----------
+    tools : EpisodeTools
+    truth : dict
+    false_alarm_reward : float
+        The reward of a submission on a star with no planet; the default is -1.
+
+    Notes
+    -----
+    The plain score pays 0 for a false alarm and 0 for a miss. With the group's
+    rewards centred on their mean, a false alarm among declines already falls below
+    its siblings; this reward makes the fall twice as deep, so that the policy
+    gradient on a null star is stronger than the gradient on a missed planet. It is
+    the reward to switch to when the test-set false-alarm rate rises during training
+    (the rule of 2026-11-01: above its starting value by more than the seed spread
+    over two evaluations), and not before, since it moves the objective away from
+    the number the LOGBOOK reports. ``metrics["score"]`` keeps the plain score.
+    """
+
+    def __init__(self, tools: EpisodeTools, truth: dict, false_alarm_reward: float = -1.0):
+        super().__init__(tools, truth)
+        self._false_alarm_reward = false_alarm_reward
+
+    def reward_of(self, row: dict) -> float:
+        """The score, or ``false_alarm_reward`` on a false alarm."""
+        if row["outcome"] == "false_alarm":
+            return float(self._false_alarm_reward)
+        return float(row["score"])
+
+
+REWARDS: dict[str, type[EpisodeReward]] = {"score": EpisodeReward, "penalised": PenalisedEpisodeReward}
+"""The rewards by name, for ``stargazer train --reward``: ``score`` is the benchmark score
+(the decision of 2026-11-01 for the first run), ``penalised`` pays a false alarm -1."""
 
 
 class EpisodeGroupBuilder(EnvGroupBuilder):
@@ -232,6 +276,8 @@ class EpisodeGroupBuilder(EnvGroupBuilder):
         The text of the system prompt (one of :data:`stargazer.agent.PROMPTS`).
     group_size : int
         Environments of this episode sampled side by side.
+    reward : str
+        A name in :data:`REWARDS`.
     max_turns, max_tool_calls : int
         The detector's safety stops, applied by the cookbook.
     max_trajectory_tokens : int
@@ -264,16 +310,20 @@ class EpisodeGroupBuilder(EnvGroupBuilder):
         renderer_name: str,
         system_prompt: str,
         group_size: int,
+        reward: str = "score",
         max_turns: int = ToolAgentDetector.DEFAULT_MAX_TURNS,
         max_tool_calls: int = ToolAgentDetector.DEFAULT_MAX_TOOL_CALLS,
         max_trajectory_tokens: int = 60_000,
     ):
+        if reward not in REWARDS:
+            raise ValueError(f"reward must be one of {sorted(REWARDS)}, not {reward!r}")
         self.episode_dir = episode_dir
         self.episode_id = episode_id
         self.model_name = model_name
         self.renderer_name = renderer_name
         self.system_prompt = system_prompt
         self.group_size = group_size
+        self.reward = reward
         self.max_turns = max_turns
         self.max_tool_calls = max_tool_calls
         self.max_trajectory_tokens = max_trajectory_tokens
@@ -326,7 +376,7 @@ class EpisodeGroupBuilder(EnvGroupBuilder):
                     renderer=renderer,
                     tools=tools.cookbook_tools(),
                     initial_messages=initial,
-                    reward_fn=EpisodeReward(tools, truth),
+                    reward_fn=REWARDS[self.reward](tools, truth),
                     rollout_config=self.rollout_config(),
                     model_name=self.model_name,
                     max_turns=self.max_turns,
@@ -377,6 +427,8 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
     model_name, renderer_name : str
     prompt : str
         A name in :data:`stargazer.agent.PROMPTS`.
+    reward : str
+        A name in :data:`REWARDS`; ``score`` is the benchmark score.
     batch_size, group_size : int
     max_turns, max_tool_calls, max_trajectory_tokens : int
     seed : int
@@ -391,6 +443,7 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
     model_name: str
     renderer_name: str
     prompt: str = "rules"
+    reward: str = "score"
     batch_size: int = 8
     group_size: int = 4
     max_turns: int = ToolAgentDetector.DEFAULT_MAX_TURNS
@@ -412,6 +465,7 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
                 renderer_name=self.renderer_name,
                 system_prompt=PROMPTS[self.prompt],
                 group_size=group_size,
+                reward=self.reward,
                 max_turns=self.max_turns,
                 max_tool_calls=self.max_tool_calls,
                 max_trajectory_tokens=self.max_trajectory_tokens,
@@ -440,6 +494,7 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
                 EpisodeSet(Path(self.test_episode_dir)).hash if self.test_episode_dir else None
             ),
             "system_prompt": self.prompt,
+            "reward": self.reward,
             "system_prompt_sha256": hashlib.sha256(PROMPTS[self.prompt].encode()).hexdigest(),
             "tools": [tool.name for tool in TOOLS],
             "batch_size": self.batch_size,

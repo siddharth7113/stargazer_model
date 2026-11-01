@@ -183,6 +183,7 @@ stargazer train --episodes data/episodes/s98_v3 --test-episodes data/episodes/s9
 | `--model` | required | Tinker base model |
 | `--renderer` | required | Tinker cookbook renderer of the model family |
 | `--prompt` | `rules` | the system prompt, as for `stargazer agent` |
+| `--reward` | `score` | `score` pays the benchmark score; `penalised` pays a false alarm -1 and the score otherwise. The decision of 2026-11-01 trains the first run on `score` |
 | `--batch-size` | 8 | episode groups in one training step |
 | `--group-size` | 4 | rollouts of the same episode in a group; the loss centres each reward on its group's mean |
 | `--learning-rate` | required | LoRA learning rate; the cookbook has no calibrated value for Inkling |

@@ -522,6 +522,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--renderer", required=True, help="tinker_cookbook renderer name, for example tml_v0")
     parser.add_argument("--prompt", choices=["base", "rules"], default="rules")
+    parser.add_argument(
+        "--reward",
+        choices=["score", "penalised"],
+        default="score",
+        help="score: the benchmark score (the first run's choice); penalised: a false alarm pays -1",
+    )
     parser.add_argument("--batch-size", type=int, default=8, help="episode groups in one training step")
     parser.add_argument("--group-size", type=int, default=4, help="rollouts of the same episode in a group")
     parser.add_argument("--learning-rate", type=float, required=True)
@@ -553,6 +559,7 @@ def cmd_train(args: argparse.Namespace) -> None:
         model_name=args.model,
         renderer_name=args.renderer,
         prompt=args.prompt,
+        reward=args.reward,
         batch_size=args.batch_size,
         group_size=args.group_size,
         max_turns=args.max_turns,

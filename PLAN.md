@@ -123,7 +123,7 @@ curve as three arrays, so each survey needs only a loader and a target list.
 ## Phase 5: Reinforcement learning on Tinker
 
 - [x] Tier 3 environment in the cookbook's RL interface: the episode is the observation, tool calls are actions, `score_episode` is the reward (`stargazer/environment.py`, `stargazer train`; the three-step cost test on Inkling-Small, about 90 seconds and about one dollar a step of 32 episodes, LOGBOOK 2026-11-01)
-- [ ] Reward shaping decided and recorded: false-alarm penalty, credit for checks performed, cost per tool call
+- [x] Reward shaping decided and recorded (2026-11-01): the first run trains on the plain benchmark score, so the curve and the LOGBOOK table say the same thing; a false-alarm penalty of -1 is ready as `--reward penalised` and goes in when the test-set false-alarm rate rises above its start by more than the seed spread over two evaluations; credit for checks performed is declined (it rewards process, a model can earn it without submitting); a cost per tool call is declined for now (fewer checks mean more false alarms). LOGBOOK 2026-11-01
 - [ ] Training on a mixture of surveys; one survey held out
 - [ ] Training curves and held-out evaluation at matched false-alarm rate against the BLS baseline and the untrained models
 - [ ] Checkpoint saved on Tinker; evaluated through `TinkerBackend(model_path=...)` with the same tools
@@ -213,10 +213,9 @@ First three steps of the next session:
    the loop and deletes the training state of every checkpoint but the newest; a
    50-step run then holds about 67 GB. Paid storage ($0.10 per GB a month) is the
    fallback for a run past ten checkpoints. Check the console's use before a run.
-2. Decide the reward shaping and record it in PLAN.md: the plain score (today), or
-   partial credit for the procedure's steps on a hard planet, or a false-alarm
-   penalty below zero. Write the chosen reward as a class beside `EpisodeReward`
-   with its own tests, so the plain score stays available as the control.
+2. Reward shaping, decided on 2026-11-01 (Phase 5 box above): the plain score for
+   the first run, `--reward score`; `--reward penalised` (`PenalisedEpisodeReward`,
+   a false alarm pays -1) ready for the switch rule written in the box.
 3. The first real run: Inkling-Small, rules prompt, s98_v3 as the training set and
    s92_v1 as the test set (`--test-episodes`, `--eval-every 10`), group 8 at
    temperature 1.2, learning rate 5e-5, 30 to 50 steps (about $3 and 6 minutes a

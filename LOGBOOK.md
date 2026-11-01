@@ -2417,3 +2417,24 @@ the training loop, reads `checkpoints.jsonl` every 30 seconds, deletes the train
 state of every checkpoint but the newest and keeps every sampler checkpoint, with
 the paths in `pruned.txt`; a 50-step run with a save every 10 steps then holds about
 67 GB. Test: `test_checkpoint_pruner_keeps_every_sampler_and_only_the_newest_state`.
+
+**Phase 5: the reward-shaping decision** (with the owner, 2026-11-01). The first real
+run trains on the plain benchmark score: a hit or a correct decline 1, a miss or a
+false alarm 0, the alias and single-event credits as in `score_episode`. Grounds:
+the gradient comes from the difference between the rollouts of one star, and in every
+mixed group of the lever measurement the plain score already carries the right sign
+(a found hard planet above its missed siblings, a false alarm below its declined
+siblings); training on the number the LOGBOOK reports keeps the curve and the
+benchmark table the same quantity; each shaping moves the objective away from it and
+is added only against a failure the first curve shows. Of the three shapings on the
+table: a false-alarm penalty is written and ready, `PenalisedEpisodeReward`
+(`--reward penalised`, a false alarm pays -1, `metrics["score"]` keeps the plain
+score), with the switch rule "the test-set false-alarm rate above its starting value
+by more than the seed spread over two evaluations", because temperature 1.3 raised
+false alarms to 6 percent; credit for the procedure's steps is declined (it rewards
+process, a model can earn it without ever submitting, and reward and score part
+ways); a cost per tool call is declined for now (the model submits after 6 to 9
+calls, and fewer checks mean more false alarms). `REWARDS` is the lookup table, the
+run's record carries `reward`, and an unknown name is refused. Tests:
+`test_penalised_reward_pays_a_false_alarm_below_zero_and_keeps_the_score_in_the_metrics`,
+`test_group_builder_and_dataset_carry_the_reward_name_and_refuse_an_unknown_one`.
