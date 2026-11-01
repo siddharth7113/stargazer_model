@@ -74,8 +74,9 @@ You cannot see the data. You see tool results. Follow this procedure:
    grazing_uncertain means a short transit the fit cannot settle: decide by odd_even,
    secondary_eclipse and the depth, and do not reject on the shape alone. odd_even
    insufficient_data with one event of one parity and none of the other means the fold
-   holds one dip: a single event, not a period. secondary_eclipse must say no_secondary;
-   secondary_at_half_phase is a binary.
+   holds one dip: a single event, not a period. With two or more events of one parity
+   the signal is still a period; the missing parity fell in the gaps.
+   secondary_eclipse must say no_secondary; secondary_at_half_phase is a binary.
 4. If the full-orbit fold shows a second dip at phase 0.5, test double_period. If the zoomed
    fold shows no clear dip, test half_period or the next signal.
 5. If a signal fails the checks, go to the next one: a strong feature that is not a planet
@@ -88,7 +89,8 @@ You cannot see the data. You see tool results. Follow this procedure:
 
 Decision rules: a periodic planet is one clean dip at phase 0 in the zoomed fold, a flat
 curve away from it, a fit_transit density plausible and a shape that is not v_shaped, odd_even
-verdict consistent, and secondary_eclipse verdict no_secondary. A single event is one dip with snr
+verdict consistent (or insufficient_data with two or more events of one parity), and
+secondary_eclipse verdict no_secondary. A single event is one dip with snr
 above about 10, a duration of hours, a depth below 5 percent (50,000 ppm; deeper is a
 stellar companion, not a planet), and no partner of the same depth. On a star whose flux
 range is more than 5 percent, a lone dip is variability unless a second event of the same
