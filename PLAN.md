@@ -216,12 +216,24 @@ First three steps of the next session:
 2. Reward shaping, decided on 2026-11-01 (Phase 5 box above): the plain score for
    the first run, `--reward score`; `--reward penalised` (`PenalisedEpisodeReward`,
    a false alarm pays -1) ready for the switch rule written in the box.
-3. The first real run: Inkling-Small, rules prompt, s98_v3 as the training set and
-   s92_v1 as the test set (`--test-episodes`, `--eval-every 10`), group 8 at
-   temperature 1.2, learning rate 5e-5, 30 to 50 steps (about $3 and 6 minutes a
-   step), checkpoints by the decision of step 1; then evaluate the checkpoint
-   through `TinkerBackend(model_path=...)` with `stargazer agent` on s92_v1 and
-   s98_real_v2, against the `full_v15parity` rows.
+3. The first real run, agreed for 2026-11-02 (the owner's words on 2026-11-01: "we
+   can do it tomorrow"). Check the console's checkpoint store is empty, then:
+
+   ```bash
+   stargazer train --episodes data/episodes/s98_v3 --test-episodes data/episodes/s92_v1 \
+       --model thinkingmachines/Inkling-Small --renderer tml_v0 --prompt rules --reward score \
+       --batch-size 8 --group-size 8 --temperature 1.2 --learning-rate 5e-5 \
+       --steps 30 --eval-every 10 --save-every 10 --seed 0 \
+       --log-path data/train/rl1_inkling_small_s98_v3
+   ```
+
+   About $3 and 6 minutes a step, so about $90 and three hours for 30 steps; the
+   pruner keeps the store under 100 GB. Write the run script under `results/` first,
+   as for every run, and read the first step's rollout export trajectory by
+   trajectory before letting it go on. Then evaluate the final checkpoint through
+   `stargazer agent --backend tinker --model-path tinker://...` on s92_v1 and
+   s98_real_v2 at seed 1, against the `full_v15parity` rows, and copy `record.json`
+   and `metrics.jsonl` under `results/train/`.
 
 Still open from before: the `variable` stop on active hosts (Phase 5, above); the
 Gaia classes of the 43 real hosts (rerun the refill with `--vizier-server` when a
