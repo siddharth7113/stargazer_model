@@ -465,7 +465,11 @@ class TrainingRun:
     max_steps : int or None
         Training steps; None runs through the dataset once.
     eval_every, save_every : int
-        Steps between evaluations on the test set and between checkpoints.
+        Steps between evaluations on the test set and between checkpoints. The
+        cookbook saves a final checkpoint whatever ``save_every`` says; with
+        ``save_every`` 0 the run discards that final checkpoint after the loop, so a
+        measurement run leaves nothing in the store (the free store filled with
+        five such checkpoints on 2026-11-01 and refused the next training client).
     temperature : float
         Sampling temperature during training; the model card value is the default.
     tolerate_rollout_errors : bool
@@ -560,4 +564,41 @@ class TrainingRun:
         log_dir.mkdir(parents=True, exist_ok=True)
         (log_dir / "record.json").write_text(json.dumps(self.record, indent=1, sort_keys=True))
         asyncio.run(train.main(self.config()))
+        if self._save_every == 0:
+            import tinker
+
+            self.discard_checkpoints(log_dir, tinker.ServiceClient().create_rest_client())
         return log_dir
+
+    @staticmethod
+    def discard_checkpoints(log_dir: Path, rest_client) -> list[str]:
+        """Delete every checkpoint named in the log directory's ``checkpoints.jsonl`` and return the paths.
+
+        Parameters
+        ----------
+        log_dir : Path
+        rest_client
+            A Tinker REST client, with ``delete_checkpoint_from_tinker_path``.
+
+        Notes
+        -----
+        The file is rewritten empty afterwards, so a later resume finds no
+        checkpoint to load. The deleted paths are appended to ``discarded.txt`` in the
+        log directory as the record.
+        """
+        path = log_dir / "checkpoints.jsonl"
+        if not path.exists():
+            return []
+        deleted = []
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            entry = json.loads(line)
+            for key in ("state_path", "sampler_path"):
+                if entry.get(key):
+                    rest_client.delete_checkpoint_from_tinker_path(entry[key]).result()
+                    deleted.append(entry[key])
+        path.write_text("")
+        with (log_dir / "discarded.txt").open("a") as handle:
+            handle.write("".join(f"{item}\n" for item in deleted))
+        return deleted

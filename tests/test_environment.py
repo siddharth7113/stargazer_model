@@ -221,3 +221,38 @@ def test_environment_carries_the_detectors_caps_on_both_sides_and_grades_a_cappe
         TrainingRun(dataset, log_path="x", learning_rate=1e-5).config().termination.zero_reward_on_limit
         is False
     )
+
+
+def test_training_run_discards_the_checkpoints_of_a_run_without_saving(tmp_path):
+    """A run with ``save_every`` 0 keeps no checkpoint: every path in ``checkpoints.jsonl`` is deleted through
+    the REST client, the file is emptied so a resume loads nothing, and the paths are recorded.
+    """
+
+    class FakeFuture:
+        def result(self):
+            return None
+
+    class FakeRest:
+        def __init__(self):
+            self.deleted = []
+
+        def delete_checkpoint_from_tinker_path(self, path):
+            self.deleted.append(path)
+            return FakeFuture()
+
+    (tmp_path / "checkpoints.jsonl").write_text(
+        json.dumps(
+            {
+                "name": "final",
+                "state_path": "tinker://a/weights/final",
+                "sampler_path": "tinker://a/sampler_weights/final",
+            }
+        )
+        + "\n"
+    )
+    rest = FakeRest()
+    deleted = TrainingRun.discard_checkpoints(tmp_path, rest)
+    assert deleted == rest.deleted == ["tinker://a/weights/final", "tinker://a/sampler_weights/final"]
+    assert (tmp_path / "checkpoints.jsonl").read_text() == ""
+    assert (tmp_path / "discarded.txt").read_text().splitlines() == deleted
+    assert TrainingRun.discard_checkpoints(tmp_path / "none", rest) == []
