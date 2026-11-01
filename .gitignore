@@ -12,3 +12,4 @@ docs/generated/
 .env
 data/episodes/
 .ipynb_checkpoints/
+data/train/

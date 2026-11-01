@@ -103,6 +103,7 @@ stargazer/
   tools.py       analysis tools with JSON Schemas, one registry for every backend; coerce_arguments reads a call as the tool runs it
   agent.py       ToolAgentDetector and the ChatBackend protocol
   backends.py    OpenAICompatibleBackend (OpenRouter, vLLM, Ollama) and TinkerBackend
+  environment.py the tier 3 environment on the Tinker cookbook: EpisodeTools, EpisodeReward, EpisodeGroupBuilder, EpisodeDatasetBuilder, TrainingRun
   calibrate.py   threshold choice from recorded statistics
   compare.py     one table for several results files
   viewer.py      terminal trajectory viewer
@@ -170,13 +171,18 @@ The agent loop, the tools and the backends are described in {doc}`agent`.
 
 ## Reinforcement-learning environment
 
-In tier 3 the same objects form an environment:
+In tier 3 the same objects form an environment, in {mod}`stargazer.environment`:
 
 | Environment part | Star Gazer object |
 |---|---|
-| reset | {meth}`~stargazer.episodes.EpisodeSet.load` of the next episode |
-| actions | the functions in {mod}`stargazer.tools` |
-| reward | {func}`~stargazer.score.score_episode` |
-| evaluation log | {class}`~stargazer.evaluate.Results` |
+| observation | the conversation rendered by the model's cookbook renderer: system prompt, tool declaration, user request, tool results |
+| actions | the tools of {mod}`stargazer.tools`, each wrapped as a cookbook tool by {class}`~stargazer.environment.EpisodeTools` |
+| reward | {func}`~stargazer.score.score_episode` of the submission, paid once at the end by {class}`~stargazer.environment.EpisodeReward` |
+| group | {class}`~stargazer.environment.EpisodeGroupBuilder`: several rollouts of one episode |
+| dataset | {class}`~stargazer.environment.EpisodeDatasetBuilder`: one group for each episode of a set, batched; a held-out set as the test set |
+| training run | {class}`~stargazer.environment.TrainingRun`, `stargazer train`: the cookbook's loop with a record of the sets by hash, the prompt hash and every setting |
 
-The training loop owns the policy and the optimiser.
+The cookbook's loop owns the policy and the optimiser; the environment adds no
+parsing of its own, the renderer that samples the model also parses its actions.
+The caps and the ``calls_remaining`` field are the detector's, so a trained policy
+sees in evaluation what it saw in training.

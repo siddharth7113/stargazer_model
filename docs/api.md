@@ -19,6 +19,7 @@ the References sections.
 | {doc}`api/tools` | analysis tools for the agent |
 | {doc}`api/agent` | the agent loop and the backend protocol |
 | {doc}`api/backends` | OpenAI-compatible and Tinker backends |
+| {doc}`api/environment` | the tier 3 reinforcement-learning environment and training run on Tinker |
 | {doc}`api/compare` | comparison tables |
 | {doc}`api/viewer` | the terminal trajectory viewer |
 | {doc}`api/provenance` | hashes, manifests and git state |

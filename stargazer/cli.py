@@ -511,7 +511,70 @@ def build_parser() -> argparse.ArgumentParser:
     parser = sub.add_parser("verify", help="recompute SHA-256 manifests")
     parser.add_argument("dirs", nargs="+")
     parser.set_defaults(func=cmd_verify)
+
+    parser = sub.add_parser("train", help="train a LoRA policy on an episode set (Tinker, cookbook RL loop)")
+    parser.add_argument("--episodes", required=True, help="the training episode set")
+    parser.add_argument(
+        "--test-episodes", default=None, help="a held-out set evaluated every --eval-every steps"
+    )
+    parser.add_argument(
+        "--model", required=True, help="Tinker base model, for example thinkingmachines/Inkling-Small"
+    )
+    parser.add_argument("--renderer", required=True, help="tinker_cookbook renderer name, for example tml_v0")
+    parser.add_argument("--prompt", choices=["base", "rules"], default="rules")
+    parser.add_argument("--batch-size", type=int, default=8, help="episode groups in one training step")
+    parser.add_argument("--group-size", type=int, default=4, help="rollouts of the same episode in a group")
+    parser.add_argument("--learning-rate", type=float, required=True)
+    parser.add_argument("--lora-rank", type=int, default=32)
+    parser.add_argument("--max-tokens", type=int, default=4096, help="output cap for each sampled turn")
+    parser.add_argument("--max-turns", type=int, default=30)
+    parser.add_argument("--max-tool-calls", type=int, default=40)
+    parser.add_argument("--max-trajectory-tokens", type=int, default=60_000)
+    parser.add_argument("--temperature", type=float, default=1.0)
+    parser.add_argument(
+        "--steps", type=int, default=None, help="training steps; default is one pass over the set"
+    )
+    parser.add_argument("--eval-every", type=int, default=0, help="0 means no evaluation during training")
+    parser.add_argument("--save-every", type=int, default=20)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--log-path", required=True, help="directory for the cookbook's metrics and checkpoints"
+    )
+    parser.set_defaults(func=cmd_train)
     return ap
+
+
+def cmd_train(args: argparse.Namespace) -> None:
+    """Train a LoRA policy on an episode set through the cookbook's reinforcement-learning loop."""
+    from stargazer.environment import EpisodeDatasetBuilder, TrainingRun
+
+    dataset = EpisodeDatasetBuilder(
+        episode_dir=args.episodes,
+        model_name=args.model,
+        renderer_name=args.renderer,
+        prompt=args.prompt,
+        batch_size=args.batch_size,
+        group_size=args.group_size,
+        max_turns=args.max_turns,
+        max_tool_calls=args.max_tool_calls,
+        max_trajectory_tokens=args.max_trajectory_tokens,
+        seed=args.seed,
+        test_episode_dir=args.test_episodes,
+    )
+    run = TrainingRun(
+        dataset,
+        log_path=args.log_path,
+        learning_rate=args.learning_rate,
+        lora_rank=args.lora_rank,
+        max_tokens=args.max_tokens,
+        max_steps=args.steps,
+        eval_every=args.eval_every,
+        save_every=args.save_every,
+        temperature=args.temperature,
+    )
+    print(json.dumps(run.record, indent=1, sort_keys=True))
+    log_dir = run.run()
+    print(f"training finished; metrics and checkpoints under {log_dir}")
 
 
 def main(argv: list[str] | None = None) -> None:
