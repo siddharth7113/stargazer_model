@@ -2084,3 +2084,128 @@ Reading.
 The real-planet path and its sets close the "real confirmed planets" item of Phase 4.
 The hashes: `s98_real_v1` `4693db32...` (first build, two stale ephemerides inside,
 kept as the record), `s98_real_v2` `bb8a6678...` (verified).
+
+**The parity sentence in the rules prompt** (decided with the owner on 2026-11-01 after
+TOI-2184.01). Step 3 now says, after the sentence on one event of one parity: "With
+two or more events of one parity the signal is still a period; the missing parity fell
+in the gaps." The first three-episode check (`results/smoke/check_parity.sh`, seed 1,
+s98_real_v2 ep_0015 TOI-2184.01, ep_0012 TOI-942.01, ep_0041 a null; $0.15) still
+declined ep_0015, and the model's reason named "4 events all of one parity, odd_even
+insufficient_data": the Decision rules paragraph still required `odd_even` `consistent`
+for a periodic planet, against the new step. The rule now reads "odd_even verdict
+consistent (or insufficient_data with two or more events of one parity)". Second check
+($0.17): ep_0015 found at 6.908 days, the reasoning "4 odd events and 0 even due to
+gap coverage, consistent with a periodic planet"; ep_0012 and ep_0041 declined as
+before. The prompt hash changes from `265fd9ab...` to `a475afde...`, so this breaks the
+comparison with every rules run on file (commit `568dd9b`).
+
+**The measurement** (`results/full_v15parity/run_seeds.sh`, commit `568dd9b`,
+Inkling-Small, rules prompt, five processes at eight workers, 10:33 to 11:10 UTC,
+$46.07, no errors, every episode submitted). Reference rows: `results/full_v13edge/`
+on s98_v3 and s92_v1 (LOGBOOK 2026-10-31), `results/s98_real_v2/` on the real set.
+
+| set, Inkling-Small rules | prompt | false alarm | completeness | with aliases | mean score |
+|---|---|---|---|---|---|
+| s98_v3, mean of seeds 1-3 | v13edge | 0.6% | 38.1% (36.9 to 39.0) | 40.0% | 0.568 |
+| s98_v3, mean of seeds 1-3 | parity | 0.6% | 38.5% (38.3 to 39.0) | 40.7% | 0.573 |
+| s92_v1, seed 1 | v13edge | 0.0% | 35.7% | 37.2% | 0.590 |
+| s92_v1, seed 1 | parity | 0.0% | 34.9% | 35.7% | 0.583 |
+| s98_real_v2, seed 1 | v13edge | 2.2% | 71.4% | 71.4% | 0.864 |
+| s98_real_v2, seed 1 | parity | 0.0% | 74.3% | 74.3% | 0.889 |
+
+Reading.
+
+- On the injected sets the sentence is null by the rule of 2026-10-25: completeness
+  up 0.4 points on s98_v3, inside the seed spread, and down 0.8 on s92_v1, four
+  episodes changed there in both directions. Over the three seeds on s98_v3 the
+  outcome counts move from 247 misses, 155 hits, 4 wrong periods to 236 misses, 160
+  hits, 10 wrong periods: the model submits a little more, and a few of the new
+  submissions carry a wrong period. The injected sets have few planets whose every
+  even transit falls in a gap, so the sentence had little to act on.
+- On the real set it does what it was written for. TOI-2184.01 (ep_0015) is found;
+  TOI-220.01 (ep_0014, 928 ppm, four events) with it, with the reasoning naming
+  consistent odd/even; the host of TOI-1338 (ep_0026), the one false alarm, is now
+  declined with the depth over 5 percent and the other-phase dip as the reasons, from
+  the tools alone and with the eclipsing-binary field still empty. One planet lost:
+  TOI-5153.01 (ep_0010, one transit in the data), whose reasoning says "a single
+  long-period transit, not a periodic planet" while the submission carries a period of
+  23.15 days, scored a wrong period where the earlier run submitted the event alone.
+  By depth: 19 of 20 over 5,000 ppm, 3 of 5 between 1,000 and 5,000, 4 of 10 under
+  1,000.
+- The sentence stays: the old one was false (four events are not one dip), the
+  injected sets do not measure it, the real set gains on both rates. The reference
+  rows for the frozen toolbox with the current prompt are now the `full_v15parity`
+  runs on all three sets; the `full_v13edge` rows stay as the record of the earlier
+  prompt.
+
+**The eclipsing-binary catalogue from disk, and a Vizier mirror** (commits `0d96a14`,
+`a466ba9`). Strasbourg is still silent (connect timeout at 10:30 UTC). Two ways round it
+were found and measured. MAST serves the TESS eclipsing-binary catalogue as one CSV
+file (`stargazer.context.TESS_EB_URL`, 4,584 rows, 1.9 MB, the same table as
+`J/ApJS/258/16`: TIC 260128333 at 14.6086 days in both); it is committed as
+`data/catalogues/hlsp_tess-ebs_tess_lcf-ffi_s0001-s0026_tess_v1.0_cat.csv` (sha256
+`97e81f6c...`) and `TessEbCatalogue` reads it, `stargazer context
+--eclipsing-binaries PATH`, with the file's hash in the source record. The Harvard
+mirror `vizier.cfa.harvard.edu` answered the eclipsing-binary query in 0.5 seconds and
+the Gaia class query in 0.6 seconds through astroquery's `vizier_server`, so
+`CatalogueFetcher` and `stargazer context` take `--vizier-server`; but the Gaia source
+cone search timed out there at 60 seconds and the class query timed out on two
+refill attempts, so the mirror is an option and not the path used today. A masked set
+no longer downloads the TOI list (`fetch_tois=False`; the source says `not fetched`),
+because ExoFOP timed out at 30 seconds during the refill. Tests:
+`test_tess_eb_catalogue_groups_entries_by_tic_and_stores_the_epoch_as_bjd`,
+`test_eclipsing_binary_entry_leaves_a_missing_epoch_as_none`,
+`test_fetcher_takes_the_binaries_from_the_disk_copy_and_queries_vizier_for_nothing_else`,
+`test_fetcher_with_mast_gaia_takes_the_classes_from_a_named_vizier_mirror`,
+`test_fetcher_without_tois_downloads_no_list_and_says_so`.
+
+Two defects found on the way. First, both copies of the catalogue give the epoch of
+the first eclipse as BTJD (1585.17 for TIC 260128333), and the context stored the
+Vizier value as `epoch_bjd` while `bjd_to_episode_time` subtracts 2457000 from it;
+no context had carried an entry (the 200 null hosts of s98_v3 have none, by the host
+cut), so `ephemeris_match` had never computed an eclipsing-binary epoch offset. Both
+paths now store `epoch_btjd + BTJD_OFFSET` through `eclipsing_binary_entry`. Second,
+the refill of s98_real_v2 (`stargazer context --episodes data/episodes/s98_real_v2
+--targets data/targets_s98_real.json data/targets_s98_v3.json --mask-tois
+--gaia-source mast --eclipsing-binaries data/catalogues/...csv`, 18 seconds, hash
+`aaddf8d5...`) gave ten hosts an entry, and nine of them are the planets themselves:
+TOI-439.01, 114.01, 106.01, 423.01, 102.01, 150.01, 479.01, 199.01 and 483.01 sit in
+the TESS eclipsing-binary catalogue at the planet's period. The catalogue lists
+transiting planets among its eclipsing signals, so with the TOIs masked it would hand
+`ephemeris_match` the hidden signal under the verdict `known_eclipsing_binary`, which
+the prompt reads as not a planet. `ContextWriter` with `mask_tois` now also leaves out
+an eclipsing-binary entry whose period is within 1 percent of the target's planet
+period or one of the alias ratios of it, and records the count in
+`sources["eclipsing_binaries_masked"]`; the tenth host, TOI-1338's, keeps its 14.6-day
+entry. Tests: `test_writer_masks_an_eclipsing_binary_entry_at_the_hidden_planets_period`,
+`test_writer_without_masking_keeps_every_eclipsing_binary_entry`. The run on the
+unmasked refill (`results/s98_real_v2/run_refill.sh`, hash `aaddf8d5...`) was already
+in flight when the leak was read; it is kept as the measurement of the leak and
+follows, with the run on the masked refill after it.
+
+**The real set with the eclipsing-binary field filled** (Inkling-Small, rules prompt
+with the parity sentence, seed 1, eight workers; the unmasked refill
+`results/s98_real_v2/run_refill.sh`, hash `aaddf8d5...`, commit `a466ba9`, 11:01 to
+11:11 UTC, $4.26; the masked refill `results/s98_real_v2/run_refill_masked.sh`, which
+rewrites the context first (hash `6ba662d9...`, nine entries masked, TOI-1338's host
+the one with an entry left) and then runs, 11:12 to 11:17 UTC, $4.26; no errors, every
+episode submitted).
+
+| s98_real_v2, Inkling-Small rules (parity) | context hash | false alarm | completeness | mean score |
+|---|---|---|---|---|
+| eclipsing-binary field empty (`full_v15parity`) | `bb8a6678` | 0.0% | 74.3% | 0.889 |
+| filled, nine planets' own entries inside | `aaddf8d5` | 0.0% | 74.3% | 0.889 |
+| filled and masked | `6ba662d9` | 0.0% | 77.1% | 0.901 |
+
+Reading. The three runs are one seed on one prompt and differ by the context only.
+The small model with the rules prompt never calls `ephemeris_match` (zero calls in
+all three runs; the procedure does not name it), so the field changes nothing it reads:
+the leak run is the same episode for episode, and the masked run differs from the
+parity run in one episode, TOI-5153.01 (ep_0010) submitted as the single event it is,
+which is the seed's noise and not the context's work. TOI-1338's host is declined in
+all three, from the depth and the other-phase dip, without the catalogue. The masked
+context is the one that stays with the set: hash `6ba662d9...` is s98_real_v2 from
+here on, and `agent_inkling_small_s98_real_v2_rules_seed1_ebmasked.json` is its
+reference row; the parity run on the empty field and the leak run are kept as the
+record of the two earlier contexts. The field would matter for a model that calls the
+tool, which the base prompt and the large models do.

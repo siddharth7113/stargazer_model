@@ -117,6 +117,7 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] One ground-based survey (NGTS or WASP public data): gaps, airmass trends, red noise
 - [ ] Injection into each survey with the same `BuildConfig`; one episode set for each survey
 - [x] Real confirmed planets: `stargazer targets --real`, `build --real` (each catalogue ephemeris verified against the data: confirmed, shifted or absent), `context --mask-tois`; the set s98_real_v2 (41 confirmed single-planet hosts of sector 98 with the flux as observed, 40 nulls). Inkling-Small with the rules prompt finds 71 percent at 2.2 percent false alarms, all 20 planets deeper than 5,000 ppm and 3 of 10 under 1,000 ppm; BLS at the same false-alarm rate 66 percent (LOGBOOK 2026-11-01)
+- [x] A copy of the TESS eclipsing-binary catalogue on disk (`data/catalogues/`, the MAST CSV) and a Vizier mirror option, so a target cut or a context never waits on Strasbourg; the masked real-planet context leaves out the catalogue's entry for the hidden planet itself (LOGBOOK 2026-11-01)
 - [ ] Vetting labels from ExoFOP dispositions with the disposition date recorded
 
 ## Phase 5: Reinforcement learning on Tinker
@@ -136,142 +137,75 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] Independent re-analysis of each survivor from the public data with a different model
 - [ ] Submit as community TOIs on ExoFOP; request follow-up where warranted
 
-## Handoff: state on 2026-10-31
+## Handoff: state on 2026-11-01
 
 Read LOGBOOK.md first; it has every number and the command that produced it.
 
-The day, in order. Item 3 of the working order, the orbit boundary flag, was measured
-before it was designed: on the null hosts that led the false alarms, every event of
-the 14- and 28-day search peaks sits within a few tenths of a day of the start or the
-end of a data segment, where the scattered-light ramps are, so the flag is a property
-of a peak's events and not of its period. `bls_peaks` and `search_signals` now carry
-`n_events_at_segment_edges` and `edge_verdict` on each peak, the rules prompt's step
-2 says what the word means, and a replay over the 20 rules-era runs on file showed the
-verdict names 71 of 116 periodic false alarms and 46 of 47 single events on no
-transit, with no findable planet of two or more events. The first measurement
-(`results/full_v12edge/`) was of a defective version: the edges were computed after
-the masks, so a masked hole read as a gap and residuals of a masked signal read as
-ramps; the model then stopped searching on ep_0029 in every seed. Fixed (edges from
-the unmasked light curve, a test on a masked search) and rerun
-(`results/full_v13edge/`): on s98_v3 false alarms 2.3 to 0.6 percent, completeness
-39.2 to 38.1, score 0.573 to 0.568, all within the seed spread; on s92_v1 false alarms
-7.0 to 0.0 percent and score 0.575 to 0.590. Null on the small model, which was not
-submitting the ramps, and kept for the large-model pass, where the ramps are the
-false alarms. The owner checked the 12.84-day dip on TIC 190310047 and reads it as
-instrumental; the verdict agrees; the open question is closed. Lesson for the next
-tool: the three-episode check must include an episode where the search masks a
-signal and finds a second one, because a check on single-signal episodes cannot show
-a masked-search defect.
+The session of 2026-11-01, in order. The parity sentence went into the rules prompt
+(step 3: two or more events of one parity are still a period; the decision rule
+accepts `insufficient_data` in that case, which the first three-episode check showed
+was needed). Measured with three seeds on s98_v3, one on s92_v1 and one on
+s98_real_v2 (`results/full_v15parity/`, $46): null on the injected sets by the rule
+of 2026-10-25 (completeness up 0.4 on s98_v3 inside the seed spread, down 0.8 on
+s92_v1), and on the real set the false alarm gone and completeness 71.4 to 74.3
+percent, TOI-2184.01 and TOI-220.01 found and the host of TOI-1338 declined from the
+tools alone. The sentence stays because the old one was false; the reference rows for
+the frozen toolbox with the current prompt are the `full_v15parity` runs on all
+three sets (LOGBOOK 2026-11-01). The prompt hash is `a475afde...`; every earlier rules
+run carries `265fd9ab...`.
 
-Later the same day the rotation item was read and closed with no tool: the four
-shared misses are two red-noise limited planets and two that the filter and the box
-search lose; harmonic prewhitening, flare clipping, a biweight filter and a red-noise
-peak field were measured offline and none recovers them, and a rotation-harmonic
-match flags as many hits as false alarms. The toolbox is frozen at twelve tools with
-the segment-edge verdict in the search (LOGBOOK 2026-10-31).
+The eclipsing-binary refill no longer waits on Strasbourg. The TESS catalogue is
+committed as a CSV from MAST under `data/catalogues/` and `stargazer context
+--eclipsing-binaries PATH` reads it; `--vizier-server vizier.cfa.harvard.edu` routes
+the Vizier queries to the Harvard mirror, which answered the small catalogues in a
+second and then timed out on two refill attempts, so the Gaia classes of the real
+hosts are still empty; a masked set no longer downloads the TOI list. Two defects
+fixed on the way: the eclipse epoch of both catalogue copies is BTJD and was stored as
+BJD (never exercised, no context had an entry); and nine of the 35 real planets sit in
+the eclipsing-binary catalogue at their own period, so the masked writer now leaves
+out an entry at the hidden planet's period and counts it in the source record. The
+small model with the rules prompt never calls `ephemeris_match`, so the leak measured
+zero on it (`agent_..._ebfilled.json`, identical numbers); it would act on a model that
+calls the tool. The run on the masked refill is `agent_..._ebmasked.json` in
+`results/s98_real_v2/`: 77.1 percent at no false alarm, one episode different from
+the parity run, the seed's noise. The set's hash is now `6ba662d9...` and that run is
+its reference row.
 
-The large-model pass on the frozen toolbox ran the same evening with the owner's
-yes: Phase 3 closes on its table (LOGBOOK 2026-10-31). The owner then chose the
-real-planet test. VizieR was down for days, so the Gaia sources now also come from
-MAST and a context file can be reused (LOGBOOK 2026-11-01). The first real-planet run
-showed that catalogue ephemerides drift: the build now verifies each against the
-data, and the verified set s98_real_v2 gives Inkling-Small 71 percent completeness
-at 2.2 percent false alarms, all deep planets found, the faint ones as on the
-injected sets. Notebook 8 shows the variability classes on real light curves.
+Phase 5 reading, done against the installed cookbook 0.5.7 and tinker 0.33.1. An
+environment implements `initial_observation` and `step`, which returns a
+`StepResult` with the reward, and `EnvGroupBuilder.make_envs` builds a group;
+`tinker_cookbook.tool_use.build_agent_tool_env` wraps a list of `Tool` objects and a
+`reward_fn` over the message history into such an environment, parses responses with
+the renderer and takes the tool declarations from
+`renderer.create_conversation_prefix_with_tools`, which is the format the backend
+already uses. `rl.train.Config` takes `model_name`, `learning_rate`, `lora_rank`,
+`max_tokens`, `renderer_name` and a `dataset_builder` whose batches are groups of
+environments; the recipe to copy is `recipes/search_tool/`; the rollout preset for
+Inkling models is `agentic` (10 turns, 30 tool calls). No installed file says which
+models train: `ServiceClient.get_server_capabilities()` returns `trainable` for each
+model, and that call is the first step. `get_lr` is calibrated for Qwen only; the
+weights README suggests LoRA learning rates near 5e-4.
 
-Nothing is running. Three items from the real-planet run, decided with the owner
-on 2026-11-01:
+Nothing is running.
 
-- The rules prompt's sentence on `odd_even` `insufficient_data` reads four transits
-  of one parity as a single dip when the period is half the gap spacing
-  (TOI-2184.01). Fix: one sentence, "with two or more events of one parity the
-  signal is still a period". A prompt change breaks the comparison with every rules
-  run, so it gets a tool's measurement first: three seeds on s98_v3 against the
-  `full_v13edge` rows, one seed on s92_v1, and s98_real_v2 again (about $50, 45
-  minutes). First thing next session.
-- The `variable` stop on active hosts: the prompt route was tried on 2026-10-25 and
-  the small model ignored it; a tool change is frozen. Left to Phase 5, where a
-  missed planet costs reward; ep_0029 of s98_v3 and TOI-540's host are the test cases.
-- The eclipsing-binary and Gaia-class fields of the 43 real hosts are empty while
-  VizieR is down. When `curl -m 15 https://vizier.cds.unistra.fr/` answers, run
-  `stargazer context --episodes data/episodes/s98_real_v2 --targets
-  data/targets_s98_real.json data/targets_s98_v3.json --mask-tois` with the default
-  source, record the new hash, and repeat the $5 reference run. Later, a copy of the
-  TESS eclipsing-binary catalogue on disk, so a target list never waits on VizieR.
+First three steps of the next session:
 
-Then Phase 5:
-
-1. Check which of the sampling models Tinker also trains, and read the cookbook's
-   RL interface (an environment with an observation, actions and a reward).
-2. Write the tier 3 environment: an episode is the observation, tool calls are the
-   actions through the existing `ToolAgentDetector` loop, `score_episode` is the
-   reward; test it offline on three episodes with a stub backend.
+1. Call `get_server_capabilities` with the key in `.env` and record which of the five
+   sampling models are trainable (LOGBOOK). If Inkling-Small is not, the small-model
+   case in Phase 5 changes.
+2. Write the tier 3 environment on `build_agent_tool_env`: an episode's three arrays
+   and context are the observation, the twelve tools wrapped as `Tool` objects through
+   the existing `ToolBox`, `score_episode` as the reward; test it offline on three
+   episodes with a stub backend. Keep `ToolAgentDetector` as the evaluation path.
 3. One short training test on Inkling-Small to measure the cost of a step, with the
-   owner's yes on the amount; then the reward-shaping decision.
-Alongside, without a paid run: the Full Frame Image loader, and a copy of the TESS
-eclipsing-binary catalogue on disk so the target cuts do not depend on VizieR.
+   owner's yes on the amount; then the reward-shaping decision (a missed planet costs
+   reward, which is the route to the `variable` stop on active hosts: ep_0029 of
+   s98_v3 and TOI-4364's host are the test cases).
 
-Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
-bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
-at $13), so the spend goes to tools, measured on the small model, until the toolbox
-freezes.
-
-1. No large-model run until the toolbox freezes. The two Kimi K2.6 raised-caps runs
-   wait as well.
-2. The held-out set s92_v1 exists (LOGBOOK 2026-10-25). Each tool below is measured
-   on s98_v3 with three seeds and then confirmed on s92_v1 with one seed. The reference
-   rows for the next tool are the `full_v13edge` runs on both sets (LOGBOOK 2026-10-31). A tool
-   that moves s98_v3 and not s92_v1 is fitted to s98_v3 and does not stay. The
-   reference on s92_v1 exists: Inkling-Small, both prompts, one seed, twelve tools
-   (LOGBOOK 2026-10-25); the numbers match s98_v3 within a few points.
-3. Three tools, in this order, each measured with Inkling-Small at three seeds and the
-   rules prompt (about $36 a tool version; a change counts when it moves the
-   false-alarm rate by more than 3 points or the completeness by more than 1 point):
-   - the orbit shape verdict: done as the separate tool `orbit_shape`; measured
-     twice on the small model with no gain and, as a fold field, a loss (LOGBOOK
-     2026-10-25). Not to be revisited on the small model;
-   - the orbit boundary flag: done as `edge_verdict`, a property of a peak's events
-     and not of its period; measured 2026-10-31, null on the small model as the orbit
-     shape verdict was, kept because the ramps are the large models' false alarms
-     (LOGBOOK 2026-10-31). Not to be revisited on the small model;
-   - the rotation item: closed 2026-10-31 with no tool. The shared misses are two
-     red-noise limited planets (ep_0042, ep_0043 at 4.8 against the noise at the
-     transit timescale) and two that the filter and the box search lose (ep_0049,
-     ep_0059); harmonic prewhitening, flare clipping, a biweight filter and a
-     red-noise peak field were each measured offline and none recovers them; a
-     rotation-harmonic match flags as many hits as false alarms (LOGBOOK 2026-10-31).
-   Each tool breaks the comparison with the earlier runs; record the break in the
-   LOGBOOK and keep the earlier tables as the record of their toolbox version. Each
-   tool gets one measurement cycle: three seeds on s98_v3, one on s92_v1. A tool
-   that does not move both sets in the same direction goes, with no second version
-   on the small model. The toolbox froze on 2026-10-31 after the rotation item, at
-   twelve tools with the segment-edge verdict in the search; the reference rows are
-   the `full_v13edge` runs on both sets. The remaining gain is the policy's job in
-   Phase 5.
-3b. Beside the tools, started early because Phase 6 lives there: the Full Frame
-   Image loader (QLP or TESS-SPOC, 10- and 30-minute cadence) as a `LightCurveCache`
-   source, and one small FFI episode set on unvetted stars to test the three-array
-   interface on real systematics. Agreed with the owner on 2026-10-25.
-4. Done 2026-10-31: the large-model pass at one seed with the rules prompt on the
-   frozen toolbox ($247): every model moves the same way, false alarms 9.8 to 6.4
-   percent and score 0.561 to 0.578 on the mean of four, the ramp family gone from
-   the false alarms (LOGBOOK 2026-10-31). The Kimi raised-caps run is dropped; Kimi
-   hit a cap in two episodes.
-5. Phase 5 starts on that toolbox, and it is the experiment the project was built
-   for; the owner's $3,000 reserve is for it. Which model trains is an open decision. The case
-   for a small model: a training run samples thousands of episodes, and an episode
-   costs $0.06 on Inkling-Small against $0.42 on Kimi K2.6, so a run of 3,000
-   episodes is about $200 against $1,300 before the training compute; the gap the
-   policy has to close is restraint, which the rules prompt already gives the small
-   model, so the reward has a known target; and the small model with the rules prompt
-   scores the same as the best large model with the base prompt. The case for a
-   large model: Kimi K2.6 finds more planets at a lower false-alarm rate with no
-   procedure, so its ceiling with a learned policy is higher. Before the decision:
-   check which of the sampling models Tinker also trains, and run one short training
-   test on the small model to measure the cost of a step.
-
-Also open: TIC 55270064's neighbour at 6.7 arcseconds (its Gaia class, if any); the
-small committed episode set for tests (Phase 1).
+Still open from before: the `variable` stop on active hosts (Phase 5, above); the
+Gaia classes of the 43 real hosts (rerun the refill with `--vizier-server` when a
+mirror holds, or without it when Strasbourg answers); the Full Frame Image loader;
+TIC 55270064's neighbour at 6.7 arcseconds; the small committed episode set for tests.
 
 ## Open questions
 
