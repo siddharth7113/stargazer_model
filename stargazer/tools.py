@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from stargazer.baseline import bin_lc, detrend
+from stargazer.context import EPHEMERIS_RATIOS
 
 SEGMENT_BREAK_CADENCES = 5
 """A gap longer than this many cadences splits a light curve into segments. The same
@@ -1159,9 +1160,6 @@ def secondary_eclipse(
         "verdict": verdict,
     }
 
-
-EPHEMERIS_RATIOS: tuple[float, ...] = (1.0, 2.0, 0.5, 3.0, 1.0 / 3.0)
-"""Ratios of the candidate period to a catalogue period that count as a match."""
 
 BLEND_DELTA_GMAG = 6.0
 """A neighbour fainter than the target by more than this many G magnitudes contributes

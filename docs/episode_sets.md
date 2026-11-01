@@ -175,7 +175,12 @@ writes one transit episode for each cached host with no injection and the truth 
 the catalogue (period, epoch moved into the window, duration, depth), then `N` null
 episodes drawn from a targets file of hosts with no TOI. `stargazer context
 --mask-tois` writes the catalogue context without the hosts' own TOI entries, so
-`ephemeris_match` cannot return the answer; the source record says `masked`.
+`ephemeris_match` cannot return the answer; the source record says `masked`, and the
+TOI list is not downloaded. The eclipsing-binary entries can come from a copy of the
+catalogue on disk, `--eclipsing-binaries data/catalogues/hlsp_tess-ebs_..._cat.csv`
+(the MAST CSV of the same catalogue, committed), and every Vizier query can go to a
+mirror, `--vizier-server vizier.cfa.harvard.edu`, so a context does not wait on
+Strasbourg. Each field's source record names where it came from.
 
 Two cautions for the reader of such a set. The signal-to-noise in the truth is an
 estimate from the catalogue depth and duration against the light curve's scatter,

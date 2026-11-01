@@ -152,6 +152,51 @@ def test_writer_masks_the_toi_entries_when_asked(tmp_path):
     assert written["ep_0000"]["sources"]["gaia_classes"] == "y" and written["ep_0000"]["tic"] == 123
 
 
+def test_writer_masks_an_eclipsing_binary_entry_at_the_hidden_planets_period(tmp_path):
+    """The TESS eclipsing-binary catalogue lists transiting planets among its signals. With ``mask_tois``
+    an entry at the target's planet period, or at its double, is the same signal and goes; an entry at
+    another period stays, and the count of masked entries is recorded.
+    """
+    truth = {"ep_0000": {"kind": "transit", "tic": 123, "sector": 98, "t_offset": 100.0}}
+    (tmp_path / "truth.json").write_text(json.dumps(truth))
+    targets = {"targets": [{"tic": 123, "ra": 1.0, "dec": 2.0, "planet": {"toi": "1.01", "period": 3.0}}]}
+
+    class FetcherWithBinaries(FakeFetcher):
+        def context_for(self, star, sector, t_offset):
+            context = super().context_for(star, sector, t_offset)
+            context.eclipsing_binaries = [
+                {"period": 3.002, "epoch_bjd": 1.0},
+                {"period": 6.01, "epoch_bjd": 2.0},
+                {"period": 11.0, "epoch_bjd": 3.0},
+            ]
+            return context
+
+    written = json.loads(
+        ContextWriter(FetcherWithBinaries(), mask_tois=True).write(tmp_path, targets).read_text()
+    )
+    assert written["ep_0000"]["eclipsing_binaries"] == [{"period": 11.0, "epoch_bjd": 3.0}]
+    assert written["ep_0000"]["sources"]["eclipsing_binaries_masked"] == 2
+
+
+def test_writer_without_masking_keeps_every_eclipsing_binary_entry(tmp_path):
+    """Without ``mask_tois`` nothing is hidden: an injected set's host has no planet to protect, and an
+    eclipsing-binary entry at any period is what the catalogue says about the star.
+    """
+    truth = {"ep_0000": {"kind": "null", "tic": 123, "sector": 98, "t_offset": 100.0}}
+    (tmp_path / "truth.json").write_text(json.dumps(truth))
+    targets = {"targets": [{"tic": 123, "ra": 1.0, "dec": 2.0}]}
+
+    class FetcherWithBinary(FakeFetcher):
+        def context_for(self, star, sector, t_offset):
+            context = super().context_for(star, sector, t_offset)
+            context.eclipsing_binaries = [{"period": 3.0, "epoch_bjd": 1.0}]
+            return context
+
+    written = json.loads(ContextWriter(FetcherWithBinary()).write(tmp_path, targets).read_text())
+    assert written["ep_0000"]["eclipsing_binaries"] == [{"period": 3.0, "epoch_bjd": 1.0}]
+    assert "eclipsing_binaries_masked" not in written["ep_0000"]["sources"]
+
+
 def test_fetcher_with_mast_gaia_uses_no_vizier_and_records_what_is_unavailable(monkeypatch):
     """With ``gaia_source`` mast the neighbours come from the MAST query, no Vizier query runs, and the
     two Vizier-only catalogues are empty with their source marked unavailable, so a reader knows they

@@ -83,6 +83,14 @@ NEIGHBOUR_RADIUS_ARCSEC = 63.0
 """Radius in arcseconds of the neighbour search: three TESS pixels of 21 arcseconds."""
 
 GAIA_ECLIPSING_CLASS = "ECL"
+
+EPHEMERIS_RATIOS: tuple[float, ...] = (1.0, 2.0, 0.5, 3.0, 1.0 / 3.0)
+"""Ratios of a candidate period to a catalogue period that count as a match: the period
+itself, its double, its half, its triple and its third."""
+
+MASK_PERIOD_RTOL = 0.01
+"""Relative tolerance within which a catalogue period is the same signal as a real-planet
+set's hidden planet, for the masking of the context."""
 """The Gaia DR3 variability class of an eclipsing binary [3]_."""
 
 
@@ -577,8 +585,14 @@ class ContextWriter:
         With ``mask_tois`` the TOI entries of every host are left out of the context
         and the source record says ``"masked"``. A real-planet episode set needs this:
         its hidden answer is the host's own TOI, which ``ephemeris_match`` would
-        otherwise hand to the model. The eclipsing-binary entries, the Gaia classes
-        and the neighbours stay. With ``reuse``, a context file of another episode
+        otherwise hand to the model. An eclipsing-binary entry at the hidden planet's
+        period, or at one of :data:`EPHEMERIS_RATIOS` times it within
+        :data:`MASK_PERIOD_RTOL`, is the same signal under another name (the TESS
+        catalogue lists transiting planets among its eclipsing signals; nine of the
+        35 hosts of ``s98_real_v2`` have one) and is left out as well, the count in
+        ``sources["eclipsing_binaries_masked"]``; the planet's period comes from the
+        target's ``planet`` record. The other entries, the Gaia classes and the
+        neighbours stay. With ``reuse``, a context file of another episode
         set, every star and sector found there is taken from it with its source
         record extended by ``reused_from``, and only the other stars are fetched.
         """
@@ -603,7 +617,27 @@ class ContextWriter:
             if self._mask_tois:
                 context.tois = []
                 context.sources = {**context.sources, "toi": "masked"}
+                self._mask_same_signal(context, stars[key[0]].get("planet"))
             contexts[episode_id] = context.to_dict()
         path = episode_dir / "context.json"
         path.write_text(json.dumps(contexts, indent=1, sort_keys=True))
         return path
+
+    @staticmethod
+    def _mask_same_signal(context: EpisodeContext, planet: dict | None) -> None:
+        """Drop the eclipsing-binary entries that match the hidden planet's period and count them."""
+        period = (planet or {}).get("period")
+        if not period:
+            return
+        kept = []
+        for entry in context.eclipsing_binaries:
+            catalogue_period = entry.get("period")
+            same = catalogue_period and any(
+                abs(catalogue_period / (period * ratio) - 1.0) < MASK_PERIOD_RTOL
+                for ratio in EPHEMERIS_RATIOS
+            )
+            if not same:
+                kept.append(entry)
+        masked = len(context.eclipsing_binaries) - len(kept)
+        context.eclipsing_binaries = kept
+        context.sources = {**context.sources, "eclipsing_binaries_masked": masked}
