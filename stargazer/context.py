@@ -15,8 +15,11 @@ Sources
 -------
 ``TOI_URL``
     The TESS Objects of Interest list from ExoFOP, as a CSV file [1]_.
-``TESS_EB_CATALOGUE``
-    The TESS eclipsing binary catalogue of Prša et al. (2022) on Vizier [2]_.
+``TESS_EB_CATALOGUE`` and ``TESS_EB_URL``
+    The TESS eclipsing binary catalogue of Prša et al. (2022) on Vizier [2]_, and the
+    same catalogue as one CSV file at MAST [5]_, which :class:`TessEbCatalogue` reads
+    from disk so that a context never waits on Vizier. Both give the epoch of the
+    first primary eclipse as BTJD (``BJD - 2457000``); the context stores it as BJD.
 ``GAIA_CLASS_CATALOGUE`` and ``GAIA_SOURCE_CATALOGUE``
     The Gaia DR3 variability classification and the Gaia DR3 source table on
     Vizier [3]_, [4]_.
@@ -35,6 +38,9 @@ References
 .. [4] Gaia Collaboration (2023). Gaia Data Release 3. Summary of the content and
    survey properties. Astronomy and Astrophysics, 674, A1.
    https://doi.org/10.1051/0004-6361/202243940
+.. [5] TESS Eclipsing Binary Working Group (2021). TESS-EBS: the TESS eclipsing binary
+   catalogue, version 1.0. MAST High Level Science Product.
+   https://doi.org/10.17909/t9-9gm4-fx30
 """
 
 from __future__ import annotations
@@ -52,6 +58,10 @@ from stargazer.provenance import utc_timestamp
 
 TOI_URL = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
 TESS_EB_CATALOGUE = "J/ApJS/258/16/tess-ebs"
+TESS_EB_URL = (
+    "https://archive.stsci.edu/hlsps/tess-ebs/hlsp_tess-ebs_tess_lcf-ffi_s0001-s0026_tess_v1.0_cat.csv"
+)
+"""The TESS eclipsing-binary catalogue as one CSV file at MAST, the disk copy's origin."""
 GAIA_CLASS_CATALOGUE = "I/358/vclassre"
 GAIA_SOURCE_CATALOGUE = "I/355/gaiadr3"
 
@@ -210,6 +220,64 @@ class ToiList:
         return entry
 
 
+class TessEbCatalogue:
+    """The TESS eclipsing-binary catalogue as rows keyed by TIC, from the MAST CSV text.
+
+    Parameters
+    ----------
+    text : str
+        The CSV file content, as served at :data:`TESS_EB_URL`.
+
+    Notes
+    -----
+    The file's ``bjd0`` column is the time of the first primary eclipse as BTJD
+    (``BJD - 2457000``), the same number as the ``BJD0`` column of the Vizier copy.
+    An entry stores it as ``epoch_bjd`` in full BJD, the convention of the TOI list,
+    so that :meth:`EpisodeContext.bjd_to_episode_time` converts both the same way.
+    """
+
+    def __init__(self, text: str):
+        self.sha256 = hashlib.sha256(text.encode()).hexdigest()
+        self._rows: dict[int, list[dict]] = {}
+        for row in csv.DictReader(io.StringIO(text)):
+            tic = tic_id(row.get("tess_id"))
+            if tic is None:
+                continue
+            self._rows.setdefault(tic, []).append(
+                eclipsing_binary_entry(_float_or_none(row.get("period")), _float_or_none(row.get("bjd0")))
+            )
+
+    @classmethod
+    def download(cls, url: str = TESS_EB_URL) -> TessEbCatalogue:
+        """Download the catalogue."""
+        with urllib.request.urlopen(url, timeout=120) as response:
+            return cls(response.read().decode("utf-8", errors="replace"))
+
+    @classmethod
+    def read(cls, path: Path) -> TessEbCatalogue:
+        """Read the catalogue from a CSV file on disk."""
+        return cls(Path(path).read_text())
+
+    def entries(self, tic: int) -> list[dict]:
+        """Return the eclipsing-binary entries of one star, an empty list if it has none."""
+        return [dict(entry) for entry in self._rows.get(tic, [])]
+
+
+def eclipsing_binary_entry(period: float | None, epoch_btjd: float | None) -> dict:
+    """Build a context entry from a catalogue period and an epoch given as BTJD.
+
+    Notes
+    -----
+    Both copies of the TESS eclipsing-binary catalogue give the epoch as
+    ``BJD - 2457000``. The entry stores ``epoch_bjd = epoch_btjd + BTJD_OFFSET`` so
+    the context converts it as it converts a TOI epoch.
+    """
+    return {
+        "period": period,
+        "epoch_bjd": None if epoch_btjd is None else epoch_btjd + BTJD_OFFSET,
+    }
+
+
 class CatalogueFetcher:
     """Fetch the catalogue rows of host stars and build their contexts.
 
@@ -220,6 +288,16 @@ class CatalogueFetcher:
 
     gaia_source : str
         ``"vizier"`` (the default) or ``"mast"``, see ``GAIA_SOURCES``.
+    eclipsing_binaries : TessEbCatalogue, optional
+        A copy of the TESS eclipsing-binary catalogue on disk. When given, the
+        eclipsing-binary entries come from it and no Vizier query is made for them.
+    vizier_server : str, optional
+        The Vizier mirror for every Vizier query, for example
+        ``"vizier.cfa.harvard.edu"``. None uses astroquery's default (Strasbourg).
+    fetch_tois : bool
+        False leaves the TOI entries out and never downloads the list; the source
+        record says ``"not fetched"``. A writer that masks the entries uses this, so
+        a masked set does not wait on ExoFOP.
 
     Notes
     -----
@@ -232,14 +310,28 @@ class CatalogueFetcher:
     copy of Gaia DR3 at MAST instead, and the two catalogues that only Vizier serves,
     the variability classes and the TESS eclipsing binaries, are left empty with
     their source recorded as unavailable; the context then says nothing about them
-    rather than something wrong.
+    rather than something wrong. Two ways fill those fields without Strasbourg: a
+    disk copy of the eclipsing-binary catalogue in ``eclipsing_binaries``, and a
+    mirror in ``vizier_server``, from which the Gaia classes are then fetched even
+    with ``gaia_source`` ``"mast"`` (the Gaia source cone search was too slow on the
+    Harvard mirror on 2026-11-01; the small class catalogue answered in a second).
     """
 
-    def __init__(self, toi_list: ToiList | None = None, gaia_source: str = "vizier"):
+    def __init__(
+        self,
+        toi_list: ToiList | None = None,
+        gaia_source: str = "vizier",
+        eclipsing_binaries: TessEbCatalogue | None = None,
+        vizier_server: str | None = None,
+        fetch_tois: bool = True,
+    ):
         if gaia_source not in GAIA_SOURCES:
             raise ValueError(f"gaia_source must be one of {sorted(GAIA_SOURCES)}, not {gaia_source!r}")
         self._toi_list = toi_list
         self._gaia_source = gaia_source
+        self._eclipsing_binaries_on_disk = eclipsing_binaries
+        self._vizier_server = vizier_server
+        self._fetch_tois = fetch_tois
 
     @property
     def toi_list(self) -> ToiList:
@@ -264,21 +356,37 @@ class CatalogueFetcher:
             raise ValueError(f"target record has no valid TIC identifier: {star.get('tic')!r}")
         ra, dec = float(star["ra"]), float(star["dec"])
         if self._gaia_source == "vizier":
-            eclipsing_binaries = self._eclipsing_binaries(tic)
             gaia_classes, neighbours, target_gmag = self._gaia(ra, dec)
-            sources = {
-                "eclipsing_binaries": TESS_EB_CATALOGUE,
-                "gaia_classes": GAIA_CLASS_CATALOGUE,
-                "gaia_sources": GAIA_SOURCE_CATALOGUE,
-            }
-        else:
-            eclipsing_binaries, gaia_classes = [], []
+            sources = {"gaia_classes": self._vizier_name(GAIA_CLASS_CATALOGUE)}
+            sources["gaia_sources"] = self._vizier_name(GAIA_SOURCE_CATALOGUE)
+        elif self._uses_vizier:
+            gaia_classes = self._gaia_classes(ra, dec)
             neighbours, target_gmag = self._gaia_mast(ra, dec)
-            sources = {
-                "eclipsing_binaries": "unavailable (Vizier not used)",
-                "gaia_classes": "unavailable (Vizier not used)",
-                "gaia_sources": GAIA_SOURCES["mast"],
+            sources = {"gaia_classes": self._vizier_name(GAIA_CLASS_CATALOGUE)}
+            sources["gaia_sources"] = GAIA_SOURCES["mast"]
+        else:
+            gaia_classes = []
+            neighbours, target_gmag = self._gaia_mast(ra, dec)
+            sources = {"gaia_classes": "unavailable (Vizier not used)"}
+            sources["gaia_sources"] = GAIA_SOURCES["mast"]
+        if self._eclipsing_binaries_on_disk is not None:
+            eclipsing_binaries = self._eclipsing_binaries_on_disk.entries(tic)
+            sources["eclipsing_binaries"] = {
+                "url": TESS_EB_URL,
+                "sha256": self._eclipsing_binaries_on_disk.sha256,
             }
+        elif self._uses_vizier:
+            eclipsing_binaries = self._eclipsing_binaries(tic)
+            sources["eclipsing_binaries"] = self._vizier_name(TESS_EB_CATALOGUE)
+        else:
+            eclipsing_binaries = []
+            sources["eclipsing_binaries"] = "unavailable (Vizier not used)"
+        if self._fetch_tois:
+            tois = self.toi_list.entries(tic)
+            sources["toi"] = {"url": TOI_URL, "sha256": self.toi_list.sha256}
+        else:
+            tois = []
+            sources["toi"] = "not fetched"
         return EpisodeContext(
             tic=tic,
             sector=int(sector),
@@ -286,13 +394,13 @@ class CatalogueFetcher:
             dec=float(star["dec"]),
             tmag=star.get("tmag"),
             t_offset=float(t_offset),
-            tois=self.toi_list.entries(tic),
+            tois=tois,
             eclipsing_binaries=eclipsing_binaries,
             gaia_classes=gaia_classes,
             neighbours=neighbours,
             target_gmag=target_gmag,
             fetched=utc_timestamp(),
-            sources={"toi": {"url": TOI_URL, "sha256": self.toi_list.sha256}, **sources},
+            sources=sources,
         )
 
     def binary_evidence(self, star: dict) -> list[str]:
@@ -316,41 +424,64 @@ class CatalogueFetcher:
         Host selection uses this list as a cut. A star with its own eclipses is a
         false alarm for every detector, and an injection on such a star is unfindable
         by design, so the benchmark excludes these stars as it excludes TOI hosts.
+        Each catalogue is read only where it is reachable: the binaries from the disk
+        copy or Vizier, the classes from Vizier when the fetcher uses it.
         """
         tic = tic_id(star.get("tic"))
         if tic is None:
             raise ValueError(f"target record has no valid TIC identifier: {star.get('tic')!r}")
         evidence = []
-        if self._eclipsing_binaries(tic):
+        if self._eclipsing_binaries_on_disk is not None:
+            has_entry = bool(self._eclipsing_binaries_on_disk.entries(tic))
+        elif self._uses_vizier:
+            has_entry = bool(self._eclipsing_binaries(tic))
+        else:
+            has_entry = False
+        if has_entry:
             evidence.append("tess_eb")
-        if GAIA_ECLIPSING_CLASS in self._gaia_classes(float(star["ra"]), float(star["dec"])):
+        if self._uses_vizier and GAIA_ECLIPSING_CLASS in self._gaia_classes(
+            float(star["ra"]), float(star["dec"])
+        ):
             evidence.append("gaia_" + GAIA_ECLIPSING_CLASS)
         return evidence
 
-    def _eclipsing_binaries(self, tic: int) -> list[dict]:
+    @property
+    def _uses_vizier(self) -> bool:
+        """True when a Vizier query can run: the default source, or a mirror is named."""
+        return self._gaia_source == "vizier" or self._vizier_server is not None
+
+    def _vizier_name(self, catalogue: str) -> str:
+        """The source record of a Vizier catalogue: its identifier, with the mirror when one is set."""
+        if self._vizier_server is None:
+            return catalogue
+        return f"{catalogue} at {self._vizier_server}"
+
+    def _vizier(self, columns: list[str], row_limit: int):
+        """An astroquery Vizier query object on the configured mirror."""
         from astroquery.vizier import Vizier
 
-        tables = Vizier(columns=["TIC", "Per", "BJD0"], row_limit=20).query_constraints(
+        if self._vizier_server is None:
+            return Vizier(columns=columns, row_limit=row_limit)
+        return Vizier(columns=columns, row_limit=row_limit, vizier_server=self._vizier_server)
+
+    def _eclipsing_binaries(self, tic: int) -> list[dict]:
+        tables = self._vizier(["TIC", "Per", "BJD0"], 20).query_constraints(
             catalog=TESS_EB_CATALOGUE, TIC=str(tic)
         )
         entries = []
         for table in tables:
             for row in table:
                 entries.append(
-                    {
-                        "period": _float_or_none(row["Per"]),
-                        "epoch_bjd": _float_or_none(row["BJD0"]),
-                    }
+                    eclipsing_binary_entry(_float_or_none(row["Per"]), _float_or_none(row["BJD0"]))
                 )
         return entries
 
     def _gaia_classes(self, ra: float, dec: float) -> list[str]:
         import astropy.units as units
         from astropy.coordinates import SkyCoord
-        from astroquery.vizier import Vizier
 
         classes = []
-        for table in Vizier(columns=["Class"], row_limit=5).query_region(
+        for table in self._vizier(["Class"], 5).query_region(
             SkyCoord(ra, dec, unit="deg"),
             radius=TARGET_MATCH_ARCSEC * units.arcsec,
             catalog=GAIA_CLASS_CATALOGUE,
@@ -361,11 +492,10 @@ class CatalogueFetcher:
     def _gaia(self, ra: float, dec: float) -> tuple[list[str], list[dict], float | None]:
         import astropy.units as units
         from astropy.coordinates import SkyCoord
-        from astroquery.vizier import Vizier
 
         coord = SkyCoord(ra, dec, unit="deg")
         classes = self._gaia_classes(ra, dec)
-        sources = Vizier(columns=["Source", "RAJ2000", "DEJ2000", "Gmag"], row_limit=200).query_region(
+        sources = self._vizier(["Source", "RAJ2000", "DEJ2000", "Gmag"], 200).query_region(
             coord, radius=NEIGHBOUR_RADIUS_ARCSEC * units.arcsec, catalog=GAIA_SOURCE_CATALOGUE
         )
         rows = []

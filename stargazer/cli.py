@@ -126,14 +126,22 @@ def cmd_baseline(args: argparse.Namespace) -> None:
 
 def cmd_context(args: argparse.Namespace) -> None:
     """Fetch the catalogue context of each host and write context.json into an episode set."""
-    from stargazer.context import CatalogueFetcher, ContextWriter
+    from stargazer.context import CatalogueFetcher, ContextWriter, TessEbCatalogue
     from stargazer.provenance import Manifest
     from stargazer.targets import load_targets
 
     episode_dir = Path(args.episodes)
     targets = {"targets": [target for file in args.targets for target in load_targets(file)["targets"]]}
+    fetcher = CatalogueFetcher(
+        gaia_source=args.gaia_source,
+        eclipsing_binaries=TessEbCatalogue.read(Path(args.eclipsing_binaries))
+        if args.eclipsing_binaries
+        else None,
+        vizier_server=args.vizier_server,
+        fetch_tois=not args.mask_tois,
+    )
     writer = ContextWriter(
-        CatalogueFetcher(gaia_source=args.gaia_source),
+        fetcher,
         mask_tois=args.mask_tois,
         reuse=Path(args.reuse) if args.reuse else None,
     )
@@ -391,6 +399,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--mask-tois", action="store_true", help="leave the hosts' TOI entries out (real-planet sets)"
     )
     parser.add_argument("--gaia-source", choices=["vizier", "mast"], default="vizier")
+    parser.add_argument(
+        "--eclipsing-binaries",
+        default=None,
+        help="a CSV copy of the TESS eclipsing-binary catalogue from MAST (stargazer.context.TESS_EB_URL); "
+        "with it no Vizier query is made for the binaries",
+    )
+    parser.add_argument(
+        "--vizier-server",
+        default=None,
+        help="a Vizier mirror such as vizier.cfa.harvard.edu; with --gaia-source mast the Gaia classes "
+        "still come from it",
+    )
     parser.add_argument(
         "--reuse", default=None, help="a context.json whose stars are copied instead of fetched"
     )

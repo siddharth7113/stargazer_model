@@ -2,7 +2,16 @@
 
 import json
 
-from stargazer.context import BTJD_OFFSET, CatalogueFetcher, ContextWriter, EpisodeContext, ToiList, tic_id
+from stargazer.context import (
+    BTJD_OFFSET,
+    CatalogueFetcher,
+    ContextWriter,
+    EpisodeContext,
+    TessEbCatalogue,
+    ToiList,
+    eclipsing_binary_entry,
+    tic_id,
+)
 
 TOI_CSV = """TIC ID,TOI,Period (days),Epoch (BJD),Duration (hours),Depth (ppm),TFOPWG Disposition
 123,100.01,3.5,2459000.5,2.1,800,PC
@@ -196,3 +205,82 @@ def test_writer_reuses_the_contexts_of_another_set_and_fetches_only_the_rest(tmp
     assert written["ep_0000"]["gaia_classes"] == ["RS"] and written["ep_0000"]["t_offset"] == 100.0
     assert written["ep_0000"]["sources"]["reused_from"].endswith("old_context.json")
     assert written["ep_0001"]["tic"] == 999 and "reused_from" not in written["ep_0001"]["sources"]
+
+
+EB_CSV = """tess_id,signal_id,ra,dec,bjd0,period,sectors
+260128333,1,92.13,-59.54,1585.1666739843085,14.608582815613214,"4,5"
+260128333,2,92.13,-59.54,1586.0,7.3,"4,5"
+not_a_tic,1,0.0,0.0,1.0,2.0,"1"
+"""
+
+
+def test_tess_eb_catalogue_groups_entries_by_tic_and_stores_the_epoch_as_bjd():
+    """The MAST CSV gives the eclipse epoch as BTJD; an entry stores it as BJD so the context converts
+    it as it converts a TOI epoch. Two rows of one star give two entries and a row without a TIC is skipped.
+    """
+    catalogue = TessEbCatalogue(EB_CSV)
+    entries = catalogue.entries(260128333)
+    assert [entry["period"] for entry in entries] == [14.608582815613214, 7.3]
+    assert entries[0]["epoch_bjd"] == 1585.1666739843085 + BTJD_OFFSET
+    assert catalogue.entries(1) == []
+
+
+def test_eclipsing_binary_entry_leaves_a_missing_epoch_as_none():
+    """A catalogue row without an epoch gives ``epoch_bjd`` None, not an offset added to nothing."""
+    assert eclipsing_binary_entry(2.0, None) == {"period": 2.0, "epoch_bjd": None}
+
+
+def test_fetcher_takes_the_binaries_from_the_disk_copy_and_queries_vizier_for_nothing_else(monkeypatch):
+    """With a disk copy of the eclipsing-binary catalogue and the MAST Gaia source, no Vizier query runs:
+    the binaries come from the copy with its hash recorded, and the evidence rule reads the copy too.
+    """
+    fetcher = CatalogueFetcher(
+        toi_list=ToiList(TOI_CSV), gaia_source="mast", eclipsing_binaries=TessEbCatalogue(EB_CSV)
+    )
+
+    def no_vizier(*args, **kwargs):
+        raise AssertionError("Vizier was queried")
+
+    monkeypatch.setattr(fetcher, "_vizier", no_vizier)
+    monkeypatch.setattr(fetcher, "_gaia_mast", lambda ra, dec: ([], 10.0))
+    star = {"tic": 260128333, "ra": 92.13, "dec": -59.54}
+    context = fetcher.context_for(star, 98, 100.0)
+    assert len(context.eclipsing_binaries) == 2
+    assert context.sources["eclipsing_binaries"]["sha256"] == TessEbCatalogue(EB_CSV).sha256
+    assert "unavailable" in context.sources["gaia_classes"]
+    assert fetcher.binary_evidence(star) == ["tess_eb"]
+
+
+def test_fetcher_with_mast_gaia_takes_the_classes_from_a_named_vizier_mirror(monkeypatch):
+    """A Vizier mirror in ``vizier_server`` fills the Gaia classes even with the MAST Gaia source, and the
+    source record names the mirror, so a context says where each field came from.
+    """
+    fetcher = CatalogueFetcher(
+        toi_list=ToiList(TOI_CSV),
+        gaia_source="mast",
+        eclipsing_binaries=TessEbCatalogue(EB_CSV),
+        vizier_server="vizier.cfa.harvard.edu",
+    )
+    monkeypatch.setattr(fetcher, "_gaia_classes", lambda ra, dec: ["ECL"])
+    monkeypatch.setattr(fetcher, "_gaia_mast", lambda ra, dec: ([], 10.0))
+    context = fetcher.context_for({"tic": 456, "ra": 1.0, "dec": 2.0}, 98, 100.0)
+    assert context.gaia_classes == ["ECL"]
+    assert context.sources["gaia_classes"] == "I/358/vclassre at vizier.cfa.harvard.edu"
+    assert context.sources["gaia_sources"].startswith("MAST")
+
+
+def test_fetcher_without_tois_downloads_no_list_and_says_so(monkeypatch):
+    """With ``fetch_tois`` False the TOI list is never downloaded and the source record says not fetched,
+    so a masked real-planet set can be built while ExoFOP is down.
+    """
+    fetcher = CatalogueFetcher(
+        gaia_source="mast", eclipsing_binaries=TessEbCatalogue(EB_CSV), fetch_tois=False
+    )
+
+    def no_download(cls, url=None):
+        raise AssertionError("the TOI list was downloaded")
+
+    monkeypatch.setattr(ToiList, "download", classmethod(no_download))
+    monkeypatch.setattr(fetcher, "_gaia_mast", lambda ra, dec: ([], 10.0))
+    context = fetcher.context_for({"tic": 456, "ra": 1.0, "dec": 2.0}, 98, 100.0)
+    assert context.tois == [] and context.sources["toi"] == "not fetched"
