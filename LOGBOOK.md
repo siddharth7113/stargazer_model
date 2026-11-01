@@ -2263,3 +2263,13 @@ trajectory of about 7,000 tokens trained ($0.012), 37,400 prompt tokens prefille
 across the turns ($0.022 before the cache), 340 tokens sampled: about $0.04, so a
 step of 8 groups of 4 is about $1.30 and a test of three steps under $5. The number
 to measure is the bill of that test against this estimate.
+
+**Phase 5, step 3: the cost test, launch** (`results/train_cost_test.sh`, the owner's
+standing yes for small-model runs given on 2026-11-01). The first launch died at
+import: the cookbook's `rl.train` imports `datasets`, and the installed `datasets`
+(a 2.x release) used `pyarrow.PyExtensionType`, which pyarrow 26.0.0 no longer has.
+`uv pip install -U datasets` to 5.1.0 fixed the import; no file of the project
+changed. Second launch at 11:48 UTC: Inkling-Small at 64K, rules prompt, s98_v3,
+three steps of 8 groups of 4, learning rate 5e-5, no checkpoint, log directory
+`data/train/cost_test_inkling_small_s98_v3/` (the cookbook writes `config.json` from
+`TrainingRun.record`, `metrics.jsonl`, `logs.log` and a `code.diff`). The result follows.

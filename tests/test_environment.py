@@ -21,6 +21,7 @@ from stargazer.environment import (
     EpisodeGroupBuilder,
     EpisodeReward,
     EpisodeTools,
+    TrainingRun,
 )
 from stargazer.episodes import BuildConfig, EpisodeSet
 
@@ -190,3 +191,14 @@ def test_dataset_builder_batches_every_episode_and_records_the_sets_by_hash(epis
     record = builder.record
     assert record["episode_set_hash"] == episodes.hash and record["test_episode_set_hash"] == episodes.hash
     assert len(record["tools"]) == 12 and record["system_prompt"] == "rules"
+
+
+def test_training_run_fails_fast_on_rollout_errors_and_records_it(episodes):
+    """By default a run stops on the first rollout error instead of skipping the group, so the record's
+    batch size is what was trained on; the cookbook config carries the choice and the record names it.
+    """
+    dataset = EpisodeDatasetBuilder(episode_dir=str(episodes.root), model_name=MODEL, renderer_name=RENDERER)
+    run = TrainingRun(dataset, log_path=str(episodes.root / "log"), learning_rate=1e-5)
+    assert run.config().rollout_error_tolerance is False and run.record["tolerate_rollout_errors"] is False
+    tolerant = TrainingRun(dataset, log_path="x", learning_rate=1e-5, tolerate_rollout_errors=True)
+    assert tolerant.config().rollout_error_tolerance is None

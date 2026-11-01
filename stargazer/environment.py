@@ -442,6 +442,12 @@ class TrainingRun:
         Steps between evaluations on the test set and between checkpoints.
     temperature : float
         Sampling temperature during training; the model card value is the default.
+    tolerate_rollout_errors : bool
+        False (the default) stops the run on the first rollout that raises, so that
+        a run never trains on fewer groups than its record says. The cookbook's own
+        default for Inkling models skips a failed group and goes on; on 2026-11-01 a
+        run whose every group failed at import then ended with exit code 0 and
+        three empty steps. True restores the cookbook's default.
 
     Notes
     -----
@@ -463,6 +469,7 @@ class TrainingRun:
         eval_every: int = 0,
         save_every: int = 20,
         temperature: float = 1.0,
+        tolerate_rollout_errors: bool = False,
     ):
         self._dataset = dataset
         self._log_path = log_path
@@ -473,6 +480,7 @@ class TrainingRun:
         self._eval_every = eval_every
         self._save_every = save_every
         self._temperature = temperature
+        self._tolerate_rollout_errors = tolerate_rollout_errors
 
     @property
     def record(self) -> dict[str, Any]:
@@ -491,6 +499,7 @@ class TrainingRun:
             "eval_every": self._eval_every,
             "save_every": self._save_every,
             "temperature": self._temperature,
+            "tolerate_rollout_errors": self._tolerate_rollout_errors,
             "log_path": self._log_path,
             "dataset": self._dataset.record,
         }
@@ -512,6 +521,7 @@ class TrainingRun:
             eval_every=self._eval_every,
             save_every=self._save_every,
             temperature=self._temperature,
+            rollout_error_tolerance=None if self._tolerate_rollout_errors else False,
         )
 
     def run(self) -> Path:
