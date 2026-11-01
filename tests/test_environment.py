@@ -202,3 +202,22 @@ def test_training_run_fails_fast_on_rollout_errors_and_records_it(episodes):
     assert run.config().rollout_error_tolerance is False and run.record["tolerate_rollout_errors"] is False
     tolerant = TrainingRun(dataset, log_path="x", learning_rate=1e-5, tolerate_rollout_errors=True)
     assert tolerant.config().rollout_error_tolerance is None
+
+
+def test_environment_carries_the_detectors_caps_on_both_sides_and_grades_a_capped_episode(episodes):
+    """The runner's limits and the message environment's cap are the detector's 30 turns and 40 calls, not
+    the cookbook's 10-turn preset for Inkling models, and the termination policy leaves a capped episode's
+    reward as the benchmark scores it; on 2026-11-01 the preset cut up to a third of a step's rollouts at
+    10 turns with reward 0 and no grading.
+    """
+    null_id, _ = _null_and_transit(episodes)
+    builder = _builder(episodes, null_id)
+    env = asyncio.run(builder.make_envs())[0]
+    assert env.rollout_limits.max_turns == 30 and env.rollout_limits.max_tool_calls == 40
+    assert env.message_env.max_turns == 30 and env.message_env.max_tool_calls == 40
+    assert builder.rollout_config().termination.zero_reward_on_limit is False
+    dataset = EpisodeDatasetBuilder(episode_dir=str(episodes.root), model_name=MODEL, renderer_name=RENDERER)
+    assert (
+        TrainingRun(dataset, log_path="x", learning_rate=1e-5).config().termination.zero_reward_on_limit
+        is False
+    )

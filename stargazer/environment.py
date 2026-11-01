@@ -54,6 +54,8 @@ from typing import Any
 
 import chz
 import numpy as np
+from tinker_cookbook.rl.rollout_limits import ParseErrorPolicy, RolloutLimits, TerminationRewardPolicy
+from tinker_cookbook.rl.rollout_presets import RolloutConfig
 from tinker_cookbook.rl.types import Env, EnvGroupBuilder, RLDataset, RLDatasetBuilder
 from tinker_cookbook.tool_use import ToolInput, ToolResult, build_agent_tool_env, simple_tool_result
 
@@ -241,6 +243,16 @@ class EpisodeGroupBuilder(EnvGroupBuilder):
     initial messages are the renderer's own tool declaration from the twelve tool
     specs and the system prompt, followed by the user's request, exactly as
     :class:`stargazer.backends.TinkerBackend` builds them for evaluation.
+
+    The caps are set in one explicit :class:`RolloutConfig` (``rollout_config``) and
+    not left to the cookbook's preset for the model: the preset for Inkling models
+    caps a rollout at 10 turns on the runner's side whatever the environment asks
+    for, and a rollout the runner cuts is never graded, so on 2026-11-01 up to a
+    third of the trajectories of a step ended at 10 turns with reward 0 (LOGBOOK).
+    With the config the environment enforces the detector's caps itself, a capped
+    episode is graded as a non-submission (``detected=false``) as the benchmark
+    scores it, two consecutive unparsable turns get a corrective message as the
+    detector's nudges do, and a limit stop leaves the reward untouched.
     """
 
     def __init__(
@@ -265,6 +277,19 @@ class EpisodeGroupBuilder(EnvGroupBuilder):
         self.max_tool_calls = max_tool_calls
         self.max_trajectory_tokens = max_trajectory_tokens
         self.example_id = episode_id
+
+    def rollout_config(self) -> RolloutConfig:
+        """The detector's caps as the cookbook's rollout configuration; see the class notes."""
+        return RolloutConfig(
+            limits=RolloutLimits(
+                max_turns=self.max_turns,
+                max_tool_calls=self.max_tool_calls,
+                max_trajectory_tokens=self.max_trajectory_tokens,
+            ),
+            parse_errors=ParseErrorPolicy(max_consecutive=ToolAgentDetector.DEFAULT_MAX_NUDGES),
+            termination=TerminationRewardPolicy(zero_reward_on_limit=False),
+            tool_execution="parallel",
+        )
 
     def _renderer(self):
         from tinker_cookbook import renderers
@@ -301,6 +326,7 @@ class EpisodeGroupBuilder(EnvGroupBuilder):
                     tools=tools.cookbook_tools(),
                     initial_messages=initial,
                     reward_fn=EpisodeReward(tools, truth),
+                    rollout_config=self.rollout_config(),
                     model_name=self.model_name,
                     max_turns=self.max_turns,
                     max_tool_calls=self.max_tool_calls,
@@ -523,6 +549,7 @@ class TrainingRun:
             save_every=self._save_every,
             temperature=self._temperature,
             rollout_error_tolerance=None if self._tolerate_rollout_errors else False,
+            termination=TerminationRewardPolicy(zero_reward_on_limit=False),
         )
 
     def run(self) -> Path:

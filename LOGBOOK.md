@@ -2320,3 +2320,34 @@ Reading.
 - The stop metrics show every episode ending on the submission (`tool_stopped`),
   none on a cap; the environment's `calls_remaining` and the detector's caps are in
   force, and the policy behaves as it does under `stargazer agent`.
+
+**The group signal, first measurement, and the turn-cap defect**
+(`results/train_group_signal.sh`, 11:44 to 11:56 UTC, three one-step runs side by
+side on the same eight stars of s98_v3 as the cost test's step 0: group 8 at
+temperature 1.0, group 16 at 1.0, group 4 at 1.3; the model card's sampling
+temperature for Inkling is 0.6 and the cookbook trains at 1.0 by default, so every
+training run so far sampled hotter than evaluation). Reading the cookbook's rollout
+export (`iteration_000000/train_rollout_summaries.jsonl`) showed that trajectories
+ending with `stop/max_turns` after exactly 10 steps carry reward 0 and no score
+metric: the cookbook's `agentic` preset, which `build_agent_tool_env` applies to every
+Inkling model when no rollout configuration is given, caps a rollout at 10 turns on
+the runner's side whatever `max_turns` the environment asks for, and a rollout the
+runner cuts is never graded. The detector allows 30 turns and a careful analysis takes
+6 to 12 calls at one call a turn, so the cap falls on the harder stars. Cut
+trajectories: 6 of 96 in the cost test, 17 of 64 at group 8, 40 of 128 at group 16,
+12 of 32 at group 4 and temperature 1.3. The all-bad groups of those runs are partly
+cut-offs, and the mixed fractions (3 of 8 at group 8, 4 of 8 at group 16, 2 of 8 at
+temperature 1.3, against 1 of 8 in the cost test) measure the cap as much as the
+policy. `EpisodeGroupBuilder` now builds one explicit `RolloutConfig` with the
+detector's caps (30 turns, 40 calls, 60,000 trajectory tokens) for the runner and the
+environment, two consecutive unparsable turns answered with a corrective message as
+the detector's nudges, and a termination policy that leaves a capped episode's reward
+as the benchmark scores it (a non-submission, `detected=false`); `TrainingRun`
+passes the same policy to the trainer. Test:
+`test_environment_carries_the_detectors_caps_on_both_sides_and_grades_a_capped_episode`.
+The cut runs' metrics are kept as `results/train/group_signal_*_capped10_metrics.jsonl`;
+the cost test's cost numbers stand (its 6 cut trajectories ended early, so its cost
+per step is a lower bound by about a tenth), its reward numbers do not. Lesson for
+the working method: the first run under a new loop must be read from its rollout
+export, trajectory by trajectory, not from its summary metrics; the stop reason of
+every trajectory is the harness check.
