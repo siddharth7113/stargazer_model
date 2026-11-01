@@ -48,6 +48,7 @@ import asyncio
 import hashlib
 import json
 import random
+import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -450,6 +451,85 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
         }
 
 
+class CheckpointPruner:
+    """Keep the Tinker checkpoint store within the free tier while a run saves checkpoints.
+
+    Parameters
+    ----------
+    log_dir : Path
+        The run's log directory, where the cookbook appends ``checkpoints.jsonl``.
+    rest_client
+        A Tinker REST client, with ``delete_checkpoint_from_tinker_path``.
+    interval_seconds : float
+        How often the list is read while the run goes.
+
+    Notes
+    -----
+    The cookbook saves two things at each checkpoint: the training state (about 25
+    GB for Inkling-Small, needed only to resume the run) and the sampler weights
+    (about 8 GB, what evaluation through ``TinkerBackend(model_path=...)`` reads).
+    The free store holds 100 GB, so three such pairs halt a run. The pruner deletes
+    the training state of every checkpoint but the newest, as soon as a newer one is
+    listed, and keeps every sampler checkpoint: a 50-step run with a save every 10
+    steps then holds five sampler checkpoints and one state, about 67 GB. It runs in
+    a thread beside the training loop and once more after it; ``pruned.txt`` in the
+    log directory records each deleted path. A line the cookbook is still writing is
+    skipped until the next read.
+    """
+
+    def __init__(self, log_dir: Path, rest_client, interval_seconds: float = 30.0):
+        self._log_dir = Path(log_dir)
+        self._rest = rest_client
+        self._interval = interval_seconds
+        self._deleted: set[str] = set()
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def entries(self) -> list[dict]:
+        """The checkpoint entries listed so far, in order; a half-written line is left out."""
+        path = self._log_dir / "checkpoints.jsonl"
+        if not path.exists():
+            return []
+        entries = []
+        for line in path.read_text().splitlines():
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return entries
+
+    def prune(self) -> list[str]:
+        """Delete the training state of every checkpoint but the newest; return the paths deleted now."""
+        entries = self.entries()
+        deleted_now = []
+        for entry in entries[:-1]:
+            state_path = entry.get("state_path")
+            if state_path and state_path not in self._deleted:
+                self._rest.delete_checkpoint_from_tinker_path(state_path).result()
+                self._deleted.add(state_path)
+                deleted_now.append(state_path)
+        if deleted_now:
+            with (self._log_dir / "pruned.txt").open("a") as handle:
+                handle.write("".join(f"{item}\n" for item in deleted_now))
+        return deleted_now
+
+    def _loop(self) -> None:
+        while not self._stop.wait(self._interval):
+            self.prune()
+
+    def start(self) -> None:
+        """Start pruning in a thread."""
+        self._thread = threading.Thread(target=self._loop, name="checkpoint-pruner", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> list[str]:
+        """Stop the thread and prune once more."""
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join()
+        return self.prune()
+
+
 class TrainingRun:
     """One LoRA training run of a model on an episode set through the cookbook's loop.
 
@@ -470,6 +550,9 @@ class TrainingRun:
         ``save_every`` 0 the run discards that final checkpoint after the loop, so a
         measurement run leaves nothing in the store (the free store filled with
         five such checkpoints on 2026-11-01 and refused the next training client).
+        With ``save_every`` above 0 a :class:`CheckpointPruner` runs beside the loop
+        and keeps the store within the free tier: every sampler checkpoint stays,
+        only the newest training state does.
     temperature : float
         Sampling temperature during training; the model card value is the default.
     tolerate_rollout_errors : bool
@@ -563,11 +646,19 @@ class TrainingRun:
         log_dir = Path(self._log_path)
         log_dir.mkdir(parents=True, exist_ok=True)
         (log_dir / "record.json").write_text(json.dumps(self.record, indent=1, sort_keys=True))
-        asyncio.run(train.main(self.config()))
-        if self._save_every == 0:
-            import tinker
+        import tinker
 
-            self.discard_checkpoints(log_dir, tinker.ServiceClient().create_rest_client())
+        rest_client = tinker.ServiceClient().create_rest_client()
+        pruner = CheckpointPruner(log_dir, rest_client) if self._save_every > 0 else None
+        if pruner is not None:
+            pruner.start()
+        try:
+            asyncio.run(train.main(self.config()))
+        finally:
+            if pruner is not None:
+                pruner.stop()
+        if self._save_every == 0:
+            self.discard_checkpoints(log_dir, rest_client)
         return log_dir
 
     @staticmethod

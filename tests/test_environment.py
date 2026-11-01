@@ -17,6 +17,7 @@ from tinker_cookbook.renderers import ToolCall
 from stargazer.agent import PROMPTS
 from stargazer.environment import (
     USER_REQUEST,
+    CheckpointPruner,
     EpisodeDatasetBuilder,
     EpisodeGroupBuilder,
     EpisodeReward,
@@ -256,3 +257,46 @@ def test_training_run_discards_the_checkpoints_of_a_run_without_saving(tmp_path)
     assert (tmp_path / "checkpoints.jsonl").read_text() == ""
     assert (tmp_path / "discarded.txt").read_text().splitlines() == deleted
     assert TrainingRun.discard_checkpoints(tmp_path / "none", rest) == []
+
+
+def test_checkpoint_pruner_keeps_every_sampler_and_only_the_newest_state(tmp_path):
+    """As checkpoints are listed, the training state of every one but the newest is deleted once, the
+    sampler weights are never touched, a half-written line is skipped, and the deleted paths are recorded;
+    the free store then holds one state and every sampler checkpoint.
+    """
+
+    class FakeFuture:
+        def result(self):
+            return None
+
+    class FakeRest:
+        def __init__(self):
+            self.deleted = []
+
+        def delete_checkpoint_from_tinker_path(self, path):
+            self.deleted.append(path)
+            return FakeFuture()
+
+    def entry(name):
+        return json.dumps(
+            {
+                "name": name,
+                "state_path": f"tinker://r/weights/{name}",
+                "sampler_path": f"tinker://r/sampler_weights/{name}",
+            }
+        )
+
+    listing = tmp_path / "checkpoints.jsonl"
+    rest = FakeRest()
+    pruner = CheckpointPruner(tmp_path, rest, interval_seconds=0.01)
+    assert pruner.prune() == []
+    listing.write_text(entry("000010") + "\n")
+    assert pruner.prune() == []
+    listing.write_text(entry("000010") + "\n" + entry("000020") + "\n" + '{"name": "0000')
+    assert pruner.prune() == ["tinker://r/weights/000010"]
+    assert pruner.prune() == []
+    listing.write_text(entry("000010") + "\n" + entry("000020") + "\n" + entry("final") + "\n")
+    assert pruner.stop() == ["tinker://r/weights/000020"]
+    assert rest.deleted == ["tinker://r/weights/000010", "tinker://r/weights/000020"]
+    assert all("sampler" not in path for path in rest.deleted)
+    assert (tmp_path / "pruned.txt").read_text().splitlines() == rest.deleted

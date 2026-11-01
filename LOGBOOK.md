@@ -2407,3 +2407,13 @@ Reading.
   fold that shows the dip, should earn credit). Group 8 at temperature 1.2 is the
   setting to start from; a larger group buys little beyond 8. Cost of a step at
   group 8: about 2.6 million prompt tokens, 332 seconds at eight groups side by side.
+
+**Checkpoints on the free store** (decided with the owner on 2026-11-01 from the
+console: the free tier holds 100 GB and 100 checkpoints and halts training at either
+limit; the paid tier is $0.10 per GB a month). A checkpoint of Inkling-Small is 25.2
+GB of training state and 8.4 GB of sampler weights; evaluation reads the sampler
+weights only, the state serves a resume. `CheckpointPruner` runs in a thread beside
+the training loop, reads `checkpoints.jsonl` every 30 seconds, deletes the training
+state of every checkpoint but the newest and keeps every sampler checkpoint, with
+the paths in `pruned.txt`; a 50-step run with a save every 10 steps then holds about
+67 GB. Test: `test_checkpoint_pruner_keeps_every_sampler_and_only_the_newest_state`.

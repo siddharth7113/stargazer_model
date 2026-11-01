@@ -192,7 +192,7 @@ stargazer train --episodes data/episodes/s98_v3 --test-episodes data/episodes/s9
 | `--max-trajectory-tokens` | 60 000 | conversation length at which the episode ends |
 | `--temperature` | 1.0 | sampling temperature during training; the cookbook's default, hotter than the model card |
 | `--steps` | one pass | training steps |
-| `--eval-every`, `--save-every` | 0, 20 | steps between evaluations and between checkpoints; 0 means never |
+| `--eval-every`, `--save-every` | 0, 20 | steps between evaluations and between checkpoints; 0 means never, and a run without saving discards the final checkpoint the cookbook writes. With saving on, a pruner beside the loop deletes the training state of every checkpoint but the newest and keeps every sampler checkpoint, so a run stays within the free store (100 GB) |
 | `--seed` | 0 | order of the episodes |
 | `--log-path` | required | directory for the run's `record.json`, the cookbook's `metrics.jsonl`, `config.json` and checkpoints; `data/train/` is not committed |
 
