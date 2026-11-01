@@ -122,7 +122,7 @@ curve as three arrays, so each survey needs only a loader and a target list.
 
 ## Phase 5: Reinforcement learning on Tinker
 
-- [ ] Tier 3 environment in the cookbook's RL interface: the episode is the observation, tool calls are actions, `score_episode` is the reward
+- [x] Tier 3 environment in the cookbook's RL interface: the episode is the observation, tool calls are actions, `score_episode` is the reward (`stargazer/environment.py`, `stargazer train`; the three-step cost test on Inkling-Small, about 90 seconds and about one dollar a step of 32 episodes, LOGBOOK 2026-11-01)
 - [ ] Reward shaping decided and recorded: false-alarm penalty, credit for checks performed, cost per tool call
 - [ ] Training on a mixture of surveys; one survey held out
 - [ ] Training curves and held-out evaluation at matched false-alarm rate against the BLS baseline and the untrained models
@@ -186,21 +186,33 @@ models train: `ServiceClient.get_server_capabilities()` returns `trainable` for 
 model, and that call is the first step. `get_lr` is calibrated for Qwen only; the
 weights README suggests LoRA learning rates near 5e-4.
 
+Phase 5 steps 1 to 3 are done the same day (LOGBOOK 2026-11-01): every sampling
+model trains; the environment is `stargazer/environment.py` with `stargazer train`
+(seven offline tests with a stub model; a run stops on the first failed rollout and
+writes `record.json` with the sets by hash); the cost test ran three steps of 8
+groups of 4 on Inkling-Small at 5e-5 (`results/train/cost_test_inkling_small_s98_v3_*`):
+about 90 seconds and about one dollar a step, no false alarm, and 22 of 24 groups
+with one reward on all four rollouts, so the groups carry almost no gradient. The
+owner's standing rule since 2026-11-01: small-model runs need no ask; say so before a
+big-model run.
+
 Nothing is running.
 
 First three steps of the next session:
 
-1. Call `get_server_capabilities` with the key in `.env` and record which of the five
-   sampling models are trainable (LOGBOOK). If Inkling-Small is not, the small-model
-   case in Phase 5 changes.
-2. Write the tier 3 environment on `build_agent_tool_env`: an episode's three arrays
-   and context are the observation, the twelve tools wrapped as `Tool` objects through
-   the existing `ToolBox`, `score_episode` as the reward; test it offline on three
-   episodes with a stub backend. Keep `ToolAgentDetector` as the evaluation path.
-3. One short training test on Inkling-Small to measure the cost of a step, with the
-   owner's yes on the amount; then the reward-shaping decision (a missed planet costs
-   reward, which is the route to the `variable` stop on active hosts: ep_0029 of
-   s98_v3 and TOI-4364's host are the test cases).
+1. Measure the group signal before any shaping: one batch each at group size 8 and
+   16, and one at temperature 1.3 with group 4, on s98_v3 (about $2 to $5 each),
+   reading `by_group/frac_mixed`. The lever that gives mixed groups on the hard
+   planets at the least sampling is the one to train with.
+2. Decide the reward shaping and record it in PLAN.md: the plain score (today), or
+   partial credit for the procedure's steps, or a false-alarm penalty below zero;
+   write the chosen reward as a class beside `EpisodeReward` with its own tests, so
+   the plain score stays available as the control.
+3. The first real run: Inkling-Small, rules prompt, s98_v3 as the training set and
+   s92_v1 as the test set (`--test-episodes`, `--eval-every`), 30 to 50 steps,
+   a checkpoint every 10; then evaluate the checkpoint through
+   `TinkerBackend(model_path=...)` with `stargazer agent` on s92_v1 and s98_real_v2,
+   against the `full_v15parity` rows.
 
 Still open from before: the `variable` stop on active hosts (Phase 5, above); the
 Gaia classes of the 43 real hosts (rerun the refill with `--vizier-server` when a

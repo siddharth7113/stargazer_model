@@ -451,9 +451,10 @@ class TrainingRun:
 
     Notes
     -----
-    The run's record is written as ``config.json`` in ``log_path`` before training
-    starts: the git commit, the sets by hash, the prompt hash, the tools and every
-    number, so that the LOGBOOK entry and the checkpoint point at the same thing.
+    The run's record is written as ``record.json`` in ``log_path`` before training
+    starts (the cookbook writes its own ``config.json`` there, without the hashes):
+    the git commit, the sets by hash, the prompt hash, the tools and every number,
+    so that the LOGBOOK entry and the checkpoint point at the same thing.
     The cookbook's own ``metrics.jsonl`` in the same directory holds the step by
     step reward and the one-hot outcome metrics of :class:`EpisodeReward`.
     """
@@ -530,6 +531,6 @@ class TrainingRun:
 
         log_dir = Path(self._log_path)
         log_dir.mkdir(parents=True, exist_ok=True)
-        (log_dir / "config.json").write_text(json.dumps(self.record, indent=1, sort_keys=True))
+        (log_dir / "record.json").write_text(json.dumps(self.record, indent=1, sort_keys=True))
         asyncio.run(train.main(self.config()))
         return log_dir

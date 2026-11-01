@@ -2273,3 +2273,50 @@ changed. Second launch at 11:48 UTC: Inkling-Small at 64K, rules prompt, s98_v3,
 three steps of 8 groups of 4, learning rate 5e-5, no checkpoint, log directory
 `data/train/cost_test_inkling_small_s98_v3/` (the cookbook writes `config.json` from
 `TrainingRun.record`, `metrics.jsonl`, `logs.log` and a `code.diff`). The result follows.
+
+**Phase 5, step 3: the cost test, result** (third launch, commit `d08715a`, 11:35 to
+11:40 UTC; the second launch had found a second package conflict: the `datasets`
+upgrade brought huggingface-hub 2.4.0, which transformers 4.57.6 refuses, so every
+rollout raised and the cookbook's default strategy for Inkling skipped every group and
+the run ended with exit code 0 and three empty steps. The resolver settled on
+transformers 5.5.4, huggingface-hub 1.33.0, datasets 5.1.0 within the cookbook's own
+bounds; `TrainingRun` now sets `rollout_error_tolerance=False` so a run stops on the
+first failed rollout, recorded as `tolerate_rollout_errors`). The cookbook writes its
+own `config.json` into the log directory and overwrote the run's record; the record
+is `record.json` from now on, and this run's was rewritten after the fact (commit
+`d08715a`, hash of s98_v3 in it). Metrics and record are copied to
+`results/train/cost_test_inkling_small_s98_v3_*`.
+
+| step | episodes | reward mean | transit hit | transit miss | false alarm | groups all same | mixed | prompt tokens | sampled tokens | sampling | train step |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | 32 | 0.688 | 64% | 32% | 0% | 7 of 8 | 1 | 1,241,237 | 13,315 | 75 s | 6.0 s |
+| 1 | 32 | 0.625 | 42% | 58% | 0% | 8 of 8 | 0 | 916,177 | 10,634 | 81 s | 6.0 s |
+| 2 | 32 | 0.562 | 0% | 100% | 3% | 7 of 8 | 1 | 1,023,861 | 10,453 | 81 s | 6.5 s |
+
+Reading.
+
+- A step of 8 groups of 4 takes about 90 seconds, 75 to 80 of them sampling the 32
+  episodes side by side and 6 the gradient step; 6 to 8 tool calls and about 1.0
+  million prompt tokens for each step, 11,000 to 13,000 sampled tokens. By the price
+  table that is about $0.60 of prefill before the cache, $0.02 of sampling and the
+  training tokens on top; the console bill is the number to put beside it. Three
+  steps at 5e-5 move nothing (KL between the sampled and the trained policy 0.004
+  at step 0); the fall of the hit rate across the steps is the draw of stars in each
+  batch of 8, not learning.
+- The finding that decides the next design: the groups carry almost no signal. Of
+  24 groups, 22 had the same reward on all four rollouts (all hit, or all miss, or
+  all declined), two were mixed. The policy-gradient loss centres each rollout's
+  reward on its group's mean, so a group with one reward contributes nothing, and
+  this policy at this prompt is close to deterministic on a given star: the null
+  stars are always declined (the restraint the rules prompt gives), the planets are
+  found or missed by their depth. A long run at this setting would spend its
+  sampling on groups that teach nothing. Three levers, to be measured before the
+  reward-shaping decision: a larger group (8 or 16) so that a rare hit on a hard
+  star enters the gradient; a higher sampling temperature in training; a reward
+  with partial credit for the steps of the procedure (the `fold` that shows the
+  dip, the `fit_transit` that passes), which turns an all-miss group into a mixed
+  one. The cookbook's `remove_constant_reward_groups` drops the constant groups
+  before the step; it does not create signal.
+- The stop metrics show every episode ending on the submission (`tool_stopped`),
+  none on a cap; the environment's `calls_remaining` and the detector's caps are in
+  force, and the policy behaves as it does under `stargazer agent`.
