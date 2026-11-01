@@ -1949,3 +1949,138 @@ return the answer; it could not run tonight, because every VizieR mirror (Strasb
 Harvard, Tokyo) timed out from 22:40 UTC while ExoFOP and MAST answered. The run
 script `results/s98_real_v1/run_reference.sh` (BLS baseline, then Inkling-Small with
 the rules prompt at seed 1) waits for the context.
+
+## 2026-11-01
+
+**VizieR down, the Gaia sources from MAST.** Every VizieR mirror (Strasbourg, Harvard,
+Tokyo), the CDS news page and SIMBAD timed out on connect from 22:40 UTC on
+2026-10-31 through the morning, while ExoFOP, MAST and the rest of the web answered;
+a traceroute reaches the Strasbourg university network at the last hop, so the
+server itself is silent. Community reports (a Cloudy Nights thread, a GitHub pull
+request of 2026-10-31) describe the same outage since about 2026-10-28, with no
+notice from CDS and no end named. The ESA Gaia archive showed a maintenance page.
+MAST holds a copy of Gaia DR3 and answered a cone search in a second, so
+`CatalogueFetcher` gained `gaia_source="mast"` (commit `2c7babf`): the neighbours
+and the target's G magnitude come from `astroquery.mast.Catalogs` with
+`catalog="Gaia", version=3`, and the two catalogues that only VizieR serves, the Gaia
+variability classes and the TESS eclipsing-binary list, stay empty with their source
+recorded as unavailable. `ContextWriter` gained `reuse`: a context file of another
+set whose stars are copied, with `reused_from` in their source record, instead of
+fetched. `stargazer context --gaia-source mast --reuse PATH`. Tests:
+`test_fetcher_with_mast_gaia_uses_no_vizier_and_records_what_is_unavailable`,
+`test_neighbours_from_rows_splits_the_target_from_the_neighbours`,
+`test_writer_reuses_the_contexts_of_another_set_and_fetches_only_the_rest`.
+
+**The real-planet set, first run** (`s98_real_v1`, hash `4693db32...` with its
+context; 43 confirmed single-planet hosts of sector 98 with the flux as observed and
+the truth from the TOI list, 40 null episodes from the s98_v3 hosts; context with the
+TOI entries masked, 35 hosts reused from `s98_v3/context.json`, 48 through MAST; BLS
+baseline `results/baseline_bls_s98_real_v1.json`, sweep
+`results/calibrate_bls_s98_real_v1.json`; Inkling-Small, rules prompt, seed 1,
+`results/s98_real_v1/agent_inkling_small_s98_real_v1_rules_seed1.json`, 23:38 to
+23:43 UTC, $4.51, no errors). Of the 43 planets 37 have a transit in the sector.
+
+| system, s98_real_v1 | false alarm | completeness | with aliases | mean score |
+|---|---|---|---|---|
+| BLS at SDE 7 | 80.4% | 70.3% | 70.3% | 0.418 |
+| BLS at SDE 14.4 (5 percent false alarm) | 2.2% | 62.2% | 62.2% | 0.819 |
+| Inkling-Small, rules | 2.2% | 64.9% | 64.9% | 0.828 |
+
+By depth, Inkling-Small: 19 of 21 planets deeper than 5,000 ppm, 2 of 6 between 1,000
+and 5,000, 3 of 10 under 1,000. BLS at SDE 7 finds 26 of 37 but with 37 false alarms
+on the 46 clean episodes, the systematics of real stars; at the 5 percent threshold it
+finds 23, two fewer than the model at the same false-alarm rate. The one false alarm of
+the model is TIC 260128333, the host of TOI-1338, a circumbinary planet of 95 days
+around an eclipsing binary of 14.6 days: the model read a 5.5 percent dip with a
+secondary at another phase, wrote that the depth exceeds the planetary range, and
+submitted it anyway. With VizieR up, the eclipsing-binary entry would have been in the
+context; this is the one episode of the run where the empty field cost.
+
+Reading the misses showed a defect in the set, not in the toolbox. On ep_0015
+(TOI-2449.01, a 1 percent transit of 7.8 hours every 16.65 days, expected
+signal-to-noise 235) the flux at the catalogue's two transit times is 1.0002 and
+1.0003: no dip. The TOI ephemeris was alerted in 2021; propagated to 2025 its period
+error has moved the transits, or the period is wrong. On ep_0041 (TOI-2458.01, 310
+ppm) the model placed the dip 0.17 days after the catalogue epoch, which is where a
+box fit at the catalogue period puts it; the model was scored a hit through the
+period, with the epoch wrong by the catalogue's error. A real-planet set must verify
+its truth against the data. `catalogue_transit` now does: a Box Least Squares fit at
+the catalogue period with the catalogue duration and a fine epoch grid, on the
+filtered and binned flux, gives the measured depth, its significance and the epoch
+shift. The word `ephemeris` records the outcome: `no_transit` (the catalogue puts no
+transit in the data, nothing to check), `confirmed` (fitted epoch within one duration
+of the catalogue's), `shifted` (further, and the dip significant: the truth epoch
+becomes the fitted one and `t0_catalogue` keeps the catalogue's), `absent` (depth
+significance under 5 where the expected signal-to-noise is 10 or more: left out of
+the set and listed in `config.json`). Tests:
+`test_catalogue_transit_confirms_an_ephemeris_that_lands_on_the_dip`,
+`..._moves_a_shifted_epoch_to_the_dip`,
+`..._calls_a_strong_ephemeris_absent_when_the_data_show_nothing`,
+`..._does_not_check_a_planet_with_no_transit_in_the_data` (commits `098ff71`,
+`3608387`). Two lessons from the trajectories that stand: on ep_0016 (TOI-2184.01,
+6.91 days, 1,752 ppm, four transits seen) the period is half the gap spacing, so every
+even transit falls in a gap, `odd_even` reports `insufficient_data` with four odd
+events and none even, and the rules prompt's sentence about that verdict (one event
+of one parity means a single dip) made the model decline a four-transit planet; and
+on ep_0021 (TOI-540.01) the model stopped at `orbit_shape` `variable` on the 0.73-day
+rotation of the M dwarf, the pattern of 2026-10-25.
+
+**The verified set s98_real_v2** (hash `bb8a6678...` with its context, built from the
+same targets and cache, seed 1, 40 nulls). Two ephemerides absent and left out:
+TOI-2449.01 (depth significance 3.6) and TOI-540.01 (3.3, a 2,319-ppm transit of 0.6
+hours every 1.24 days that the data at that period do not show). Three shifted and
+refined: TOI-5153.01 by 9.88 days (half its 20.9-day period, so the catalogue period
+or epoch is off), TOI-942.01 by 2.04 days, TOI-2458.01 by 0.16 days. Six with no
+transit in the sector, 32 confirmed. 81 episodes, 41 real; the context reused from
+`s98_real_v1` for every host, TOI entries masked. The run follows.
+
+**The verified set, run** (`results/s98_real_v2/run_reference.sh`: BLS baseline
+`results/baseline_bls_s98_real_v2.json`, sweep `results/calibrate_bls_s98_real_v2.json`;
+Inkling-Small, rules prompt, seed 1, frozen toolbox commit `f7f77f2`,
+`results/s98_real_v2/agent_inkling_small_s98_real_v2_rules_seed1.json`, 00:00 to 00:10
+UTC, $4.36, no errors, every episode submitted). 35 planets with a transit in the
+sector, 46 clean episodes (40 nulls and the six planets with no transit).
+
+| system, s98_real_v2 | false alarm | completeness | with aliases | mean score |
+|---|---|---|---|---|
+| BLS at SDE 7 | 80.4% | 74.3% | 74.3% | 0.432 |
+| BLS at SDE 14.4 (5 percent false alarm) | 2.2% | 65.7% | 65.7% | 0.840 |
+| Inkling-Small, rules | 2.2% | 71.4% | 71.4% | 0.864 |
+
+By depth, Inkling-Small finds 20 of 20 planets deeper than 5,000 ppm (18 by period,
+2 as single events on planets with one transit in the sector), 2 of 5 between 1,000
+and 5,000, and 3 of 10 under 1,000 ppm. BLS at the same 2 percent false-alarm rate
+finds 23 of 35; the model finds 25. The ten misses: seven planets under 1,000 ppm
+with expected signal-to-noise 5 to 16 (TOI-486.01 at 160 ppm, TOI-2238.01, TOI-704.01,
+TOI-426.01, TOI-871.01, TOI-283.01, TOI-220.01), the four-transit planet
+TOI-2184.01 whose even transits fall in the gaps, TOI-4364.01 on an active star,
+and TOI-942.01 whose epoch the build refined by two days. The one false alarm is
+TIC 260128333 again, the eclipsing binary of TOI-1338 submitted as a 14.6-day planet
+against the model's own reading of the depth.
+
+Reading.
+
+- The toolbox transfers from injected to real transits. On the injected s98_v3 the
+  same model and prompt find 38 percent of the planets at 0.6 percent false alarms;
+  here 71 percent at 2.2 percent. The sets differ in what they hold, not in the
+  tools: confirmed TESS planets are mostly deep (20 of 35 over 5,000 ppm, where the
+  injected set draws depths log-uniform down to 100 ppm), so the real set is easier
+  at the top and the same at the bottom, where 3 of 10 under 1,000 ppm matches the
+  injected rate for that depth.
+- Real stars without a planet are declined: 45 of 46 clean episodes, against 9 of 46
+  for BLS at its default threshold, whose 37 false alarms are the systematics of real
+  light curves. The model's margin over BLS at a matched false-alarm rate is 2
+  planets of 35, the same order as on the injected sets.
+- Nothing in the run points at memorised planets: the misses are the faint ones and
+  the hits the deep ones, in the order the signal-to-noise predicts, and the model's
+  reasoning names tool results only. The light curves are from 2025 and the
+  episodes carry no name.
+- Two costs of the outage and one of the prompt stand: the eclipsing-binary entry
+  that would have named TOI-1338's host; the `odd_even` sentence in the rules
+  prompt that reads four events of one parity as a single dip (TOI-2184.01); and
+  the `variable` stop on active hosts. None is changed now, the toolbox being
+  frozen; they go to the handoff for the policy to learn or the prompt to fix.
+
+The real-planet path and its sets close the "real confirmed planets" item of Phase 4.
+The hashes: `s98_real_v1` `4693db32...` (first build, two stale ephemerides inside,
+kept as the record), `s98_real_v2` `bb8a6678...` (verified).

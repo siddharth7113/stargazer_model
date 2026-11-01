@@ -116,7 +116,7 @@ curve as three arrays, so each survey needs only a loader and a target list.
 - [ ] K2: different systematics, the transfer test
 - [ ] One ground-based survey (NGTS or WASP public data): gaps, airmass trends, red noise
 - [ ] Injection into each survey with the same `BuildConfig`; one episode set for each survey
-- [x] Real confirmed planets: `stargazer targets --real`, `build --real`, `context --mask-tois`; the set s98_real_v1 (43 confirmed single-planet hosts of sector 98 with the flux as observed, 40 nulls) is built, its first run waits for VizieR (LOGBOOK 2026-10-31)
+- [x] Real confirmed planets: `stargazer targets --real`, `build --real` (each catalogue ephemeris verified against the data: confirmed, shifted or absent), `context --mask-tois`; the set s98_real_v2 (41 confirmed single-planet hosts of sector 98 with the flux as observed, 40 nulls). Inkling-Small with the rules prompt finds 71 percent at 2.2 percent false alarms, all 20 planets deeper than 5,000 ppm and 3 of 10 under 1,000 ppm; BLS at the same false-alarm rate 66 percent (LOGBOOK 2026-11-01)
 - [ ] Vetting labels from ExoFOP dispositions with the disposition date recorded
 
 ## Phase 5: Reinforcement learning on Tinker
@@ -172,25 +172,29 @@ the segment-edge verdict in the search (LOGBOOK 2026-10-31).
 
 The large-model pass on the frozen toolbox ran the same evening with the owner's
 yes: Phase 3 closes on its table (LOGBOOK 2026-10-31). The owner then chose the
-real-planet test as the next step, on a sector observed after the models' release
-so that no model can have seen the light curve. The code path exists and the set
-s98_real_v1 is built: 43 confirmed single-planet hosts of sector 98 with the flux as
-observed and the truth from the TOI list, 40 null episodes from the s98_v3 hosts.
-Its context could not be fetched, because every VizieR mirror timed out.
+real-planet test. VizieR was down for days, so the Gaia sources now also come from
+MAST and a context file can be reused (LOGBOOK 2026-11-01). The first real-planet run
+showed that catalogue ephemerides drift: the build now verifies each against the
+data, and the verified set s98_real_v2 gives Inkling-Small 71 percent completeness
+at 2.2 percent false alarms, all deep planets found, the faint ones as on the
+injected sets. Notebook 8 shows the variability classes on real light curves.
 
-Nothing is running. The next session starts with the real-planet run:
+Nothing is running. Open items from the real-planet run, for the prompt or the
+policy and not for the frozen toolbox: the rules prompt's sentence on `odd_even`
+`insufficient_data` reads four transits of one parity as a single dip when the
+period is half the gap spacing (TOI-2184.01); the `variable` stop on active hosts;
+and the eclipsing-binary context, empty while VizieR is down, which would have named
+TOI-1338's host. The next session starts Phase 5:
 
-1. `stargazer context --episodes data/episodes/s98_real_v1 --targets
-   data/targets_s98_real.json data/targets_s98_v3.json --mask-tois` once VizieR
-   answers (test with `curl -m 15 https://vizier.cds.unistra.fr/`); check that
-   `context.json` holds no TOI entry and that its source record says `masked`.
-2. `sh results/s98_real_v1/run_reference.sh`: the BLS baseline and Inkling-Small
-   with the rules prompt at seed 1 (about $5). Read the hits by depth: the ten
-   planets under 1,000 ppm are the test, the hot Jupiters are the control. Record
-   the sector's observation dates beside each model's release date.
-3. Then Phase 5: which sampling models Tinker trains, and one short training test on
-   Inkling-Small to measure the cost of a step; the environment wrapper in the
-   cookbook's RL interface. The Full Frame Image loader alongside.
+1. Check which of the sampling models Tinker also trains, and read the cookbook's
+   RL interface (an environment with an observation, actions and a reward).
+2. Write the tier 3 environment: an episode is the observation, tool calls are the
+   actions through the existing `ToolAgentDetector` loop, `score_episode` is the
+   reward; test it offline on three episodes with a stub backend.
+3. One short training test on Inkling-Small to measure the cost of a step, with the
+   owner's yes on the amount; then the reward-shaping decision.
+Alongside, without a paid run: the Full Frame Image loader, and a copy of the TESS
+eclipsing-binary catalogue on disk so the target cuts do not depend on VizieR.
 
 Working order agreed with the owner on 2026-10-25. The large-model batch showed that a
 bigger model is not the lever (Qwen3.5 at $119 a run scores the same as Inkling-Small
