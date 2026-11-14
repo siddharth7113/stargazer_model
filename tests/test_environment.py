@@ -206,6 +206,22 @@ def test_training_run_fails_fast_on_rollout_errors_and_records_it(episodes):
     assert tolerant.config().rollout_error_tolerance is None
 
 
+def test_training_run_refuses_more_steps_than_the_set_has_whole_batches(episodes):
+    """Check that a training run refuses a step count above the number of whole batches in its set.
+
+    One step trains on one batch of episode groups. The cookbook's loop stops at the last whole batch
+    and does not report the stop. A larger ``max_steps`` would make ``record.json``, the run's record,
+    name steps that did not run. The six-episode set in batches of two has three whole batches, so the
+    run accepts three steps and refuses four.
+    """
+    dataset = EpisodeDatasetBuilder(
+        episode_dir=str(episodes.root), model_name=MODEL, renderer_name=RENDERER, batch_size=2
+    )
+    assert TrainingRun(dataset, log_path="x", learning_rate=1e-5, max_steps=3).record["max_steps"] == 3
+    with pytest.raises(ValueError, match="whole batches"):
+        TrainingRun(dataset, log_path="x", learning_rate=1e-5, max_steps=4)
+
+
 def test_environment_carries_the_detectors_caps_on_both_sides_and_grades_a_capped_episode(episodes):
     """The runner's limits and the message environment's cap are the detector's 30 turns and 40 calls, not
     the cookbook's 10-turn preset for Inkling models, and the termination policy leaves a capped episode's

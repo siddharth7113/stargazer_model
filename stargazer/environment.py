@@ -484,6 +484,11 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
         return train, test
 
     @property
+    def train_batches(self) -> int:
+        """The whole batches in the training set: the most steps one pass over it can train."""
+        return len(EpisodeSet(Path(self.episode_dir)).ids) // self.batch_size
+
+    @property
     def record(self) -> dict[str, Any]:
         """What a results file records about the dataset: the sets by hash and every setting."""
         return {
@@ -598,7 +603,11 @@ class TrainingRun:
     max_tokens : int
         Output tokens for each sampled turn, thinking included.
     max_steps : int or None
-        Training steps; None runs through the dataset once.
+        Training steps. One step trains on one batch of episode groups. None runs
+        through the dataset once. The run refuses a value above the number of whole
+        batches in the training set. The cookbook trains ``min(max_steps, batches)``
+        steps and does not report the cut, so the record would name more steps than
+        ran. A set of 200 episodes in batches of 8 gives 25 steps.
     eval_every, save_every : int
         Steps between evaluations on the test set and between checkpoints. The
         cookbook saves a final checkpoint whatever ``save_every`` says; with
@@ -640,6 +649,12 @@ class TrainingRun:
         temperature: float = 1.0,
         tolerate_rollout_errors: bool = False,
     ):
+        if max_steps is not None and max_steps > dataset.train_batches:
+            raise ValueError(
+                f"max_steps {max_steps} is above the {dataset.train_batches} whole batches of "
+                f"{dataset.episode_dir} at batch size {dataset.batch_size}; the cookbook would train "
+                f"{dataset.train_batches} steps and the record would say {max_steps}"
+            )
         self._dataset = dataset
         self._log_path = log_path
         self._learning_rate = learning_rate

@@ -1,0 +1,69 @@
+diff --git a/stargazer/environment.py b/stargazer/environment.py
+index 56cb575..66583fb 100644
+--- a/stargazer/environment.py
++++ b/stargazer/environment.py
+@@ -483,6 +483,11 @@ class EpisodeDatasetBuilder(RLDatasetBuilder):
+             test = EpisodeDataset(self.builders(self.test_episode_dir, 1, shuffle=False), self.batch_size)
+         return train, test
+ 
++    @property
++    def train_batches(self) -> int:
++        """The whole batches in the training set: the most steps one pass over it can train."""
++        return len(EpisodeSet(Path(self.episode_dir)).ids) // self.batch_size
++
+     @property
+     def record(self) -> dict[str, Any]:
+         """What a results file records about the dataset: the sets by hash and every setting."""
+@@ -598,7 +603,11 @@ class TrainingRun:
+     max_tokens : int
+         Output tokens for each sampled turn, thinking included.
+     max_steps : int or None
+-        Training steps; None runs through the dataset once.
++        Training steps. One step trains on one batch of episode groups. None runs
++        through the dataset once. The run refuses a value above the number of whole
++        batches in the training set. The cookbook trains ``min(max_steps, batches)``
++        steps and does not report the cut, so the record would name more steps than
++        ran. A set of 200 episodes in batches of 8 gives 25 steps.
+     eval_every, save_every : int
+         Steps between evaluations on the test set and between checkpoints. The
+         cookbook saves a final checkpoint whatever ``save_every`` says; with
+@@ -640,6 +649,12 @@ class TrainingRun:
+         temperature: float = 1.0,
+         tolerate_rollout_errors: bool = False,
+     ):
++        if max_steps is not None and max_steps > dataset.train_batches:
++            raise ValueError(
++                f"max_steps {max_steps} is above the {dataset.train_batches} whole batches of "
++                f"{dataset.episode_dir} at batch size {dataset.batch_size}; the cookbook would train "
++                f"{dataset.train_batches} steps and the record would say {max_steps}"
++            )
+         self._dataset = dataset
+         self._log_path = log_path
+         self._learning_rate = learning_rate
+diff --git a/tests/test_environment.py b/tests/test_environment.py
+index 3f9b2c6..7b097ac 100644
+--- a/tests/test_environment.py
++++ b/tests/test_environment.py
+@@ -206,6 +206,22 @@ def test_training_run_fails_fast_on_rollout_errors_and_records_it(episodes):
+     assert tolerant.config().rollout_error_tolerance is None
+ 
+ 
++def test_training_run_refuses_more_steps_than_the_set_has_whole_batches(episodes):
++    """Check that a training run refuses a step count above the number of whole batches in its set.
++
++    One step trains on one batch of episode groups. The cookbook's loop stops at the last whole batch
++    and does not report the stop. A larger ``max_steps`` would make ``record.json``, the run's record,
++    name steps that did not run. The six-episode set in batches of two has three whole batches, so the
++    run accepts three steps and refuses four.
++    """
++    dataset = EpisodeDatasetBuilder(
++        episode_dir=str(episodes.root), model_name=MODEL, renderer_name=RENDERER, batch_size=2
++    )
++    assert TrainingRun(dataset, log_path="x", learning_rate=1e-5, max_steps=3).record["max_steps"] == 3
++    with pytest.raises(ValueError, match="whole batches"):
++        TrainingRun(dataset, log_path="x", learning_rate=1e-5, max_steps=4)
++
++
+ def test_environment_carries_the_detectors_caps_on_both_sides_and_grades_a_capped_episode(episodes):
+     """The runner's limits and the message environment's cap are the detector's 30 turns and 40 calls, not
+     the cookbook's 10-turn preset for Inkling models, and the termination policy leaves a capped episode's
