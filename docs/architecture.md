@@ -100,6 +100,7 @@ stargazer/
   score.py       scoring rules and set-level metrics
   evaluate.py    evaluate and Results, with a worker pool
   baseline.py    BLSDetector
+  scripted.py    ScriptedRulesDetector: the rules prompt's procedure as fixed code over the same tools
   tools.py       analysis tools with JSON Schemas, one registry for every backend; coerce_arguments reads a call as the tool runs it
   agent.py       ToolAgentDetector and the ChatBackend protocol
   backends.py    OpenAICompatibleBackend (OpenRouter, vLLM, Ollama) and TinkerBackend

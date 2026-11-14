@@ -25,7 +25,17 @@ def cmd_targets(args: argparse.Namespace) -> None:
             f"{selection['n_two_minute_in_sector']} 2-min stars -> {args.out}"
         )
         return
-    selection = select_targets(args.sector, args.n, args.seed, tmag_max=args.tmag_max)
+    from stargazer.context import CatalogueFetcher, TessEbCatalogue
+
+    binaries = TessEbCatalogue.read(Path(args.eclipsing_binaries)) if args.eclipsing_binaries else None
+    fetcher = CatalogueFetcher(eclipsing_binaries=binaries, vizier_server=args.vizier_server)
+    selection = select_targets(args.sector, args.n, args.seed, tmag_max=args.tmag_max, fetcher=fetcher)
+    selection["binary_sources"] = {
+        "eclipsing_binaries": (
+            {"path": args.eclipsing_binaries, "sha256": binaries.sha256} if binaries else "vizier"
+        ),
+        "vizier_server": args.vizier_server or "astroquery default (Strasbourg)",
+    }
     save_targets(selection, args.out)
     print(f"selected {selection['n_selected']} / {selection['n_requested']} targets -> {args.out}")
     print(f"sector 2-min stars: {selection['n_two_minute_in_sector']}")
@@ -101,23 +111,31 @@ def cmd_build(args: argparse.Namespace) -> None:
 
 
 def _progress(episode_id, prediction, truth_record):
+    period = "none" if prediction.period is None else f"{prediction.period:.4f}"
+    evidence = (
+        f"sde={prediction.extra['sde']:.1f}"
+        if "sde" in prediction.extra
+        else prediction.extra.get("reason", "")
+    )
     print(
-        f"{episode_id} {truth_record['kind']:8s} det={prediction.detected!s:5s} P={prediction.period:.4f} "
-        f"sde={prediction.extra.get('sde', float('nan')):.1f} ({prediction.extra.get('seconds')}s)",
+        f"{episode_id} {truth_record['kind']:8s} det={prediction.detected!s:5s} P={period} "
+        f"{evidence} ({prediction.extra.get('seconds')}s)",
         flush=True,
     )
 
 
 def cmd_baseline(args: argparse.Namespace) -> None:
-    """Run the BLS baseline on an episode set and write results."""
+    """Run a baseline detector (BLS or the scripted rules) on an episode set and write results."""
     from stargazer.baseline import BLSDetector
     from stargazer.episodes import EpisodeSet
     from stargazer.evaluate import evaluate
+    from stargazer.scripted import ScriptedRulesDetector
 
+    detectors = {"bls": BLSDetector, "scripted": ScriptedRulesDetector}
     es = EpisodeSet(args.episodes)
-    det = BLSDetector(**(json.loads(args.config) if args.config else {}))
+    det = detectors[args.detector](**(json.loads(args.config) if args.config else {}))
     ids = es.ids[: args.limit] if args.limit else None
-    res = evaluate(det, es, ids=ids, period_rtol=args.period_rtol, progress=_progress)
+    res = evaluate(det, es, ids=ids, period_rtol=args.period_rtol, progress=_progress, workers=args.workers)
     out = args.out or Path("results") / f"{det.name}_{es.root.name}_{_time.strftime('%Y%m%dT%H%M%S')}.json"
     res.save(out)
     print(json.dumps(res.summary, indent=1))
@@ -360,6 +378,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="select the confirmed single-planet TOI hosts of the sector instead",
     )
+    parser.add_argument(
+        "--eclipsing-binaries",
+        default=None,
+        help="a CSV copy of the TESS eclipsing-binary catalogue from MAST; with it the binary cut makes no "
+        "Vizier query for the binaries",
+    )
+    parser.add_argument(
+        "--vizier-server",
+        default=None,
+        help="the Vizier mirror for the Gaia variability classes, for example vizier.cfa.harvard.edu",
+    )
     parser.set_defaults(func=cmd_targets)
 
     parser = sub.add_parser("remove-binaries", help="drop the known eclipsing binaries from a targets file")
@@ -416,9 +445,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.set_defaults(func=cmd_context)
 
-    parser = sub.add_parser("baseline", help="run the BLS baseline on an episode set and score it")
+    parser = sub.add_parser("baseline", help="run a baseline detector on an episode set and score it")
     parser.add_argument("--episodes", required=True)
-    parser.add_argument("--config", default=None, help="JSON overrides for BLSDetector")
+    parser.add_argument(
+        "--detector",
+        choices=["bls", "scripted"],
+        default="bls",
+        help="bls: the Box Least Squares search; scripted: the rules prompt as fixed code over the tools",
+    )
+    parser.add_argument("--config", default=None, help="JSON overrides for the detector's DEFAULT_CONFIG")
+    parser.add_argument("--workers", type=int, default=1, help="episodes evaluated at the same time")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--period-rtol", type=float, default=0.01)
     parser.add_argument("--out", default=None)

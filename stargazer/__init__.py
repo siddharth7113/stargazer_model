@@ -45,6 +45,8 @@ Detector, Prediction
     The interface any detection system implements.
 BLSDetector
     The classical baseline.
+ScriptedRulesDetector
+    The rules prompt's procedure and decision rules as fixed code, with no language model.
 ToolAgentDetector, ChatBackend
     A language-model agent with analysis tools, and the provider interface.
 evaluate, Results
@@ -62,6 +64,7 @@ from stargazer.episodes import BuildConfig, EpisodeSet
 from stargazer.evaluate import Results, evaluate
 from stargazer.inject import TransitTruth, inject, make_truth, sample_truth
 from stargazer.score import score_episode, score_set
+from stargazer.scripted import ScriptedRulesDetector
 from stargazer.targets import load_targets, save_targets, select_targets
 from stargazer.types import Detector, Prediction
 
@@ -75,6 +78,7 @@ __all__ = [
     "LightCurveCache",
     "Prediction",
     "Results",
+    "ScriptedRulesDetector",
     "ToolAgentDetector",
     "TransitTruth",
     "evaluate",

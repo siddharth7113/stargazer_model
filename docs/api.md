@@ -16,6 +16,7 @@ the References sections.
 | {doc}`api/evaluate` | evaluation runs and results files |
 | {doc}`api/calibrate` | threshold choice from null episodes |
 | {doc}`api/baseline` | the Box Least Squares detector |
+| {doc}`api/scripted` | the rules prompt's procedure as fixed code over the tools |
 | {doc}`api/tools` | analysis tools for the agent |
 | {doc}`api/agent` | the agent loop and the backend protocol |
 | {doc}`api/backends` | OpenAI-compatible and Tinker backends |

@@ -20,6 +20,17 @@ def test_baseline_command_defaults():
     """The baseline scores at the default period tolerance of 1 percent on all episodes."""
     args = build_parser().parse_args(["baseline", "--episodes", "x"])
     assert args.period_rtol == 0.01 and args.limit == 0
+    assert args.detector == "bls" and args.workers == 1
+
+
+def test_baseline_command_selects_the_scripted_rules_detector():
+    """The baseline command runs the scripted rules by name, so both baselines share one command and
+    one results format.
+    """
+    args = build_parser().parse_args(
+        ["baseline", "--episodes", "x", "--detector", "scripted", "--workers", "8"]
+    )
+    assert args.detector == "scripted" and args.workers == 8
 
 
 def test_show_command_defaults():
@@ -202,7 +213,7 @@ def test_targets_command_forwards_arguments(monkeypatch):
 
     captured = {}
 
-    def fake_select(sector, n_targets, seed, tmag_max):
+    def fake_select(sector, n_targets, seed, tmag_max, fetcher):
         captured.update({"sector": sector, "n_targets": n_targets, "seed": seed, "tmag_max": tmag_max})
         raise StopHereError
 
@@ -212,6 +223,47 @@ def test_targets_command_forwards_arguments(monkeypatch):
     with pytest.raises(StopHereError):
         cli_module.cmd_targets(args)
     assert captured == {"sector": 98, "n_targets": 12, "seed": 4, "tmag_max": 12.0}
+
+
+def test_targets_command_sends_the_binary_sources_to_the_fetcher_and_records_them(monkeypatch, tmp_path):
+    """The binary cut of the host selection uses the disk copy of the catalogue and the Vizier mirror that
+    the flags name, and the targets file records both, so a reader knows which sources made the cut.
+    """
+    import stargazer.cli as cli_module
+    import stargazer.targets as targets_module
+
+    catalogue = tmp_path / "ebs.csv"
+    catalogue.write_text("tess_id,period,bjd0\n")
+    captured = {}
+
+    def fake_select(sector, n_targets, seed, tmag_max, fetcher):
+        captured["fetcher"] = fetcher
+        counts = ("n_selected", "n_requested", "n_two_minute_in_sector", "n_excluded_by_toi")
+        return {"targets": [], "rejected": {}, **dict.fromkeys(counts, 0)}
+
+    monkeypatch.setattr(targets_module, "select_targets", fake_select)
+    monkeypatch.setattr(
+        targets_module, "save_targets", lambda selection, out: captured.update(saved=selection)
+    )
+    args = cli_module.build_parser().parse_args(
+        [
+            "targets",
+            "--sector",
+            "98",
+            "--eclipsing-binaries",
+            str(catalogue),
+            "--vizier-server",
+            "mirror.example",
+        ]
+    )
+    args.out = "x"
+    cli_module.cmd_targets(args)
+    assert captured["fetcher"]._vizier_server == "mirror.example"
+    assert captured["fetcher"]._eclipsing_binaries_on_disk is not None
+    sources = captured["saved"]["binary_sources"]
+    assert sources["vizier_server"] == "mirror.example" and sources["eclipsing_binaries"]["path"] == str(
+        catalogue
+    )
 
 
 def test_remove_binaries_command_reads_one_targets_file_and_writes_another(monkeypatch, tmp_path):

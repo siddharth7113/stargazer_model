@@ -2438,3 +2438,115 @@ calls, and fewer checks mean more false alarms). `REWARDS` is the lookup table, 
 run's record carries `reward`, and an unknown name is refused. Tests:
 `test_penalised_reward_pays_a_false_alarm_below_zero_and_keeps_the_score_in_the_metrics`,
 `test_group_builder_and_dataset_carry_the_reward_name_and_refuse_an_unknown_one`.
+
+## 2026-11-14
+
+**A step count that the record overstates.** The Handoff of 2026-11-01 named 30 steps
+for the first real run, but s98_v3 has 200 episodes, which gives 25 whole batches of
+8. The cookbook trains `min(max_steps, len(dataset))` steps and does not report the
+cut, so the run would have trained 25 steps under a record of 30. `TrainingRun` now
+refuses a step count above the whole batches of the training set, and
+`EpisodeDatasetBuilder.train_batches` gives that number. Test:
+`test_training_run_refuses_more_steps_than_the_set_has_whole_batches`. The fix is not
+committed yet; the run below records `033f896-dirty`, and the diff is in
+`results/train/rl1_inkling_small_s98_v3_uncommitted.diff`.
+
+**Phase 5, the first real training run, started** (`results/train_rl1.sh`, 04:04 UTC;
+log directory `data/train/rl1_inkling_small_s98_v3`). Inkling-Small, rules prompt,
+plain score as the reward, trained on s98_v3 (hash `745c6cb5...`) and evaluated on
+s92_v1 (hash `facd9778...`) at steps 0, 10 and 20; group 8, temperature 1.2, learning
+rate 5e-5, LoRA rank 32, 25 steps, a checkpoint every 10 steps and the final one. The
+checkpoint store was empty at the start (read through the REST client:
+`list_user_checkpoints` returned none). A step takes about 3.5 minutes, against the
+6 minutes of the estimate.
+
+The first step's rollout export, read trajectory by trajectory
+(`iteration_000000/train_rollout_summaries.jsonl`): 63 of 64 trajectories end on a
+submission (`stop/tool_stopped`), with 5 to 14 turns and no cap reached. The 64th
+(group 7, a planet that all eight rollouts missed) ends on a structural parse error
+after 9 turns: the sampled turn has no stop signal. The cookbook's `ParseErrorPolicy`
+ends such a rollout at once by design, because without the stop signal the message
+boundary is unknown and a corrective message cannot be placed; the benchmark scores it
+as no submission. It is a failure of the policy, not of the harness. Two of the eight
+groups are mixed: one planet (3 of 8 declined) and one null star (2 of 8 submitted a
+single event at 19.94 days). The step-0 test on s92_v1 at temperature 1.2: every one
+of 200 rollouts submitted; 0 false alarms in 71 episodes without a transit in the data
+(58 nulls and 13 planets whose transits all fall in the gaps, which the scorer counts
+as nulls) and 47 of 129 planets found (36.4 percent, 43 by period and 4 as single
+events), mean score 0.590. The reference row at the model card's temperature is 34.9
+percent at 0.0 percent false alarms. The curve and the evaluation of the final
+checkpoint follow in this entry when the run ends.
+
+**The scripted-rules baseline.** An outside review of the project (2026-11-14) named
+the open question that no run answered: what the language model adds beyond the
+procedure that the rules prompt gives it. `ScriptedRulesDetector`
+(`stargazer/scripted.py`, `stargazer baseline --detector scripted`) applies the seven
+steps and the decision rules of the rules prompt as fixed code. It calls the same tools
+through `call_tool` and reads the same verdict words, with no language model and no
+API cost. Five rules read a number with no limit in the prompt; the module sets one for
+each (`DEFAULT_CONFIG`): a clean dip is a transit fit 7.1 sigma or more above a flat
+line (the Kepler threshold, Jenkins et al. 2010), a flat orbit has no bin away from the
+transit deeper than half the dip, a second dip at phase 0.5 is half the dip or deeper,
+a residual peak within 1 SDE of `min_sde` is near it, and two events within 50 percent
+in depth and duration are of the same depth. None of the limits was tuned on a set.
+Tests: seven in `tests/test_scripted.py` (a deep transit found at its period, white
+noise declined, a lone event submitted alone, an eclipsing binary with a secondary
+declined, the transcript in the agent's form, the fold reading, an unknown key
+refused).
+
+A defect in the rules prompt, found while writing the code: step 4 gives the two alias
+tests in the wrong order. It says "a second dip at phase 0.5, test double_period; no
+clear dip, test half_period". The `fold` tool's description and the physics give the
+reverse: a second dip at phase 0.5 means the true period is half the trial period, and
+a fold with no clear dip means half the trial events fall on empty time, so the true
+period is double. The scripted detector follows the tool's description. The prompt is
+not changed: the training run uses it, and a change breaks the comparison with every
+rules run on file.
+
+The measurement (`results/scripted/run_reference.sh`, 04:21 to 04:34 UTC, eight worker
+threads, about 4 minutes a set, no errors; code not committed, the diff in
+`results/scripted/uncommitted.diff`). The agent rows are the `full_v15parity` reference
+rows on the same set hashes. The BLS rows are the best completeness at 2.5 percent
+false alarms or less in each set's own threshold sweep, so they are the baseline's best
+case (`results/calibrate_bls_*.json`; the sweep on s98_real_v2 is on hash
+`bb8a6678...`, the same light curves before the context refill).
+
+| set | detector | false alarm | completeness | with aliases | mean score |
+|---|---|---|---|---|---|
+| s98_v3 | scripted rules | 0.0% | 41.8% | 44.0% | 0.596 |
+| s98_v3 | Inkling-Small rules, seeds 1-3 | 0.6% | 38.5% | 40.7% | 0.573 |
+| s98_v3 | BLS at SDE 15 | 0.0% | 33.3% | 33.3% | 0.530 |
+| s92_v1 | scripted rules | 0.0% | 32.6% | 35.7% | 0.575 |
+| s92_v1 | Inkling-Small rules, seed 1 | 0.0% | 34.9% | 35.7% | 0.583 |
+| s92_v1 | BLS at SDE 12 | 0.0% | 31.8% | 31.8% | 0.560 |
+| s98_real_v2 | scripted rules | 0.0% | 74.3% | 74.3% | 0.889 |
+| s98_real_v2 | Inkling-Small rules, seed 1, masked refill | 0.0% | 77.1% | 77.1% | 0.901 |
+| s98_real_v2 | BLS at SDE 15 | 2.2% | 65.7% | 65.7% | 0.840 |
+
+Episode by episode: on s98_v3 the scripted detector scores higher than the agent on 5
+to 6 episodes of 200 and lower on 0 to 1, for each of the three seeds (four to five
+planets the agent missed, against wrong periods and wrong events on both sides). On
+s92_v1 the agent scores higher on 7 episodes and the scripted detector on 4. On
+s98_real_v2 the agent scores higher on 3 and the scripted detector on 2: one planet of
+35 between them.
+
+Reading.
+
+- On these three sets the language model adds nothing measurable beyond its procedure.
+  The two detectors differ by 1 to 3 planets on each set, in both directions, inside
+  the seed spread of the agent. Both decline every null star and both beat the best
+  case of BLS by 1 to 11 points of completeness. The gain over BLS belongs to the tools
+  and the procedure, not to the model's judgement.
+- On s98_v3, the set on which the tools were designed, the fixed code is ahead; on the
+  two sets that designed nothing, the agent is ahead by 2.3 and 2.8 points. That is the
+  direction a design-set advantage predicts, and it is too small to separate from
+  noise at 129 and 35 planets.
+- The sets cannot measure a small gain of judgement. A difference of 3 planets in 129
+  is about one standard error of a binomial at 35 percent, and the 58 to 71 null
+  episodes of a set give no false alarm to either detector, so neither rate is known
+  to better than about 2 percent. The larger sets of the next step are the condition
+  for any claim about what judgement adds.
+- The decision on the $3,000 RL reserve now depends on two measurements: whether the
+  first training run moves the agent above the scripted detector on s92_v1, and how
+  the two detectors compare on sets with injected eclipsing binaries, where the
+  verdict words alone are least sufficient.

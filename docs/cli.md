@@ -20,6 +20,8 @@ Select host stars in one sector. See {func}`~stargazer.targets.select_targets`.
 | `--seed` | 1 | random seed |
 | `--tmag-max` | 12.0 | faintest TESS magnitude |
 | `--out` | `data/targets_sNN.json` | output file |
+| `--eclipsing-binaries` | | CSV copy of the TESS eclipsing-binary catalogue; the binary cut then makes no Vizier query for it |
+| `--vizier-server` | Strasbourg | Vizier mirror for the Gaia variability classes |
 
 ### `stargazer remove-binaries`
 
@@ -88,12 +90,15 @@ Recompute the hash of each file and report each mismatch with the manifest.
 
 ### `stargazer baseline`
 
-Run {class}`~stargazer.baseline.BLSDetector`. See {doc}`baseline`.
+Run a baseline detector: {class}`~stargazer.baseline.BLSDetector` (see {doc}`baseline`) or
+{class}`~stargazer.scripted.ScriptedRulesDetector`, the procedure of the rules prompt as fixed code.
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--episodes` | required | episode set |
+| `--detector` | `bls` | `bls` or `scripted` |
 | `--config` | | JSON overrides for the detector, for example `'{"sde_threshold": 18.6}'` |
+| `--workers` | 1 | episodes evaluated at the same time; 8 gives about six times the speed |
 | `--limit` | 0 | number of episodes; 0 runs all |
 | `--period-rtol` | 0.01 | period tolerance of the scorer |
 | `--out` | timestamped file in `results/` | output file |
